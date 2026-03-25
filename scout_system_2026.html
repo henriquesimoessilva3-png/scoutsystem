@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scout System 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@300;400;600;700;800&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════ CALENDAR (original) ═══════════════════ */
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;background:#f5f4f0;color:#1a1a18}
+.app{min-height:100vh}
+.nav{display:flex;gap:2px;padding:8px 12px;background:#2c2c2a;flex-wrap:wrap;align-items:center}
+.nav-btn{padding:6px 14px;border:none;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;transition:opacity .15s}
+.nav-btn:hover{opacity:.85}
+.nav-btn.active{outline:2px solid rgba(255,255,255,.5);outline-offset:1px}
+.view{display:none;padding:0}
+.view.active{display:block}
+.toolbar{padding:10px 12px;background:#fff;border-bottom:0.5px solid #e0ded4;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.toolbar h1{font-size:15px;font-weight:500;color:#1a1a18}
+.toolbar p{font-size:11px;color:#888780}
+.legend{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-left:auto}
+.leg{display:flex;align-items:center;gap:4px;font-size:11px;color:#5f5e5a}
+.leg-dot{width:12px;height:10px;border-radius:2px}
+.scroll-wrap{overflow:auto;-webkit-overflow-scrolling:touch}
+table.cal{border-collapse:collapse;font-size:11px;min-width:900px;width:100%}
+.cal th,.cal td{border:0.5px solid #e0ded4}
+.cal .col-name{position:sticky;left:0;z-index:2;background:#fff;min-width:220px;max-width:260px;padding:2px 4px 2px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal .col-start,.cal .col-end{min-width:70px;padding:3px 5px;text-align:center;background:#ebf4fd;color:#0a3d6b;font-size:10px}
+.cal .col-s{min-width:82px;padding:2px 3px;text-align:center}
+.cal .col-s select{width:100%;border:none;background:transparent;font-size:10px;cursor:pointer;color:#1a1a18;padding:1px}
+.cal .period{width:20px;min-width:20px;height:22px;text-align:center;vertical-align:middle;font-size:7px;font-weight:500;cursor:default;padding:0}
+.cal .period.active{color:#fff}
+.cal .period.month-end{border-right:1.5px solid #b4b2a9!important}
+.row-group td{background:#a8d468;color:#1b4d06;font-weight:500;font-size:10px;padding:5px 8px;border-top:2px solid #5a5855!important}
+.row-group.g-brasil-base td{background:#5dcaa5;color:#04342c}
+.row-group.g-sa-pro td{background:#4ba0e0;color:#042c53}
+.row-group.g-sa-base td{background:#9a8ee0;color:#26215c}
+.row-group.g-mundo td{background:#e07090;color:#4a0c28}
+.row-sg td{font-size:10px;padding:3px 8px 3px 20px;color:#5f5e5a;background:#f5f5f0}
+.cal tr.data:hover .col-name{background:#f0eeea}
+.cal tr.data:nth-child(even) .col-name{background:#f9f8f4}
+.inactive-cell{background:#eeecea}
+.inactive-cell:nth-child(odd){background:#f4f3ec}
+.period.multi{background:#2c2c2a!important}
+th.month-hdr{text-align:center;font-weight:500;font-size:10px;padding:4px;background:#d8d6cc;height:27px}
+th.month-hdr:nth-child(even){background:#e4e2d8}
+th.period-hdr{font-size:7px;color:#888780;background:#eeecea;padding:2px 0;text-align:center;width:20px;min-width:20px;overflow:hidden}
+th.period-hdr:nth-child(even){background:#f4f3ec}
+th.hdr-name{background:#2c2c2a;color:#f1efe8;font-weight:500;padding:5px 8px;text-align:left;position:sticky;left:0;z-index:3}
+th.hdr-col{background:#2c2c2a;color:#f1efe8;font-weight:500;padding:5px 4px;text-align:center;font-size:10px}
+.level-pro{background:#eaf3de;color:#27500a;border-radius:3px;padding:2px 5px}
+.level-base{background:#e6f1fb;color:#0c447c;border-radius:3px;padding:2px 5px}
+.empty-state{padding:40px;text-align:center;color:#888780;font-size:13px}
+.resumo-wrap{padding:12px;overflow-x:auto}
+.resumo-table{border-collapse:collapse;font-size:11px;min-width:700px}
+.resumo-table th,.resumo-table td{border:0.5px solid #e0ded4;padding:5px 7px;text-align:center}
+.resumo-table .r-scout{text-align:left;padding:6px 10px;font-weight:500;font-size:12px;min-width:130px;color:#fff}
+.resumo-table .r-val{font-size:13px;font-weight:500}
+.resumo-table .r-pro{background:#eaf3de;color:#27500a}
+.resumo-table .r-base{background:#e6f1fb;color:#0c447c}
+.resumo-table .r-total{background:#e8e6dc;font-weight:500;font-size:13px}
+.resumo-table .m-hdr{background:#d8d6cc;font-weight:500}
+.resumo-table .m-hdr:nth-child(even){background:#e4e2d8}
+.resumo-table .sub-hdr{font-size:9px;color:#5f5e5a;background:#f0eee8;font-weight:500}
+.resumo-table .r-grand{background:#2c2c2a;color:#f1efe8;font-weight:500}
+.save-badge{font-size:10px;color:#888780;padding:3px 8px;border-radius:4px;background:#f0eeea}
+.sv-name{padding:4px 8px;font-size:12px;color:#1a1a18;min-width:220px;border:0.5px solid #e0ded4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px}
+.sv-col{padding:4px 6px;font-size:11px;color:#5f5e5a;border:0.5px solid #e0ded4;text-align:center;white-space:nowrap}
+.sv-dates{color:#0a3d6b;font-size:10px}
+.sv-mhdr{text-align:center;font-weight:500;font-size:10px;padding:4px 2px;background:#d8d6cc;height:27px}
+.sv-mhdr:nth-child(even){background:#e4e2d8}
+.sv-phdr{font-size:7px;color:#888780;background:#eeecea;padding:2px 0;text-align:center;width:20px;min-width:20px;overflow:hidden}
+.sv-phdr:nth-child(even){background:#f4f3ec}
+.date-input{border:1px solid #e0ded4;border-radius:4px;padding:2px 4px;font-size:10px;width:68px;text-align:center}
+.cal thead tr:first-child th{position:sticky;top:0;z-index:4}
+.cal thead tr:nth-child(2) th{position:sticky;z-index:4}
+.cal thead tr:first-child .hdr-name{position:sticky;left:0;top:0;z-index:6}
+
+/* ── Report button in calendar ── */
+.btn-report{
+  display:inline-flex;align-items:center;gap:3px;
+  background:transparent;border:1px solid #c8c6be;
+  border-radius:4px;padding:1px 5px;font-size:9px;font-weight:600;
+  color:#5f5e5a;cursor:pointer;white-space:nowrap;
+  transition:background .15s,border-color .15s,color .15s;
+  vertical-align:middle;margin-left:4px;flex-shrink:0;
+}
+.btn-report:hover{background:#2c2c2a;border-color:#2c2c2a;color:#f1efe8}
+.btn-report.has-reports{background:#2c2c2a;border-color:#2c2c2a;color:#e8c84a}
+.report-count{
+  background:#e8c84a;color:#2c2c2a;border-radius:10px;
+  padding:0 4px;font-size:8px;font-weight:700;line-height:14px;
+  display:inline-block;min-width:14px;text-align:center;
+}
+
+.col-name-inner{display:flex;align-items:center;gap:0;width:100%}
+.col-name-text{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ═══════════════════ MODAL OVERLAY ═══════════════════ */
+:root{
+  --gold:#e8c84a;--gold-dim:rgba(232,200,74,.1);
+  --blue:#3a7bd5;--bg:#0b0d12;--card:#12151d;--card2:#181c27;
+  --border:#222840;--text:#e8ecf3;--muted:#5a6278;
+  --red:#e84a4a;--green:#4ae890;
+}
+
+#reportModal{
+  position:fixed;inset:0;z-index:1000;
+  display:none;align-items:stretch;
+  background:rgba(0,0,0,.75);backdrop-filter:blur(4px);
+}
+
+#reportModal.open{display:flex}
+
+.modal-panel{
+  background:var(--bg);
+  width:100%;max-width:960px;
+  margin:0 auto;
+  display:flex;flex-direction:column;
+  overflow:hidden;
+  animation:slideUp .25s ease;
+}
+
+@keyframes slideUp{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+/* Modal header */
+.modal-header{
+  background:var(--card2);
+  border-bottom:1px solid var(--border);
+  padding:.9rem 1.4rem;
+  display:flex;align-items:center;gap:1rem;
+  flex-shrink:0;
+}
+
+.modal-comp-name{
+  font-family:'Barlow Condensed',sans-serif;
+  font-weight:700;font-size:1.1rem;
+  letter-spacing:.04em;text-transform:uppercase;color:var(--text);
+}
+
+.modal-comp-meta{
+  font-size:.72rem;color:var(--muted);letter-spacing:.06em;
+}
+
+.modal-close{
+  margin-left:auto;background:transparent;border:1px solid var(--border);
+  color:var(--muted);border-radius:6px;padding:.35rem .75rem;
+  font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.8rem;
+  letter-spacing:.08em;text-transform:uppercase;cursor:pointer;
+  transition:background .15s,color .15s;
+}
+.modal-close:hover{background:var(--red);border-color:var(--red);color:#fff}
+
+/* Modal sub-tabs */
+.modal-tabs{
+  display:flex;gap:0;
+  background:var(--card2);
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+
+.modal-tab{
+  font-family:'Barlow Condensed',sans-serif;font-weight:700;
+  font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--muted);background:transparent;border:none;
+  border-bottom:2px solid transparent;
+  padding:.65rem 1.2rem .75rem;cursor:pointer;
+  transition:color .2s,border-color .2s;
+}
+.modal-tab.active{color:var(--gold);border-bottom-color:var(--gold)}
+
+.modal-body{flex:1;overflow-y:auto;padding:1.2rem 1.4rem 2rem}
+
+/* ── FORM inside modal ── */
+.fsec{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:9px;margin-bottom:1.2rem;overflow:hidden;
+}
+.fsec-head{
+  background:var(--card2);border-bottom:1px solid var(--border);
+  padding:.7rem 1rem;display:flex;align-items:center;gap:.5rem;
+}
+.fsec-head h3{
+  font-family:'Barlow Condensed',sans-serif;font-size:.75rem;
+  font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);
+}
+.fsec-body{padding:1rem}
+
+.fg{display:grid;gap:.8rem}
+.fg2{grid-template-columns:1fr 1fr}
+.fg3{grid-template-columns:1fr 1fr 1fr}
+.fg4{grid-template-columns:1fr 1fr 1fr 1fr}
+.s2{grid-column:span 2}.s3{grid-column:span 3}.s4{grid-column:span 4}
+
+@media(max-width:640px){
+  .fg2,.fg3,.fg4{grid-template-columns:1fr 1fr}
+  .s3,.s4{grid-column:span 2}
+}
+
+.fl{display:flex;flex-direction:column;gap:.3rem}
+.fl label{font-size:.65rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.fl input,.fl select,.fl textarea{
+  background:var(--bg);border:1px solid var(--border);border-radius:6px;
+  color:var(--text);font-family:'Barlow',sans-serif;font-size:.88rem;
+  padding:.5rem .75rem;outline:none;width:100%;
+  transition:border-color .2s,box-shadow .2s;-webkit-appearance:none;
+}
+.fl select{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%235a6278' d='M5 7L0 2h10z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right .7rem center;
+  padding-right:2rem;cursor:pointer;
+}
+.fl textarea{resize:vertical;min-height:70px;line-height:1.5}
+.fl input:focus,.fl select:focus,.fl textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(58,123,213,.18)}
+.fl input::placeholder,.fl textarea::placeholder{color:var(--muted);opacity:.45}
+
+/* ── Attribute dots ── */
+.attrs-grid{display:grid;grid-template-columns:1fr 1fr;gap:.9rem}
+@media(max-width:500px){.attrs-grid{grid-template-columns:1fr}}
+
+.attr-row{display:flex;flex-direction:column;gap:.25rem}
+.attr-row-top{display:flex;justify-content:space-between;align-items:center}
+.attr-row-top>span:first-child{font-size:.65rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.attr-score-disp{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.9rem;color:var(--gold);min-width:16px;text-align:right}
+.attr-dots{display:flex;gap:3px}
+.dot{
+  flex:1;max-width:24px;height:9px;border-radius:2px;
+  background:var(--border);cursor:pointer;
+  transition:background .1s,transform .1s;
+}
+.dot:hover{transform:scaleY(1.3)}
+.dot.on{background:var(--gold)}
+.dot.on.low{background:var(--red)}
+.dot.on.mid{background:#e8a44a}
+.dot.on.hi{background:var(--green)}
+
+/* ── Photo zone ── */
+.photo-zone{
+  border:2px dashed var(--border);border-radius:8px;
+  padding:1.2rem 1rem;text-align:center;cursor:pointer;
+  transition:border-color .2s,background .2s;position:relative;
+}
+.photo-zone:hover{border-color:var(--blue);background:rgba(58,123,213,.04)}
+.photo-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.photo-zone .pz-ico{font-size:1.5rem;margin-bottom:.3rem}
+.photo-zone p{font-size:.72rem;color:var(--muted)}
+#mPhotoPreview{display:none;width:80px;height:96px;border-radius:6px;object-fit:cover;object-position:top;margin:.6rem auto 0;border:2px solid var(--gold)}
+
+/* ── Form actions ── */
+.form-actions{display:flex;justify-content:flex-end;gap:.75rem;padding-top:1.2rem;border-top:1px solid var(--border);margin-top:.5rem}
+
+.dbtn{
+  font-family:'Barlow Condensed',sans-serif;font-weight:700;
+  font-size:.85rem;letter-spacing:.1em;text-transform:uppercase;
+  padding:.6rem 1.4rem;border-radius:6px;border:none;cursor:pointer;
+  transition:opacity .2s,transform .15s;
+}
+.dbtn:hover{opacity:.82;transform:translateY(-1px)}
+.dbtn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted)}
+.dbtn-save{background:var(--gold);color:#0b0d12}
+.dbtn-del{background:transparent;border:1px solid var(--red);color:var(--red)}
+
+/* ═══════════════ REPORT CARDS LIST ═══════════════ */
+.rep-list-empty{
+  text-align:center;padding:3rem 1rem;
+  font-family:'Barlow Condensed',sans-serif;font-size:.9rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
+}
+
+.rep-list-empty .rl-icon{font-size:2.5rem;margin-bottom:.75rem;opacity:.25}
+
+/* ── Individual report card (Keynote-style) ── */
+.rcard{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:10px;overflow:hidden;margin-bottom:1.2rem;
+  position:relative;
+}
+.rcard::before{content:'';display:block;height:2px;background:linear-gradient(90deg,var(--gold),transparent)}
+
+.rcard-header{
+  background:var(--card2);border-bottom:1px solid var(--border);
+  padding:.65rem 1rem;display:flex;justify-content:space-between;align-items:center;
+}
+
+.rcard-hdr-left{display:flex;align-items:center;gap:.6rem}
+.rcard-game{font-family:'Barlow Condensed',sans-serif;font-size:.8rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text)}
+.rcard-date{font-size:.7rem;color:var(--muted)}
+.rcard-score{background:var(--gold);color:#0b0d12;font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:.08em;padding:.05rem .6rem;border-radius:4px}
+.rcard-scout{font-size:.7rem;color:var(--muted);font-style:italic}
+
+.rcard-body{display:grid;grid-template-columns:140px 1fr}
+@media(max-width:550px){.rcard-body{grid-template-columns:1fr}}
+
+/* Left col */
+.rcard-left{border-right:1px solid var(--border);display:flex;flex-direction:column}
+.rcard-photo{
+  position:relative;background:#0b0d12;
+  min-height:160px;flex:1;overflow:hidden;
+}
+.rcard-photo img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block;filter:grayscale(15%) contrast(1.05)}
+.rcard-photo-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:3rem;opacity:.1;background:linear-gradient(180deg,#1a1e2a,#0b0d12);min-height:160px}
+.rcard-pos-tag{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(0deg,rgba(11,13,18,.95) 0%,transparent 100%);padding:1.2rem .7rem .4rem}
+.rcard-pos{font-family:'Barlow Condensed',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--gold)}
+
+.rcard-meta{padding:.7rem;border-top:1px solid var(--border)}
+.rcard-meta-row{display:flex;align-items:baseline;gap:.3rem;margin-bottom:.3rem}
+.rcard-meta-row:last-child{margin-bottom:0}
+.rcard-meta-lbl{font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);min-width:48px;flex-shrink:0}
+.rcard-meta-val{font-family:'Barlow Condensed',sans-serif;font-size:.82rem;font-weight:600;color:var(--text);line-height:1.2}
+.rcard-meta-val.gld{color:var(--gold)}
+
+/* Right col */
+.rcard-right{display:flex;flex-direction:column}
+
+.rcard-name-area{
+  padding:.9rem 1rem .7rem;border-bottom:1px solid var(--border);
+  background:linear-gradient(135deg,rgba(232,200,74,.04) 0%,transparent 60%);
+}
+.rcard-club{font-size:.65rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:.15rem}
+.rcard-name{font-family:'Bebas Neue',sans-serif;font-size:2.2rem;letter-spacing:.04em;line-height:1;color:var(--text)}
+.rcard-namesub{font-family:'Barlow Condensed',sans-serif;font-size:.72rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin-top:.15rem}
+
+/* Attributes */
+.rcard-attrs{padding:.8rem 1rem;border-bottom:1px solid var(--border);flex:1}
+.rcard-attrs-title{font-size:.6rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:.6rem}
+.rcard-attr-grid{display:grid;grid-template-columns:1fr 1fr;gap:.4rem .9rem}
+@media(max-width:450px){.rcard-attr-grid{grid-template-columns:1fr}}
+.rcard-attr{display:flex;flex-direction:column;gap:.2rem}
+.rcard-attr-top{display:flex;justify-content:space-between;align-items:center}
+.rcard-attr-name{font-size:.62rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.rcard-attr-num{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.82rem;color:var(--text)}
+.rcard-attr-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden}
+.rcard-attr-fill{height:100%;border-radius:2px}
+
+/* SW */
+.rcard-sw{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--border)}
+.rcard-sw-col{padding:.75rem 1rem}
+.rcard-sw-col:first-child{border-right:1px solid var(--border)}
+.rcard-sw-title{font-family:'Barlow Condensed',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;margin-bottom:.4rem}
+.sw-s .rcard-sw-title{color:var(--green)}
+.sw-w .rcard-sw-title{color:var(--red)}
+.rcard-sw-text{font-size:.75rem;color:#9aa3b8;line-height:1.55;white-space:pre-line}
+
+/* Notes */
+.rcard-notes{border-top:1px solid var(--border);padding:.75rem 1rem}
+.rcard-notes-title{font-size:.6rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:.3rem}
+.rcard-notes-text{font-size:.78rem;color:#8a93a8;line-height:1.55}
+
+/* Footer */
+.rcard-footer{
+  background:var(--card2);border-top:1px solid var(--border);
+  padding:.7rem 1rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.6rem;
+}
+.rcard-rec{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;padding:.25rem .75rem;border-radius:4px}
+.rec-A{background:rgba(74,232,144,.15);color:var(--green);border:1px solid rgba(74,232,144,.3)}
+.rec-B{background:rgba(58,123,213,.15);color:#6ba3e8;border:1px solid rgba(58,123,213,.3)}
+.rec-C{background:rgba(232,200,74,.15);color:var(--gold);border:1px solid rgba(232,200,74,.3)}
+.rec-D{background:rgba(232,74,74,.15);color:var(--red);border:1px solid rgba(232,74,74,.3)}
+.rcard-overall{display:flex;align-items:center;gap:.5rem}
+.rcard-overall-lbl{font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.rcard-overall-num{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:var(--gold);line-height:1}
+.rcard-footer-actions{display:flex;gap:.4rem;align-items:center;margin-left:auto}
+.rcard-edit-btn,.rcard-del-btn{
+  font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.72rem;
+  letter-spacing:.08em;text-transform:uppercase;padding:.25rem .7rem;
+  border-radius:4px;cursor:pointer;border:none;transition:opacity .2s;
+}
+.rcard-edit-btn{background:var(--card);border:1px solid var(--border);color:var(--muted)}
+.rcard-edit-btn:hover{border-color:var(--blue);color:var(--text)}
+.rcard-del-btn{background:transparent;border:1px solid rgba(232,74,74,.3);color:var(--red)}
+.rcard-del-btn:hover{background:rgba(232,74,74,.15)}
+
+/* print */
+@media print{
+  .nav,.toolbar,.scroll-wrap,#reportModal .modal-header,
+  #reportModal .modal-tabs,.form-actions,.rcard-footer-actions,
+  .modal-close,.modal-tab:not(.active){display:none!important}
+  #reportModal{position:static;background:none;display:block!important}
+  .modal-panel{max-width:100%;animation:none}
+  .modal-body{overflow:visible}
+  body{background:#0b0d12}
+  .rcard{page-break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<nav class="nav" id="nav"></nav>
+<div id="views"></div>
+</div>
+
+<!-- ═══════ REPORT MODAL ═══════ -->
+<div id="reportModal">
+  <div class="modal-panel">
+
+    <div class="modal-header">
+      <div>
+        <div class="modal-comp-name" id="mCompName">—</div>
+        <div class="modal-comp-meta" id="mCompMeta">—</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕ Fechar</button>
+    </div>
+
+    <div class="modal-tabs">
+      <button class="modal-tab active" id="mTabForm" onclick="switchMTab('form')">＋ Adicionar Jogador</button>
+      <button class="modal-tab" id="mTabList" onclick="switchMTab('list')">📋 Relatórios <span id="mRepCount" style="background:var(--gold);color:#0b0d12;border-radius:10px;padding:0 5px;font-size:.7rem;margin-left:4px">0</span></button>
+    </div>
+
+    <div class="modal-body" id="mBody">
+      <!-- Filled by JS -->
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════
+   DATA & CONFIG
+══════════════════════════════════════════ */
+const MONTHS=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+const MONTHS_FULL=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const SCOUTS=['Brunno','Cristian','Gabriel','Humberto'];
+const SCOUT_COLORS={
+  Brunno:{soft:'#F5C86A',strong:'#D07000',text:'#7A3D00',btn:'#E8940A'},
+  Cristian:{soft:'#90C4F0',strong:'#1562B8',text:'#042C53',btn:'#1562B8'},
+  Gabriel:{soft:'#8ED4A4',strong:'#1A8038',text:'#04342C',btn:'#1A8038'},
+  Humberto:{soft:'#C4A4E8',strong:'#7030A8',text:'#26215C',btn:'#7030A8'}
+};
+const MULTI_COLOR='#2c2c2a';
+const ALT=['#eeece9','#f4f3ec'];
+const GROUP_CLASSES={'BRASIL':'','BRASIL BASE':'g-brasil-base','AMERICA DO SUL PRO':'g-sa-pro','AMERICA DO SUL BASE':'g-sa-base','AMERICAS MUNDO':'g-mundo'};
+const GROUP_LABELS={'BRASIL':'Brasil','BRASIL BASE':'Brasil — Base','AMERICA DO SUL PRO':'América do Sul — Pro','AMERICA DO SUL BASE':'América do Sul — Base','AMERICAS MUNDO':'Américas / Mundo'};
+
+const PERIODS=[];
+for(let m=0;m<12;m++){
+  const days=[10,20,new Date(2026,m+1,0).getDate()];
+  const starts=[1,11,21];
+  for(let p=0;p<3;p++) PERIODS.push({m,p,label:p===0?'1':p===1?'11':'21',start:new Date(2026,m,starts[p]),end:new Date(2026,m,days[p])});
+}
+
+const ATTRS=[
+  {key:'tecnica',     label:'Técnica'},
+  {key:'velocidade',  label:'Velocidade'},
+  {key:'fisico',      label:'Físico / Duelo'},
+  {key:'posicion',    label:'Posicionamento'},
+  {key:'decisao',     label:'Tomada de Decisão'},
+  {key:'passe',       label:'Passe / Distribuição'},
+  {key:'drible',      label:'Drible / 1x1'},
+  {key:'aereo',       label:'Jogo Aéreo'},
+  {key:'visao',       label:'Visão de Jogo'},
+  {key:'intensidade', label:'Intensidade'},
+  {key:'defensivo',   label:'Trabalho Defensivo'},
+  {key:'mental',      label:'Mental / Liderança'},
+];
+
+let DATA=[{"id": 0, "group": "BRASIL", "subgroup": "Profissional", "name": "Brasileiro Série A", "country": "Brasil", "level": "Profissional", "start": "2026-01-01", "end": "2026-12-31", "scouts": []}, {"id": 1, "group": "BRASIL", "subgroup": "Profissional", "name": "Brasileiro Série B", "country": "Brasil", "level": "Profissional", "start": "2026-03-01", "end": "2026-11-30", "scouts": []}, {"id": 2, "group": "BRASIL", "subgroup": "Profissional", "name": "Brasileiro Série C", "country": "Brasil", "level": "Profissional", "start": "2026-04-01", "end": "2026-10-31", "scouts": []}, {"id": 3, "group": "BRASIL", "subgroup": "Profissional", "name": "Brasileiro Série D", "country": "Brasil", "level": "Profissional", "start": "2026-04-01", "end": "2026-09-30", "scouts": []}, {"id": 4, "group": "BRASIL", "subgroup": "Profissional", "name": "Campeonato Gaúcho", "country": "Brasil", "level": "Profissional", "start": "2026-01-01", "end": "2026-03-31", "scouts": []}, {"id": 5, "group": "BRASIL", "subgroup": "Profissional", "name": "Campeonato Gaúcho A2", "country": "Brasil", "level": "Profissional", "start": "2026-01-01", "end": "2026-03-31", "scouts": []}, {"id": 6, "group": "BRASIL", "subgroup": "Profissional", "name": "Campeonato Catarinense", "country": "Brasil", "level": "Profissional", "start": "2026-01-01", "end": "2026-03-31", "scouts": []}, {"id": 7, "group": "BRASIL", "subgroup": "Profissional", "name": "Campeonato Catarinense A2", "country": "Brasil", "level": "Profissional", "start": "2026-01-01", "end": "2026-03-31", "scouts": []}, {"id": 8, "group": "BRASIL", "subgroup": "Profissional", "name": "Campeonato Paranaense", "country": "Brasil", "level": "Profissional", "start": "2026-01-01", "end": "2026-03-31", "scouts": []}, {"id": 9, "group": "BRASIL", "subgroup": "Profissional", "name": "Campeonato Paranaense A2", "country": "Brasil", "level": "Profissional", "start": "2026-01-01", "end": "2026-03-31", "scouts": []}, {"id": 10, "group": "BRASIL", "subgroup": "Profissional", "name": "Campeonato Carioca", "country": "Brasil", "level": "Profissional", "start": "2026-01-01", "end": "2026-03-31", "scouts": []}, {"id": 11, "group": "BRASIL", "subgroup": "Profissional", "name": "Campeonato Carioca A2", "country": "Brasil", "level": "Profissional", "start": "2026-01-01", "end": "2026-03-31", "scouts": []}, {"id": 12, "group": "BRASIL", "subgroup": "Profissional", "name": "Campeonato Paulista", "country": "Brasil", "level": "Profissional", "start": "2026-01-01", "end": "2026-03-31", "scouts": []}, {"id": 13, "group": "BRASIL", "subgroup": "Profissional", "name": "Campeonato Paulista A2", "country": "Brasil", "level": "Profissional", "start": "2026-01-01", "end": "2026-03-31", "scouts": []}, {"id": 14, "group": "BRASIL", "subgroup": "Profissional", "name": "Campeonato Mineiro", "country": "Brasil", "level": "Profissional", "start": "2026-01-01", "end": "2026-03-31", "scouts": []}, {"id": 15, "group": "BRASIL", "subgroup": "Profissional", "name": "Campeonato Baiano", "country": "Brasil", "level": "Profissional", "start": "2026-01-01", "end": "2026-03-31", "scouts": []}, {"id": 16, "group": "BRASIL", "subgroup": "Profissional", "name": "Campeonato Goiano", "country": "Brasil", "level": "Profissional", "start": "2026-01-01", "end": "2026-03-31", "scouts": []}, {"id": 17, "group": "BRASIL", "subgroup": "Profissional", "name": "Copa Verde", "country": "Brasil", "level": "Profissional", "start": "2026-03-01", "end": "2026-06-30", "scouts": []}, {"id": 18, "group": "BRASIL", "subgroup": "Profissional", "name": "Copa Sul-Sudeste", "country": "Brasil", "level": "Profissional", "start": "2026-03-01", "end": "2026-06-30", "scouts": []}, {"id": 19, "group": "BRASIL", "subgroup": "Profissional", "name": "Copa do Nordeste", "country": "Brasil", "level": "Profissional", "start": "2026-03-01", "end": "2026-06-30", "scouts": []}, {"id": 20, "group": "BRASIL", "subgroup": "Profissional", "name": "Copa RS", "country": "Brasil", "level": "Profissional", "start": "2026-05-01", "end": "2026-07-31", "scouts": []}, {"id": 21, "group": "BRASIL", "subgroup": "Profissional", "name": "Copa Rio", "country": "Brasil", "level": "Profissional", "start": "2026-06-01", "end": "2026-09-30", "scouts": []}, {"id": 22, "group": "BRASIL", "subgroup": "Profissional", "name": "Copa Paulista", "country": "Brasil", "level": "Profissional", "start": "2026-02-01", "end": "2026-05-31", "scouts": []}, {"id": 23, "group": "BRASIL", "subgroup": "Profissional", "name": "Copa Santa Catarina", "country": "Brasil", "level": "Profissional", "start": "2026-09-01", "end": "2026-11-30", "scouts": []}, {"id": 24, "group": "BRASIL", "subgroup": "Profissional", "name": "Copa do Brasil", "country": "Brasil", "level": "Profissional", "start": "2026-02-01", "end": "2026-12-31", "scouts": []}, {"id": 25, "group": "BRASIL", "subgroup": "Profissional", "name": "Supercopa do Brasil", "country": "Brasil", "level": "Profissional", "start": "2026-02-01", "end": "2026-02-28", "scouts": []}, {"id": 26, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Campeonato Brasileiro U20 A", "country": "Brasil", "level": "Base", "start": "2026-02-01", "end": "2026-09-30", "scouts": []}, {"id": 27, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Campeonato Brasileiro U20 B", "country": "Brasil", "level": "Base", "start": "2026-04-01", "end": "2026-09-30", "scouts": []}, {"id": 28, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Campeonato Brasileiro U17", "country": "Brasil", "level": "Base", "start": "2026-02-01", "end": "2026-05-31", "scouts": []}, {"id": 29, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Copa do Brasil U20", "country": "Brasil", "level": "Base", "start": "2026-09-01", "end": "2026-12-31", "scouts": []}, {"id": 30, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Copa do Brasil U17", "country": "Brasil", "level": "Base", "start": "2026-02-01", "end": "2026-05-31", "scouts": []}, {"id": 31, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Copa Santiago RS U17", "country": "Brasil", "level": "Base", "start": "2026-01-01", "end": "2026-01-31", "scouts": []}, {"id": 32, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Copa São Paulo U20", "country": "Brasil", "level": "Base", "start": "2026-01-01", "end": "2026-01-31", "scouts": []}, {"id": 33, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "EFIPAN U15", "country": "Brasil", "level": "Base", "start": "2026-01-01", "end": "2026-01-31", "scouts": []}, {"id": 34, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Copa Sul U20", "country": "Brasil", "level": "Base", "start": "2026-04-01", "end": "2026-12-31", "scouts": []}, {"id": 35, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Copa Sul U17", "country": "Brasil", "level": "Base", "start": "2026-04-01", "end": "2026-12-31", "scouts": []}, {"id": 36, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Copa Gramado U16", "country": "Brasil", "level": "Base", "start": "2026-10-01", "end": "2026-10-31", "scouts": []}, {"id": 37, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Campeonato Gaúcho U20", "country": "Brasil", "level": "Base", "start": "2026-03-01", "end": "2026-07-31", "scouts": []}, {"id": 38, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Campeonato Gaúcho U20 A2", "country": "Brasil", "level": "Base", "start": "2026-05-01", "end": "2026-08-31", "scouts": []}, {"id": 39, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Campeonato Gaúcho U17", "country": "Brasil", "level": "Base", "start": "2026-03-01", "end": "2026-06-30", "scouts": []}, {"id": 40, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Campeonato Gaúcho U17 A2", "country": "Brasil", "level": "Base", "start": "2026-07-01", "end": "2026-11-30", "scouts": []}, {"id": 41, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Liga Serrana U19", "country": "Brasil", "level": "Base", "start": "2026-02-01", "end": "2026-12-31", "scouts": []}, {"id": 42, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Campeonato Catarinense U20", "country": "Brasil", "level": "Base", "start": "2026-04-01", "end": "2026-08-31", "scouts": []}, {"id": 43, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Campeonato Catarinense U21", "country": "Brasil", "level": "Base", "start": "2026-02-01", "end": "2026-04-30", "scouts": []}, {"id": 44, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Campeonato Catarinense U17", "country": "Brasil", "level": "Base", "start": "2026-03-01", "end": "2026-08-31", "scouts": []}, {"id": 45, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Copa Santa Catarina U20", "country": "Brasil", "level": "Base", "start": "2026-09-01", "end": "2026-11-30", "scouts": []}, {"id": 46, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Campeonato Carioca U20", "country": "Brasil", "level": "Base", "start": "2026-05-01", "end": "2026-08-31", "scouts": []}, {"id": 47, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Campeonato Paulista U20", "country": "Brasil", "level": "Base", "start": "2026-04-01", "end": "2026-11-30", "scouts": []}, {"id": 48, "group": "AMERICA DO SUL PRO", "subgroup": "Profissional", "name": "Campeonato Uruguaio", "country": "Uruguai", "level": "Profissional", "start": "2026-02-01", "end": "2026-12-31", "scouts": []}, {"id": 49, "group": "AMERICA DO SUL PRO", "subgroup": "Profissional", "name": "Campeonato Uruguaio 2a", "country": "Uruguai", "level": "Profissional", "start": "2026-02-01", "end": "2026-12-31", "scouts": []}, {"id": 50, "group": "AMERICA DO SUL PRO", "subgroup": "Profissional", "name": "Torneo de Verano", "country": "Uruguai", "level": "Profissional", "start": "2026-01-01", "end": "2026-01-31", "scouts": []}, {"id": 51, "group": "AMERICA DO SUL PRO", "subgroup": "Profissional", "name": "Campeonato Argentino", "country": "Argentina", "level": "Profissional", "start": "2026-01-01", "end": "2026-12-31", "scouts": []}, {"id": 52, "group": "AMERICA DO SUL PRO", "subgroup": "Profissional", "name": "Campeonato Argentino 2a", "country": "Argentina", "level": "Profissional", "start": "2026-02-01", "end": "2026-11-30", "scouts": []}, {"id": 53, "group": "AMERICA DO SUL PRO", "subgroup": "Profissional", "name": "Torneo Proyección", "country": "Argentina", "level": "Profissional", "start": "2026-01-01", "end": "2026-12-31", "scouts": []}, {"id": 54, "group": "AMERICA DO SUL PRO", "subgroup": "Profissional", "name": "Campeonato Colombiano", "country": "Colômbia", "level": "Profissional", "start": "2026-01-01", "end": "2026-12-31", "scouts": []}, {"id": 55, "group": "AMERICA DO SUL PRO", "subgroup": "Profissional", "name": "Campeonato Colombiano 2a", "country": "Colômbia", "level": "Profissional", "start": "2026-01-01", "end": "2026-11-30", "scouts": []}, {"id": 56, "group": "AMERICA DO SUL PRO", "subgroup": "Profissional", "name": "Campeonato Equatoriano", "country": "Equador", "level": "Profissional", "start": "2026-02-01", "end": "2026-11-30", "scouts": []}, {"id": 57, "group": "AMERICA DO SUL PRO", "subgroup": "Profissional", "name": "Campeonato Equatoriano 2a", "country": "Equador", "level": "Profissional", "start": "2026-02-01", "end": "2026-11-30", "scouts": []}, {"id": 58, "group": "AMERICA DO SUL PRO", "subgroup": "Profissional", "name": "Campeonato Paraguaio", "country": "Paraguai", "level": "Profissional", "start": "2026-01-01", "end": "2026-12-31", "scouts": []}, {"id": 59, "group": "AMERICA DO SUL PRO", "subgroup": "Profissional", "name": "Campeonato Chileno", "country": "Chile", "level": "Profissional", "start": "2026-01-01", "end": "2026-12-31", "scouts": []}, {"id": 60, "group": "AMERICA DO SUL PRO", "subgroup": "Profissional", "name": "Campeonato Chileno 2a", "country": "Chile", "level": "Profissional", "start": "2026-02-01", "end": "2026-11-30", "scouts": []}, {"id": 61, "group": "AMERICA DO SUL PRO", "subgroup": "Profissional", "name": "Copa Libertadores da América", "country": "América do Sul", "level": "Profissional", "start": "2026-02-01", "end": "2026-11-30", "scouts": []}, {"id": 62, "group": "AMERICA DO SUL PRO", "subgroup": "Profissional", "name": "Copa Sul-Americana", "country": "América do Sul", "level": "Profissional", "start": "2026-04-01", "end": "2026-11-30", "scouts": []}, {"id": 63, "group": "AMERICA DO SUL PRO", "subgroup": "Profissional", "name": "Recopa Sul-Americana", "country": "América do Sul", "level": "Profissional", "start": "2026-03-01", "end": "2026-03-31", "scouts": []}, {"id": 64, "group": "AMERICA DO SUL BASE", "subgroup": "Seleções Sub", "name": "Copa Libertadores U20", "country": "Equador", "level": "Base", "start": "2026-03-01", "end": "2026-03-31", "scouts": []}, {"id": 65, "group": "AMERICA DO SUL BASE", "subgroup": "Seleções Sub", "name": "Torneio Sul-Americano U17", "country": "Paraguai", "level": "Base", "start": "2026-04-01", "end": "2026-04-30", "scouts": []}, {"id": 66, "group": "AMERICA DO SUL BASE", "subgroup": "Seleções Sub", "name": "Copa Jovenes Promesas U17", "country": "Argentina", "level": "Base", "start": "2026-02-01", "end": "2026-02-28", "scouts": []}, {"id": 67, "group": "AMERICA DO SUL BASE", "subgroup": "Seleções Sub", "name": "Copa UC U17", "country": "Chile", "level": "Base", "start": "2026-12-01", "end": "2026-12-31", "scouts": []}, {"id": 68, "group": "AMERICA DO SUL BASE", "subgroup": "Seleções Sub", "name": "Torneio AUCAS First U16-U19", "country": "Equador", "level": "Base", "start": "2026-03-01", "end": "2026-03-31", "scouts": []}, {"id": 69, "group": "AMERICA DO SUL BASE", "subgroup": "Seleções Sub", "name": "Torneio AUCAS Second U16-U19", "country": "Equador", "level": "Base", "start": "2026-05-01", "end": "2026-06-30", "scouts": []}, {"id": 70, "group": "AMERICA DO SUL BASE", "subgroup": "Seleções Sub", "name": "Torneio Las Americas U17/U19", "country": "Colômbia", "level": "Base", "start": "2026-10-01", "end": "2026-10-31", "scouts": []}, {"id": 71, "group": "AMERICA DO SUL BASE", "subgroup": "Seleções Sub", "name": "Torneio Pioneros U16", "country": "Uruguai", "level": "Base", "start": "2026-02-01", "end": "2026-02-28", "scouts": []}, {"id": 72, "group": "AMERICA DO SUL BASE", "subgroup": "Seleções Sub", "name": "Copa Por La Paz U18", "country": "Colômbia", "level": "Base", "start": "2026-12-01", "end": "2026-12-31", "scouts": []}, {"id": 73, "group": "AMERICA DO SUL BASE", "subgroup": "Seleções Sub", "name": "Copa Imposible U17", "country": "Colômbia", "level": "Base", "start": "2026-05-01", "end": "2026-05-31", "scouts": []}, {"id": 74, "group": "AMERICA DO SUL BASE", "subgroup": "Seleções Sub", "name": "Torneio Mitad Del Mundo U18", "country": "Equador", "level": "Base", "start": "2026-05-01", "end": "2026-06-30", "scouts": []}, {"id": 75, "group": "AMERICAS MUNDO", "subgroup": "Internacional", "name": "Campeonato Mexicano", "country": "México", "level": "Profissional", "start": "2026-01-01", "end": "2026-12-31", "scouts": []}, {"id": 76, "group": "AMERICAS MUNDO", "subgroup": "Internacional", "name": "Campeonato Mexicano 2a", "country": "México", "level": "Profissional", "start": "2026-01-01", "end": "2026-12-31", "scouts": []}, {"id": 77, "group": "AMERICAS MUNDO", "subgroup": "Internacional", "name": "Major League Soccer", "country": "EUA", "level": "Profissional", "start": "2026-02-01", "end": "2026-12-31", "scouts": []}, {"id": 78, "group": "AMERICAS MUNDO", "subgroup": "Internacional", "name": "Campeonato Português", "country": "Portugal", "level": "Profissional", "start": "2026-08-01", "end": "2026-12-31", "scouts": []}, {"id": 79, "group": "AMERICAS MUNDO", "subgroup": "Internacional", "name": "Campeonato Português 2a", "country": "Portugal", "level": "Profissional", "start": "2026-08-01", "end": "2026-12-31", "scouts": []}, {"id": 80, "group": "AMERICAS MUNDO", "subgroup": "Internacional", "name": "Copa do Mundo", "country": "Internacional", "level": "Profissional", "start": "2026-06-01", "end": "2026-07-31", "scouts": []}, {"id": 81, "group": "AMERICAS MUNDO", "subgroup": "Internacional", "name": "Concacaf U20", "country": "América Central", "level": "Base", "start": "2026-07-01", "end": "2026-08-31", "scouts": []}, {"id": 82, "group": "AMERICAS MUNDO", "subgroup": "Internacional", "name": "Concacaf U17", "country": "América Central", "level": "Base", "start": "2026-02-01", "end": "2026-02-28", "scouts": []}, {"id": 83, "group": "AMERICAS MUNDO", "subgroup": "Internacional", "name": "Mundial U17", "country": "Internacional", "level": "Base", "start": "2026-11-01", "end": "2026-11-30", "scouts": []}, {"id": 84, "group": "AMERICAS MUNDO", "subgroup": "Datas FIFA", "name": "Data FIFA 1", "country": "Internacional", "level": "Profissional", "start": "2026-03-01", "end": "2026-03-31", "scouts": []}, {"id": 85, "group": "AMERICAS MUNDO", "subgroup": "Datas FIFA", "name": "Data FIFA 2", "country": "Internacional", "level": "Profissional", "start": "2026-06-01", "end": "2026-06-30", "scouts": []}, {"id": 86, "group": "AMERICAS MUNDO", "subgroup": "Datas FIFA", "name": "Data FIFA 3", "country": "Internacional", "level": "Profissional", "start": "2026-09-01", "end": "2026-10-31", "scouts": []}, {"id": 87, "group": "AMERICAS MUNDO", "subgroup": "Datas FIFA", "name": "Data FIFA 4", "country": "Internacional", "level": "Profissional", "start": "2026-11-01", "end": "2026-11-30", "scouts": []}, {"id": 88, "group": "AMERICAS MUNDO", "subgroup": "Janelas", "name": "Janela de Transferência 1", "country": "Internacional", "level": "Profissional", "start": "2026-01-05", "end": "2026-03-03", "scouts": []}, {"id": 89, "group": "AMERICAS MUNDO", "subgroup": "Janelas", "name": "Janela de Transferência 2", "country": "Internacional", "level": "Profissional", "start": "2026-07-20", "end": "2026-09-11", "scouts": []}, {"id": 90, "group": "AMERICAS MUNDO", "subgroup": "Janelas", "name": "Janela Transf. Especial", "country": "Internacional", "level": "Profissional", "start": "2026-03-03", "end": "2026-03-27", "scouts": []}];
+
+let currentView='cal';
+let REPORTS={};         // { compId: [ {id, ...fields} ] }
+let currentCompId=null;
+let currentMTab='form';
+let editingReportId=null;
+let mScores={};         // current form dot scores
+
+/* ══════════════════════════════════════════
+   STORAGE
+══════════════════════════════════════════ */
+function loadData(){
+  try{
+    const s=localStorage.getItem('scout_cal_2026');
+    if(s){const d=JSON.parse(s);d.forEach(c=>{const f=DATA.find(x=>x.id===c.id);if(f){f.scouts=c.scouts||[];f.start=c.start;f.end=c.end;}})}
+    const r=localStorage.getItem('scout_reports_2026');
+    if(r) REPORTS=JSON.parse(r);
+  }catch(e){}
+}
+
+function saveData(){
+  try{
+    localStorage.setItem('scout_cal_2026',JSON.stringify(DATA.map(c=>({id:c.id,scouts:c.scouts,start:c.start,end:c.end}))));
+    localStorage.setItem('scout_reports_2026',JSON.stringify(REPORTS));
+  }catch(e){}
+  const b=document.getElementById('save-badge');
+  if(b) b.textContent='Salvo ✓';
+}
+
+function getReports(compId){ return REPORTS[compId]||[]; }
+
+function saveReport(compId, data){
+  if(!REPORTS[compId]) REPORTS[compId]=[];
+  const existing=REPORTS[compId].findIndex(r=>r.id===data.id);
+  if(existing>=0) REPORTS[compId][existing]=data;
+  else REPORTS[compId].push(data);
+  saveData();
+  updateReportBadge(compId);
+}
+
+function deleteReport(compId, repId){
+  if(!REPORTS[compId]) return;
+  REPORTS[compId]=REPORTS[compId].filter(r=>r.id!==repId);
+  saveData();
+  updateReportBadge(compId);
+}
+
+function updateReportBadge(compId){
+  const btn=document.getElementById('rbtn-'+compId);
+  if(!btn) return;
+  const count=(REPORTS[compId]||[]).length;
+  btn.classList.toggle('has-reports', count>0);
+  btn.innerHTML = count>0
+    ? `📋 <span class="report-count">${count}</span>`
+    : `📋`;
+}
+
+/* ══════════════════════════════════════════
+   CALENDAR RENDER
+══════════════════════════════════════════ */
+function isActive(comp,period){
+  if(!comp.start||!comp.end) return false;
+  const cs=new Date(comp.start+' '),ce=new Date(comp.end+' ');
+  return cs<=period.end&&ce>=period.start;
+}
+
+function cellColor(comp){
+  const assigned=comp.scouts.filter(s=>s&&s!=='');
+  if(!assigned.length) return null;
+  if(assigned.length>1) return MULTI_COLOR;
+  return SCOUT_COLORS[assigned[0]]?.soft||null;
+}
+
+function renderNav(){
+  const nav=document.getElementById('nav');
+  const views=[{id:'cal',label:'Calendário'},...SCOUTS.map(s=>({id:'scout_'+s,label:s,color:SCOUT_COLORS[s].btn}))];
+  nav.innerHTML=views.map(v=>`<button class="nav-btn${currentView===v.id?' active':''}" style="background:${v.color||'#3a3835'};color:#fff" onclick="switchView('${v.id}')">${v.label}</button>`).join('');
+}
+
+function switchView(id){currentView=id;renderNav();renderViews();}
+function renderViews(){
+  const views=document.getElementById('views');
+  if(currentView==='cal'){views.innerHTML=renderCal();setTimeout(fixStickyTops,10);}
+  else if(currentView==='resumo'){views.innerHTML=renderResumo();setTimeout(fixStickyTops,10);}
+  else{const s=currentView.replace('scout_','');views.innerHTML=renderScoutView(s);setTimeout(fixStickyTops,10);}
+}
+
+function renderCal(){
+  const groups=[...new Set(DATA.map(c=>c.group))];
+  let rows='';
+  groups.forEach(g=>{
+    const cls=GROUP_CLASSES[g]||'';
+    const label=GROUP_LABELS[g]||g;
+    rows+=`<tr class="row-group ${cls}"><td colspan="${4+SCOUTS.length+PERIODS.length}">${label}</td></tr>`;
+    const sgs=[...new Set(DATA.filter(c=>c.group===g).map(c=>c.subgroup))];
+    sgs.forEach(sg=>{
+      rows+=`<tr class="row-sg"><td colspan="${4+SCOUTS.length+PERIODS.length}">${sg}</td></tr>`;
+      DATA.filter(c=>c.group===g&&c.subgroup===sg).forEach(comp=>{
+        const active=PERIODS.map(p=>isActive(comp,p));
+        const assigned=comp.scouts.filter(s=>s&&s!=='');
+        const color=cellColor(comp);
+        const textCol=assigned.length>1?'#fff':(assigned[0]?SCOUT_COLORS[assigned[0]]?.text||'#1a1a18':'#1a1a18');
+        const reps=(REPORTS[comp.id]||[]).length;
+        const hasr=reps>0;
+        rows+=`<tr class="data" id="row-${comp.id}">
+          <td class="col-name">
+            <div class="col-name-inner">
+              <span class="col-name-text" title="${comp.name}">${comp.name}</span>
+              <button class="btn-report${hasr?' has-reports':''}" id="rbtn-${comp.id}" onclick="openModal(${comp.id})" title="Relatórios de ${comp.name}">${hasr?`📋 <span class='report-count'>${reps}</span>`:'📋'}</button>
+            </div>
+          </td>
+          <td class="col-start"><input class="date-input" type="date" value="${comp.start||''}" onchange="updateDate(${comp.id},'start',this.value)"></td>
+          <td class="col-end"><input class="date-input" type="date" value="${comp.end||''}" onchange="updateDate(${comp.id},'end',this.value)"></td>`;
+        SCOUTS.forEach((s,si)=>{
+          rows+=`<td class="col-s"><select onchange="updateScout(${comp.id},${si},this.value)">
+            <option value="">—</option>
+            ${SCOUTS.map(sc=>`<option value="${sc}"${comp.scouts[si]===sc?' selected':''}>${sc}</option>`).join('')}
+          </select></td>`;
+        });
+        PERIODS.forEach((p,pi)=>{
+          const act=active[pi];
+          const isEnd=(pi+1)%3===0;
+          const bg=act&&color?color:ALT[p.m%2];
+          const fc=act&&color?textCol:'transparent';
+          const initials=assigned.length>1?assigned.map(s=>s[0]).join(''):(assigned[0]?assigned[0][0]:'');
+          rows+=`<td class="period${act?' active':''}${isEnd?' month-end':''}" style="background:${bg};color:${fc}">${act&&assigned.length?initials:act?'·':''}</td>`;
+        });
+        rows+='</tr>';
+      });
+    });
+  });
+
+  const monthHdrs=MONTHS.map(m=>`<th class="month-hdr" colspan="3">${m}</th>`).join('');
+  const periodHdrs=PERIODS.map((p,pi)=>`<th class="period-hdr${(pi+1)%3===0?' month-end':''}">${p.label}</th>`).join('');
+  const scoutHdrs=SCOUTS.map(s=>`<th class="hdr-col">${s}</th>`).join('');
+
+  return `<div class="view active">
+    <div class="toolbar">
+      <div><h1>Calendário de Cobertura 2026</h1>
+      <p>Clique em 📋 ao lado de qualquer campeonato para adicionar relatórios de jogadores</p></div>
+      <div class="legend">
+        ${SCOUTS.map(s=>`<span class="leg"><span class="leg-dot" style="background:${SCOUT_COLORS[s].soft}"></span>${s}</span>`).join('')}
+        <span class="leg"><span class="leg-dot" style="background:#2c2c2a"></span>2+ scouts</span>
+        <span class="leg"><span class="leg-dot" style="background:#e8c84a;border-radius:50%"></span>Com relatório</span>
+      </div>
+      <span class="save-badge" id="save-badge">Auto-salvo</span>
+    </div>
+    <div class="scroll-wrap">
+    <table class="cal">
+      <thead>
+        <tr>
+          <th class="hdr-name" rowspan="2">Campeonato</th>
+          <th class="hdr-col" rowspan="2">Início</th>
+          <th class="hdr-col" rowspan="2">Fim</th>
+          ${SCOUTS.map((s,i)=>`<th class="hdr-col" rowspan="2" style="background:#484038">Scout ${i+1}</th>`).join('')}
+          ${monthHdrs}
+        </tr>
+        <tr>${periodHdrs}</tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+    </div></div>`;
+}
+
+/* ══════════════════════════════════════════
+   SCOUT VIEW & RESUMO (original)
+══════════════════════════════════════════ */
+function isActiveInMonth(comp,monthIdx){
+  if(!comp.start||!comp.end) return false;
+  const cs=new Date(comp.start+' '),ce=new Date(comp.end+' ');
+  const ms=new Date(2026,monthIdx,1),me=new Date(2026,monthIdx+1,0);
+  return cs<=me&&ce>=ms;
+}
+
+function renderScoutView(scout){
+  const color=SCOUT_COLORS[scout];
+  const assigned=DATA.filter(c=>c.scouts.some(s=>s===scout));
+  const monthHdrs=MONTHS.map(m=>`<th class="sv-mhdr" colspan="3">${m}</th>`).join('');
+  const periodHdrs=PERIODS.map((p,pi)=>{
+    const isEnd=(pi+1)%3===0;
+    return `<th class="sv-phdr${isEnd?' month-end':''}">${p.p===0?'1':p.p===1?'11':'21'}</th>`;
+  }).join('');
+  let bodyRows='';
+  if(!assigned.length){
+    bodyRows=`<tr><td colspan="${4+PERIODS.length}" class="empty-state">Nenhuma competição atribuída a ${scout} ainda.</td></tr>`;
+  } else {
+    bodyRows=assigned.map((comp,ri)=>{
+      const active=PERIODS.map(p=>isActive(comp,p));
+      const rowbg=ri%2===0?'#fff':'#f9f8f4';
+      const reps=(REPORTS[comp.id]||[]).length;
+      const periodCells=PERIODS.map((p,pi)=>{
+        const act=active[pi];const isEnd=(pi+1)%3===0;
+        return `<td style="background:${act?color.soft:ALT[p.m%2]};width:18px;min-width:18px;height:26px;border:0.5px solid #e0ded4${isEnd?';border-right:1.5px solid #b4b2a9':''}"></td>`;
+      }).join('');
+      return `<tr style="background:${rowbg}">
+        <td class="sv-name">${comp.name}${reps?` <span style="background:#2c2c2a;color:#e8c84a;border-radius:10px;padding:0 5px;font-size:9px;font-weight:700">${reps}</span>`:''}</td>
+        <td class="sv-col">${comp.country}</td>
+        <td class="sv-col"><span class="level-${comp.level==='Base'?'base':'pro'}">${comp.level}</span></td>
+        <td class="sv-col sv-dates">${comp.start?comp.start.slice(5).replace('-','/'):'?'} → ${comp.end?comp.end.slice(5).replace('-','/'):'?'}</td>
+        ${periodCells}
+      </tr>`;
+    }).join('');
+  }
+  return `<div class="view active">
+    <div class="toolbar">
+      <div style="width:14px;height:14px;border-radius:50%;background:${color.btn};flex-shrink:0"></div>
+      <div><h1>${scout} — Competições Atribuídas 2026</h1>
+      <p>${assigned.length} competição(ões) atribuída(s)</p></div>
+    </div>
+    <div class="scroll-wrap">
+    <table class="cal" style="min-width:800px">
+      <thead>
+        <tr>
+          <th class="hdr-name" rowspan="2" style="min-width:220px">Campeonato</th>
+          <th class="hdr-col" rowspan="2" style="min-width:90px">País</th>
+          <th class="hdr-col" rowspan="2" style="min-width:80px">Nível</th>
+          <th class="hdr-col" rowspan="2" style="min-width:110px">Período</th>
+          ${monthHdrs}
+        </tr>
+        <tr>${periodHdrs}</tr>
+      </thead>
+      <tbody>${bodyRows}</tbody>
+    </table>
+    </div></div>`;
+}
+
+function renderResumo(){
+  const calcs=SCOUTS.map(scout=>{
+    const months=MONTHS.map((_,mi)=>{
+      const pro=DATA.filter(c=>c.scouts.includes(scout)&&c.level==='Profissional'&&isActiveInMonth(c,mi)).length;
+      const base=DATA.filter(c=>c.scouts.includes(scout)&&c.level==='Base'&&isActiveInMonth(c,mi)).length;
+      return {pro,base};
+    });
+    return {scout,months,totPro:months.reduce((a,m)=>a+m.pro,0),totBase:months.reduce((a,m)=>a+m.base,0)};
+  });
+  const monthHdrs=MONTHS.map(m=>`<th class="m-hdr" colspan="2">${m}</th>`).join('');
+  const subHdrs=MONTHS.map(()=>`<th class="sub-hdr">Pro</th><th class="sub-hdr">Base</th>`).join('');
+  const rows=calcs.map(({scout,months,totPro,totBase})=>{
+    const c=SCOUT_COLORS[scout];
+    return `<tr><td class="r-scout" style="background:${c.btn}">${scout}</td>
+      <td class="r-val r-pro r-total">${totPro||''}</td><td class="r-val r-base r-total">${totBase||''}</td>
+      ${months.map(m=>`<td class="r-val r-pro">${m.pro||''}</td><td class="r-val r-base">${m.base||''}</td>`).join('')}
+    </tr>`;
+  }).join('');
+  const grandMonths=MONTHS.map((_,mi)=>{
+    const pro=DATA.filter(c=>c.scouts.some(s=>s)&&c.level==='Profissional'&&isActiveInMonth(c,mi)).length;
+    const base=DATA.filter(c=>c.scouts.some(s=>s)&&c.level==='Base'&&isActiveInMonth(c,mi)).length;
+    return `<td class="r-grand">${pro||''}</td><td class="r-grand">${base||''}</td>`;
+  }).join('');
+  const gP=calcs.reduce((a,c)=>a+c.totPro,0),gB=calcs.reduce((a,c)=>a+c.totBase,0);
+  return `<div class="view active">
+    <div class="toolbar"><div><h1>Resumo de Cobertura — 2026</h1><p>Scouts nas linhas · Meses nas colunas</p></div></div>
+    <div class="resumo-wrap"><table class="resumo-table">
+      <thead><tr><th rowspan="2" style="background:#2c2c2a;color:#f1efe8">Scout</th><th colspan="2" style="background:#444441;color:#f1efe8">Total Ano</th>${monthHdrs}</tr>
+      <tr><th class="sub-hdr" style="background:#e0ece8;color:#27500a">Pro</th><th class="sub-hdr" style="background:#d8e8f5;color:#0c447c">Base</th>${subHdrs}</tr></thead>
+      <tbody>${rows}<tr><td class="r-grand" style="text-align:left;padding-left:10px">Total Geral</td><td class="r-grand">${gP||''}</td><td class="r-grand">${gB||''}</td>${grandMonths}</tr></tbody>
+    </table></div></div>`;
+}
+
+/* ══════════════════════════════════════════
+   MODAL OPEN / CLOSE
+══════════════════════════════════════════ */
+function openModal(compId){
+  currentCompId=compId;
+  editingReportId=null;
+  const comp=DATA.find(c=>c.id===compId);
+  document.getElementById('mCompName').textContent=comp.name;
+  document.getElementById('mCompMeta').textContent=`${comp.country} · ${comp.level} · ${comp.start||'?'} → ${comp.end||'?'}`;
+  const count=(REPORTS[compId]||[]).length;
+  document.getElementById('mRepCount').textContent=count;
+  switchMTab(count>0?'list':'form');
+  document.getElementById('reportModal').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+
+function closeModal(){
+  document.getElementById('reportModal').classList.remove('open');
+  document.body.style.overflow='';
+  currentCompId=null;
+}
+
+document.getElementById('reportModal').addEventListener('click', e=>{
+  if(e.target===document.getElementById('reportModal')) closeModal();
+});
+
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeModal(); });
+
+/* ══════════════════════════════════════════
+   MODAL TABS
+══════════════════════════════════════════ */
+function switchMTab(tab){
+  currentMTab=tab;
+  document.getElementById('mTabForm').classList.toggle('active',tab==='form');
+  document.getElementById('mTabList').classList.toggle('active',tab==='list');
+  if(tab==='form') renderModalForm();
+  else renderModalList();
+}
+
+/* ══════════════════════════════════════════
+   MODAL FORM
+══════════════════════════════════════════ */
+function renderModalForm(preload){
+  mScores={};
+  ATTRS.forEach(a=>mScores[a.key]=0);
+
+  const p=preload||{};
+
+  const attrHtml=ATTRS.map(a=>`
+    <div class="attr-row">
+      <div class="attr-row-top">
+        <span>${a.label}</span>
+        <span class="attr-score-disp" id="msc_${a.key}">${p.scores&&p.scores[a.key]?p.scores[a.key]:'—'}</span>
+      </div>
+      <div class="attr-dots" id="mdots_${a.key}">
+        ${Array.from({length:10},(_,i)=>`<div class="dot${p.scores&&p.scores[a.key]>i?' on'+(p.scores[a.key]<=3?' low':p.scores[a.key]<=6?' mid':' hi'):''}" data-k="${a.key}" data-v="${i+1}"></div>`).join('')}
+      </div>
+    </div>
+  `).join('');
+
+  if(p.scores) Object.keys(p.scores).forEach(k=>mScores[k]=p.scores[k]);
+
+  document.getElementById('mBody').innerHTML=`
+    <div class="fsec">
+      <div class="fsec-head"><span>⚽</span><h3>Jogo</h3></div>
+      <div class="fsec-body">
+        <div class="fg fg3">
+          <div class="fl"><label>Data do Jogo</label><input id="mData" type="date" value="${p.data||''}"></div>
+          <div class="fl"><label>Time A</label><input id="mTimeA" type="text" placeholder="Clube / País" value="${p.timeA||''}"></div>
+          <div class="fl"><label>Time B</label><input id="mTimeB" type="text" placeholder="Clube / País" value="${p.timeB||''}"></div>
+          <div class="fl"><label>Placar</label><input id="mPlacar" type="text" placeholder="2 — 1" value="${p.placar||''}"></div>
+          <div class="fl"><label>Scout</label><select id="mScout"><option value="">—</option>${SCOUTS.map(s=>`<option value="${s}"${p.scout===s?' selected':''}>${s}</option>`).join('')}</select></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fsec">
+      <div class="fsec-head"><span>👤</span><h3>Atleta</h3></div>
+      <div class="fsec-body">
+        <div class="fg fg4">
+          <div class="fl s2"><label>Nome Completo</label><input id="mNome" type="text" placeholder="Nome do Atleta" value="${p.nome||''}"></div>
+          <div class="fl"><label>Data de Nasc.</label><input id="mDob" type="date" value="${p.dob||''}"></div>
+          <div class="fl"><label>Nacionalidade</label><input id="mNac" type="text" placeholder="Brasil" value="${p.nac||''}"></div>
+          <div class="fl s2"><label>Clube</label><input id="mClube" type="text" placeholder="Ex.: Flamengo - BRA" value="${p.clube||''}"></div>
+          <div class="fl"><label>Posição</label>
+            <select id="mPos">
+              <option value="">—</option>
+              <optgroup label="Goleiro"><option${p.pos==='GK'?' selected':''}>GK</option></optgroup>
+              <optgroup label="Defensores">
+                <option${p.pos==='ZAG'?' selected':''}>ZAG</option>
+                <option${p.pos==='LD'?' selected':''}>LD</option>
+                <option${p.pos==='LE'?' selected':''}>LE</option>
+              </optgroup>
+              <optgroup label="Meio-Campo">
+                <option${p.pos==='VOL'?' selected':''}>VOL</option>
+                <option${p.pos==='MC'?' selected':''}>MC</option>
+                <option${p.pos==='MEI'?' selected':''}>MEI</option>
+                <option${p.pos==='MAD'?' selected':''}>MAD</option>
+                <option${p.pos==='MAE'?' selected':''}>MAE</option>
+              </optgroup>
+              <optgroup label="Atacantes">
+                <option${p.pos==='ALD'?' selected':''}>ALD</option>
+                <option${p.pos==='ALE'?' selected':''}>ALE</option>
+                <option${p.pos==='SA'?' selected':''}>SA</option>
+                <option${p.pos==='CA'?' selected':''}>CA</option>
+              </optgroup>
+            </select>
+          </div>
+          <div class="fl"><label>Pé</label>
+            <select id="mPe"><option value="">—</option>
+              <option${p.pe==='Direito'?' selected':''}>Direito</option>
+              <option${p.pe==='Esquerdo'?' selected':''}>Esquerdo</option>
+              <option${p.pe==='Ambidestro'?' selected':''}>Ambidestro</option>
+            </select>
+          </div>
+          <div class="fl"><label>Altura (cm)</label><input id="mAlt" type="number" placeholder="185" value="${p.alt||''}"></div>
+          <div class="fl"><label>Tipo Físico</label>
+            <select id="mFis"><option value="">—</option>
+              <option${p.fis==='Magro'?' selected':''}>Magro</option>
+              <option${p.fis==='Atlético'?' selected':''}>Atlético</option>
+              <option${p.fis==='Forte'?' selected':''}>Forte</option>
+              <option${p.fis==='Robusto'?' selected':''}>Robusto</option>
+            </select>
+          </div>
+          <div class="fl"><label>Fim Contrato</label><input id="mContrato" type="date" value="${p.contrato||''}"></div>
+          <div class="fl"><label>Valor TM</label><input id="mTm" type="text" placeholder="€ 500k" value="${p.tm||''}"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fsec">
+      <div class="fsec-head"><span>📷</span><h3>Foto</h3></div>
+      <div class="fsec-body">
+        <div class="photo-zone">
+          <input type="file" id="mFoto" accept="image/*">
+          <div class="pz-ico">📷</div>
+          <p>Clique para carregar</p>
+          <img id="mPhotoPreview" src="${p.photo||''}" style="${p.photo?'display:block':'display:none'};width:80px;height:96px;border-radius:6px;object-fit:cover;object-position:top;margin:.6rem auto 0;border:2px solid #e8c84a">
+        </div>
+      </div>
+    </div>
+
+    <div class="fsec">
+      <div class="fsec-head"><span>⚽</span><h3>Atributos — Nota 1 a 10</h3></div>
+      <div class="fsec-body"><div class="attrs-grid" id="mAttrs">${attrHtml}</div></div>
+    </div>
+
+    <div class="fsec">
+      <div class="fsec-head"><span>📋</span><h3>Análise</h3></div>
+      <div class="fsec-body">
+        <div class="fg fg2">
+          <div class="fl"><label>Pontos Fortes</label><textarea id="mForcas" placeholder="Strengths…">${p.forcas||''}</textarea></div>
+          <div class="fl"><label>Pontos Fracos</label><textarea id="mFraquezas" placeholder="Weaknesses…">${p.fraquezas||''}</textarea></div>
+          <div class="fl s2"><label>Observações Gerais</label><textarea id="mObs" placeholder="Contexto tático, comportamento…" style="min-height:80px">${p.obs||''}</textarea></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fsec">
+      <div class="fsec-head"><span>🎯</span><h3>Recomendação</h3></div>
+      <div class="fsec-body">
+        <div class="fg fg3">
+          <div class="fl"><label>Recomendação</label>
+            <select id="mRec"><option value="">—</option>
+              <option value="A"${p.rec==='A'?' selected':''}>A — Contratar</option>
+              <option value="B"${p.rec==='B'?' selected':''}>B — Monitorar</option>
+              <option value="C"${p.rec==='C'?' selected':''}>C — Observar</option>
+              <option value="D"${p.rec==='D'?' selected':''}>D — Não recomendado</option>
+            </select>
+          </div>
+          <div class="fl"><label>Prioridade</label>
+            <select id="mPrio"><option value="">—</option>
+              <option${p.prio==='Alta'?' selected':''}>Alta</option>
+              <option${p.prio==='Média'?' selected':''}>Média</option>
+              <option${p.prio==='Baixa'?' selected':''}>Baixa</option>
+            </select>
+          </div>
+          <div class="fl"><label>Nota Geral (0–10)</label><input id="mNota" type="number" placeholder="7.5" min="0" max="10" step="0.5" value="${p.nota||''}"></div>
+          <div class="fl s3"><label>Justificativa</label><textarea id="mJust" placeholder="Justifique a recomendação…">${p.just||''}</textarea></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button class="dbtn dbtn-ghost" onclick="switchMTab('list')">← Cancelar</button>
+      <button class="dbtn dbtn-save" onclick="submitReport()">Salvar Relatório ✓</button>
+    </div>
+  `;
+
+  // wire dots
+  document.getElementById('mAttrs').addEventListener('click', e=>{
+    const dot=e.target.closest('.dot');
+    if(!dot) return;
+    const k=dot.dataset.k, v=parseInt(dot.dataset.v);
+    mScores[k]=v;
+    const row=document.getElementById('mdots_'+k);
+    row.querySelectorAll('.dot').forEach((d,i)=>{
+      d.className='dot';
+      if(i<v){d.classList.add('on');d.classList.add(v<=3?'low':v<=6?'mid':'hi');}
+    });
+    document.getElementById('msc_'+k).textContent=v;
+  });
+
+  // photo
+  document.getElementById('mFoto').addEventListener('change',function(){
+    const file=this.files[0];if(!file)return;
+    const r=new FileReader();
+    r.onload=e=>{
+      const img=document.getElementById('mPhotoPreview');
+      img.src=e.target.result;img.style.display='block';
+      window._mPhoto=e.target.result;
+    };
+    r.readAsDataURL(file);
+  });
+
+  // restore existing photo
+  window._mPhoto=p.photo||null;
+}
+
+/* ══════════════════════════════════════════
+   SUBMIT
+══════════════════════════════════════════ */
+function gv(id){ const el=document.getElementById(id); return el?el.value.trim():''; }
+
+function submitReport(){
+  const nome=gv('mNome');
+  if(!nome){ alert('Informe o nome do atleta.'); return; }
+
+  const rep={
+    id: editingReportId || ('r'+Date.now()),
+    data:gv('mData'), timeA:gv('mTimeA'), timeB:gv('mTimeB'),
+    placar:gv('mPlacar'), scout:gv('mScout'),
+    nome, dob:gv('mDob'), nac:gv('mNac'), clube:gv('mClube'),
+    pos:gv('mPos'), pe:gv('mPe'), alt:gv('mAlt'), fis:gv('mFis'),
+    contrato:gv('mContrato'), tm:gv('mTm'),
+    scores:{...mScores},
+    photo: window._mPhoto||null,
+    forcas:gv('mForcas'), fraquezas:gv('mFraquezas'),
+    obs:gv('mObs'), rec:gv('mRec'), prio:gv('mPrio'),
+    nota:gv('mNota'), just:gv('mJust'),
+  };
+
+  saveReport(currentCompId, rep);
+  editingReportId=null;
+  window._mPhoto=null;
+  document.getElementById('mRepCount').textContent=(REPORTS[currentCompId]||[]).length;
+  switchMTab('list');
+}
+
+/* ══════════════════════════════════════════
+   REPORT LIST
+══════════════════════════════════════════ */
+function renderModalList(){
+  const reps=getReports(currentCompId);
+  if(!reps.length){
+    document.getElementById('mBody').innerHTML=`
+      <div class="rep-list-empty">
+        <div class="rl-icon">📋</div>
+        <p>Nenhum jogador reportado ainda</p>
+        <br>
+        <button class="dbtn dbtn-save" onclick="switchMTab('form')" style="margin:0 auto">＋ Adicionar Jogador</button>
+      </div>`;
+    return;
+  }
+
+  const html=reps.map(r=>buildReportCard(r)).join('');
+  document.getElementById('mBody').innerHTML=`
+    <div style="display:flex;justify-content:flex-end;margin-bottom:1rem">
+      <button class="dbtn dbtn-save" onclick="switchMTab('form')">＋ Novo Jogador</button>
+    </div>
+    ${html}
+  `;
+}
+
+function buildReportCard(r){
+  const fmtDate=s=>{if(!s)return'—';const d=new Date(s+'T12:00:00');return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'})};
+  const calcAge=s=>{if(!s)return'';const d=new Date(s+'T12:00:00'),t=new Date();let a=t.getFullYear()-d.getFullYear();if(t.getMonth()-d.getMonth()<0||(t.getMonth()-d.getMonth()===0&&t.getDate()<d.getDate()))a--;return`${a}a`};
+  const barColor=n=>n<=3?'#e84a4a':n<=6?'#e8a44a':n<=8?'#e8c84a':'#4ae890';
+  const recLabel={A:'✅ A — Contratar',B:'🔵 B — Monitorar',C:'🟡 C — Observar',D:'🔴 D — Não recom.'};
+
+  const matchLine=r.timeA&&r.timeB?`${r.timeA} <span style="color:var(--muted);margin:0 .25rem">vs</span> ${r.timeB}`:(r.timeA||r.timeB||'');
+
+  const photoHtml=r.photo
+    ?`<img src="${r.photo}" style="width:100%;height:100%;object-fit:cover;object-position:top center;display:block;filter:grayscale(15%) contrast(1.05)">`
+    :`<div class="rcard-photo-ph">👤</div>`;
+
+  const filledAttrs=ATTRS.filter(a=>r.scores&&r.scores[a.key]>0);
+  const attrsHtml=filledAttrs.length?`
+    <div class="rcard-attrs">
+      <div class="rcard-attrs-title">Atributos Técnicos</div>
+      <div class="rcard-attr-grid">
+        ${filledAttrs.map(a=>`
+          <div class="rcard-attr">
+            <div class="rcard-attr-top">
+              <span class="rcard-attr-name">${a.label}</span>
+              <span class="rcard-attr-num">${r.scores[a.key]}</span>
+            </div>
+            <div class="rcard-attr-bar"><div class="rcard-attr-fill" style="width:${r.scores[a.key]*10}%;background:${barColor(r.scores[a.key])}"></div></div>
+          </div>
+        `).join('')}
+      </div>
+    </div>`:'';
+
+  const swHtml=(r.forcas||r.fraquezas)?`
+    <div class="rcard-sw">
+      <div class="rcard-sw-col sw-s"><div class="rcard-sw-title">Strengths</div><div class="rcard-sw-text">${r.forcas||'<span style="opacity:.3">—</span>'}</div></div>
+      <div class="rcard-sw-col sw-w"><div class="rcard-sw-title">Weaknesses</div><div class="rcard-sw-text">${r.fraquezas||'<span style="opacity:.3">—</span>'}</div></div>
+    </div>`:'';
+
+  const notesHtml=(r.obs||r.just)?`
+    <div class="rcard-notes">
+      <div class="rcard-notes-title">Observações</div>
+      <div class="rcard-notes-text">${[r.obs,r.just].filter(Boolean).join('<br><br>')}</div>
+    </div>`:'';
+
+  const meta=[
+    {l:'D.O.B', v:r.dob?`${fmtDate(r.dob)} (${calcAge(r.dob)})`:'—'},
+    {l:'Nac.', v:r.nac||'—'},
+    {l:'Pé', v:r.pe||'—'},
+    {l:'Altura', v:r.alt?`${r.alt} cm`:'—'},
+    {l:'Físico', v:r.fis||'—'},
+    ...(r.tm?[{l:'TM',v:r.tm,gld:true}]:[]),
+  ];
+
+  return `
+    <div class="rcard" id="rc_${r.id}">
+      <div class="rcard-header">
+        <div class="rcard-hdr-left">
+          ${r.data?`<span class="rcard-date">${fmtDate(r.data)}</span>`:''}
+          ${matchLine?`<span class="rcard-game">${matchLine}</span>`:''}
+          ${r.placar?`<span class="rcard-score">${r.placar}</span>`:''}
+        </div>
+        <span class="rcard-scout">${r.scout?'Scout: '+r.scout:''}</span>
+      </div>
+      <div class="rcard-body">
+        <div class="rcard-left">
+          <div class="rcard-photo">${photoHtml}
+            <div class="rcard-pos-tag"><div class="rcard-pos">${r.pos||'Campo'}</div></div>
+          </div>
+          <div class="rcard-meta">
+            ${meta.map(m=>`<div class="rcard-meta-row"><span class="rcard-meta-lbl">${m.l}</span><span class="rcard-meta-val${m.gld?' gld':''}">${m.v}</span></div>`).join('')}
+          </div>
+        </div>
+        <div class="rcard-right">
+          <div class="rcard-name-area">
+            ${r.clube?`<div class="rcard-club">${r.clube}</div>`:''}
+            <div class="rcard-name">${r.nome}</div>
+            ${r.nac||r.pos?`<div class="rcard-namesub">${[r.nac,r.pos].filter(Boolean).join(' · ')}</div>`:''}
+          </div>
+          ${attrsHtml}
+          ${swHtml}
+          ${notesHtml}
+        </div>
+      </div>
+      <div class="rcard-footer">
+        <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">
+          ${r.rec?`<span class="rcard-rec rec-${r.rec}">${recLabel[r.rec]||r.rec}</span>`:''}
+          ${r.prio?`<span style="font-size:.7rem;color:var(--muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase">Prioridade: <strong style="color:var(--text)">${r.prio}</strong></span>`:''}
+        </div>
+        <div style="display:flex;align-items:center;gap:.8rem">
+          ${r.nota?`<div class="rcard-overall"><span class="rcard-overall-lbl">Nota</span><span class="rcard-overall-num">${r.nota}</span></div>`:''}
+          <div class="rcard-footer-actions">
+            <button class="rcard-edit-btn" onclick="editReport('${r.id}')">✏ Editar</button>
+            <button class="rcard-del-btn" onclick="confirmDelete('${r.id}')">✕</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function editReport(repId){
+  const rep=getReports(currentCompId).find(r=>r.id===repId);
+  if(!rep) return;
+  editingReportId=repId;
+  switchMTab('form');
+  renderModalForm(rep);
+}
+
+function confirmDelete(repId){
+  if(!confirm('Excluir este relatório?')) return;
+  deleteReport(currentCompId, repId);
+  document.getElementById('mRepCount').textContent=(REPORTS[currentCompId]||[]).length;
+  renderModalList();
+}
+
+/* ══════════════════════════════════════════
+   CAL MUTATIONS
+══════════════════════════════════════════ */
+function updateScout(id,slot,value){
+  const comp=DATA.find(c=>c.id===id);if(!comp)return;
+  comp.scouts=comp.scouts.slice();
+  while(comp.scouts.length<=slot)comp.scouts.push('');
+  comp.scouts[slot]=value;
+  comp.scouts=comp.scouts.filter((s,i)=>i<=Math.max(...comp.scouts.map((_,i)=>comp.scouts[i]?i:-1)));
+  saveData();renderViews();
+}
+
+function updateDate(id,field,value){
+  const comp=DATA.find(c=>c.id===id);
+  if(comp){comp[field]=value;saveData();renderViews();}
+}
+
+/* ══════════════════════════════════════════
+   STICKY TOPS
+══════════════════════════════════════════ */
+function fixStickyTops(){
+  const nav=document.querySelector('.nav');
+  const toolbar=document.querySelector('.toolbar');
+  const wrap=document.querySelector('.scroll-wrap');
+  if(!nav||!toolbar||!wrap)return;
+  const navH=nav.getBoundingClientRect().height;
+  const toolH=toolbar.getBoundingClientRect().height;
+  wrap.style.height=(window.innerHeight-navH-toolH)+'px';
+  const firstRow=wrap.querySelector('thead tr:first-child');
+  const rowH=firstRow?firstRow.getBoundingClientRect().height:27;
+  wrap.querySelectorAll('thead tr:first-child th').forEach(el=>el.style.top='0px');
+  wrap.querySelectorAll('thead tr:nth-child(2) th').forEach(el=>el.style.top=rowH+'px');
+  wrap.querySelectorAll('thead tr:first-child .hdr-name').forEach(el=>{el.style.top='0px';el.style.left='0px';});
+}
+window.addEventListener('resize',fixStickyTops);
+
+/* ══════════════════════════════════════════
+   BOOT
+══════════════════════════════════════════ */
+loadData();
+renderNav();
+renderViews();
+setTimeout(fixStickyTops,50);
+</script>
+</body>
+</html>
