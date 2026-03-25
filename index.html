@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Scout System 2026</title>
+<script>window._fbLoadErrors=0;</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js" onerror="window._fbLoadErrors++"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js" onerror="window._fbLoadErrors++"></script>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@300;400;600;700;800&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 /* ═══════════════════ CALENDAR (original) ═══════════════════ */
@@ -26,8 +29,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 table.cal{border-collapse:collapse;font-size:11px;min-width:900px;width:100%}
 .cal th,.cal td{border:0.5px solid #e0ded4}
 .cal .col-name{position:sticky;left:0;z-index:2;background:#fff;min-width:220px;max-width:260px;padding:2px 4px 2px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.cal .col-start,.cal .col-end{min-width:70px;padding:3px 5px;text-align:center;background:#ebf4fd;color:#0a3d6b;font-size:10px}
-.cal .col-s{min-width:82px;padding:2px 3px;text-align:center}
+.cal .col-start,.cal .col-end{min-width:120px;width:120px;padding:3px 5px;text-align:center;background:#ebf4fd;color:#0a3d6b;font-size:10px}
+.cal .col-s{min-width:58px;max-width:64px;width:60px;padding:2px 3px;text-align:center}
 .cal .col-s select{width:100%;border:none;background:transparent;font-size:10px;cursor:pointer;color:#1a1a18;padding:1px}
 .cal .period{width:20px;min-width:20px;height:22px;text-align:center;vertical-align:middle;font-size:7px;font-weight:500;cursor:default;padding:0}
 .cal .period.active{color:#fff}
@@ -65,6 +68,10 @@ th.hdr-col{background:#2c2c2a;color:#f1efe8;font-weight:500;padding:5px 4px;text
 .resumo-table .sub-hdr{font-size:9px;color:#5f5e5a;background:#f0eee8;font-weight:500}
 .resumo-table .r-grand{background:#2c2c2a;color:#f1efe8;font-weight:500}
 .save-badge{font-size:10px;color:#888780;padding:3px 8px;border-radius:4px;background:#f0eeea}
+.save-badge.syncing{background:#e8c84a22;color:#c89a00}
+.save-badge.synced{background:#4ae89022;color:#1a8040}
+.save-badge.error{background:#e84a4a22;color:#c00}
+.save-badge.local{background:#f0eeea;color:#888780}
 .sv-name{padding:4px 8px;font-size:12px;color:#1a1a18;min-width:220px;border:0.5px solid #e0ded4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px}
 .sv-col{padding:4px 6px;font-size:11px;color:#5f5e5a;border:0.5px solid #e0ded4;text-align:center;white-space:nowrap}
 .sv-dates{color:#0a3d6b;font-size:10px}
@@ -72,7 +79,7 @@ th.hdr-col{background:#2c2c2a;color:#f1efe8;font-weight:500;padding:5px 4px;text
 .sv-mhdr:nth-child(even){background:#e4e2d8}
 .sv-phdr{font-size:7px;color:#888780;background:#eeecea;padding:2px 0;text-align:center;width:20px;min-width:20px;overflow:hidden}
 .sv-phdr:nth-child(even){background:#f4f3ec}
-.date-input{border:1px solid #e0ded4;border-radius:4px;padding:2px 4px;font-size:10px;width:68px;text-align:center}
+.date-input{border:1px solid #e0ded4;border-radius:4px;padding:2px 4px;font-size:10px;width:110px;text-align:center}
 .cal thead tr:first-child th{position:sticky;top:0;z-index:4}
 .cal thead tr:nth-child(2) th{position:sticky;z-index:4}
 .cal thead tr:first-child .hdr-name{position:sticky;left:0;top:0;z-index:6}
@@ -382,6 +389,85 @@ th.hdr-col{background:#2c2c2a;color:#f1efe8;font-weight:500;padding:5px 4px;text
   body{background:#0b0d12}
   .rcard{page-break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
+
+/* ═══════════════════ SHORTLIST VIEW ═══════════════════ */
+.shortlist-wrap{padding:12px;overflow-x:auto}
+.shortlist-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.shortlist-filter{padding:4px 10px;border:0.5px solid #e0ded4;border-radius:6px;font-size:11px;background:#fff;cursor:pointer;transition:background .15s,border-color .15s}
+.shortlist-filter.active{background:#2c2c2a;color:#fff;border-color:#2c2c2a}
+.shortlist-filter:hover:not(.active){background:#f0eeea}
+.shortlist-search{padding:4px 10px;border:0.5px solid #e0ded4;border-radius:6px;font-size:11px;background:#fff;outline:none;min-width:160px}
+.shortlist-search:focus{border-color:#3a7bd5}
+.shortlist-count{font-size:11px;color:#888780;margin-left:auto}
+table.sl{border-collapse:collapse;font-size:11px;min-width:900px;width:100%}
+table.sl th,table.sl td{border:0.5px solid #e0ded4;padding:0}
+table.sl th{background:#2c2c2a;color:#f1efe8;font-weight:500;font-size:10px;padding:5px 8px;text-align:left;white-space:nowrap;cursor:pointer;user-select:none;position:sticky;top:0;z-index:2}
+table.sl th:hover{background:#3a3835}
+table.sl th.sort-asc::after{content:' ▲';font-size:8px;opacity:.8}
+table.sl th.sort-desc::after{content:' ▼';font-size:8px;opacity:.8}
+table.sl td{padding:4px 8px;vertical-align:middle;background:#fff}
+table.sl tr:nth-child(even) td{background:#f9f8f4}
+table.sl tr:hover td{background:#f0eeea;cursor:pointer}
+.sl-photo{width:32px;height:38px;border-radius:3px;object-fit:cover;object-position:top;display:block}
+.sl-photo-ph{width:32px;height:38px;border-radius:3px;background:#e8e6dc;display:flex;align-items:center;justify-content:center;font-size:14px;opacity:.4}
+.sl-name{font-weight:500;font-size:12px;color:#1a1a18;white-space:nowrap}
+.sl-sub{font-size:10px;color:#888780}
+.sl-pos{display:inline-block;background:#2c2c2a;color:#e8c84a;border-radius:3px;padding:1px 5px;font-size:9px;font-weight:700;letter-spacing:.06em}
+.sl-score{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px}
+.sl-rec{display:inline-block;border-radius:3px;padding:2px 6px;font-size:9px;font-weight:700;letter-spacing:.06em;white-space:nowrap}
+.sl-rec.A{background:rgba(74,232,144,.15);color:#1a8040;border:1px solid rgba(74,232,144,.3)}
+.sl-rec.B{background:rgba(58,123,213,.15);color:#1562B8;border:1px solid rgba(58,123,213,.3)}
+.sl-rec.C{background:rgba(232,200,74,.15);color:#b8860b;border:1px solid rgba(232,200,74,.3)}
+.sl-rec.D{background:rgba(232,74,74,.15);color:#c00;border:1px solid rgba(232,74,74,.3)}
+.sl-prio{font-size:10px;color:#5f5e5a}
+.sl-prio.High{color:#c00;font-weight:600}
+.sl-prio.Medium{color:#b8860b;font-weight:600}
+
+
+/* ═══════════════════ INDICADOS MODULE ═══════════════════ */
+.ind-wrap{padding:0}
+.ind-tabs{display:flex;background:#f0eeea;border-bottom:1px solid #e0ded4;padding:0 12px;gap:0}
+.ind-tab{padding:8px 18px;font-size:12px;font-weight:500;color:#888780;border:none;background:transparent;cursor:pointer;border-bottom:2px solid transparent;transition:color .15s,border-color .15s}
+.ind-tab.active{color:#1a1a18;border-bottom-color:#2c2c2a;font-weight:600}
+.ind-tab:hover:not(.active){color:#1a1a18}
+.ind-body{padding:0}
+.ind-controls-wrap{padding:10px 12px 6px;background:#fff;border-bottom:0.5px solid #e0ded4}
+.ind-table-wrap{overflow:auto;-webkit-overflow-scrolling:touch}
+.ind-controls{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.ind-filter-group{display:flex;gap:4px;align-items:center}
+.ind-filter-label{font-size:10px;color:#888780;font-weight:500;white-space:nowrap}
+.ind-select{padding:3px 8px;border:0.5px solid #e0ded4;border-radius:5px;font-size:11px;background:#fff;cursor:pointer;color:#1a1a18}
+.ind-search{padding:4px 10px;border:0.5px solid #e0ded4;border-radius:5px;font-size:11px;background:#fff;outline:none;min-width:150px}
+.ind-search:focus{border-color:#3a7bd5}
+.ind-add-btn{padding:5px 14px;background:#2c2c2a;color:#fff;border:none;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;transition:opacity .15s}
+.ind-add-btn:hover{opacity:.85}
+.ind-count{font-size:11px;color:#888780;margin-left:auto}
+table.ind-table{border-collapse:collapse;font-size:11px;min-width:1000px;width:100%}
+table.ind-table th,table.ind-table td{border:0.5px solid #e0ded4;padding:0}
+table.ind-table th{background:#2c2c2a;color:#f1efe8;font-weight:500;font-size:10px;padding:5px 8px;text-align:left;white-space:nowrap;cursor:pointer;user-select:none;position:sticky;top:0;z-index:2}
+table.ind-table th:hover{background:#3a3835}
+table.ind-table th.sort-asc::after{content:' ▲';font-size:8px;opacity:.8}
+table.ind-table th.sort-desc::after{content:' ▼';font-size:8px;opacity:.8}
+table.ind-table td{padding:5px 8px;vertical-align:middle;background:#fff}
+table.ind-table tr:nth-child(even) td{background:#f9f8f4}
+table.ind-table tr:hover td{background:#f0eeea;cursor:pointer}
+.ind-aval{display:inline-block;border-radius:3px;padding:2px 6px;font-size:9px;font-weight:700;letter-spacing:.04em;white-space:nowrap}
+.ind-aval.a-team{background:rgba(74,232,144,.15);color:#1a8040;border:1px solid rgba(74,232,144,.3)}
+.ind-aval.squad{background:rgba(58,123,213,.15);color:#1562B8;border:1px solid rgba(58,123,213,.3)}
+.ind-aval.youth{background:rgba(232,200,74,.15);color:#b8860b;border:1px solid rgba(232,200,74,.3)}
+.ind-aval.descartado{background:rgba(232,74,74,.15);color:#c00;border:1px solid rgba(232,74,74,.3)}
+.ind-aval.monitorando{background:rgba(150,150,150,.12);color:#555;border:1px solid rgba(150,150,150,.3)}
+.ind-pos{display:inline-block;background:#2c2c2a;color:#e8ecf3;border-radius:3px;padding:1px 5px;font-size:9px;font-weight:700;white-space:nowrap}
+/* Indicados Form Modal */
+#indModal{position:fixed;inset:0;z-index:2000;display:none;align-items:flex-start;justify-content:center;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);overflow-y:auto;padding:20px}
+#indModal.open{display:flex}
+.ind-modal-panel{background:#0b0d12;width:100%;max-width:860px;border-radius:10px;overflow:hidden;animation:slideUp .2s ease;margin:auto}
+.ind-modal-hdr{background:#181c27;border-bottom:1px solid #222840;padding:.9rem 1.4rem;display:flex;align-items:center;justify-content:space-between}
+.ind-modal-title{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1rem;letter-spacing:.06em;text-transform:uppercase;color:#e8ecf3}
+.ind-modal-close{background:transparent;border:1px solid #222840;color:#5a6278;border-radius:5px;padding:.3rem .7rem;font-size:.75rem;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-weight:700}
+.ind-modal-close:hover{background:#e84a4a;border-color:#e84a4a;color:#fff}
+.ind-modal-body{padding:1.2rem 1.4rem 2rem}
+
 </style>
 </head>
 <body>
@@ -424,7 +510,7 @@ const SCOUT_COLORS={
   Brunno:{soft:'#F5C86A',strong:'#D07000',text:'#7A3D00',btn:'#E8940A'},
   Cristian:{soft:'#90C4F0',strong:'#1562B8',text:'#042C53',btn:'#1562B8'},
   Gabriel:{soft:'#8ED4A4',strong:'#1A8038',text:'#04342C',btn:'#1A8038'},
-  Humberto:{soft:'#C4A4E8',strong:'#7030A8',text:'#26215C',btn:'#7030A8'}
+  Humberto:{soft:'#D4909A',strong:'#7a1830',text:'#3d0010',btn:'#8B1A2E'}
 };
 const MULTI_COLOR='#2c2c2a';
 const ALT=['#eeece9','#f4f3ec'];
@@ -438,20 +524,28 @@ for(let m=0;m<12;m++){
   for(let p=0;p<3;p++) PERIODS.push({m,p,label:p===0?'1':p===1?'11':'21',start:new Date(2026,m,starts[p]),end:new Date(2026,m,days[p])});
 }
 
-const ATTRS=[
-  {key:'tecnica',     label:'Técnica'},
-  {key:'velocidade',  label:'Velocidade'},
-  {key:'fisico',      label:'Físico / Duelo'},
-  {key:'posicion',    label:'Posicionamento'},
-  {key:'decisao',     label:'Tomada de Decisão'},
-  {key:'passe',       label:'Passe / Distribuição'},
-  {key:'drible',      label:'Drible / 1x1'},
-  {key:'aereo',       label:'Jogo Aéreo'},
-  {key:'visao',       label:'Visão de Jogo'},
-  {key:'intensidade', label:'Intensidade'},
-  {key:'defensivo',   label:'Trabalho Defensivo'},
-  {key:'mental',      label:'Mental / Liderança'},
+const ATTRS_GK=[
+  {key:'gk_1v1',   label:'1v1 Defending'},
+  {key:'gk_feet',  label:'Footwork'},
+  {key:'gk_dist',  label:'Distribution'},
+  {key:'gk_shot',  label:'Shot Stopping'},
+  {key:'gk_kick',  label:'Goal Kicks / Restarts'},
 ];
+const ATTRS_FIELD=[
+  {key:'tecnica',     label:'Technique'},
+  {key:'velocidade',  label:'Speed / Acceleration'},
+  {key:'fisico',      label:'Physical / Duel'},
+  {key:'posicion',    label:'Positioning'},
+  {key:'decisao',     label:'Decision Making'},
+  {key:'passe',       label:'Passing / Distribution'},
+  {key:'drible',      label:'Dribbling / 1v1'},
+  {key:'aereo',       label:'Aerial Game'},
+  {key:'visao',       label:'Vision / Awareness'},
+  {key:'intensidade', label:'Work Rate / Pressing'},
+  {key:'defensivo',   label:'Defensive Work'},
+  {key:'mental',      label:'Mentality / Leadership'},
+];
+function getAttrs(pos){ return pos==='GK' ? ATTRS_GK : ATTRS_FIELD; }
 
 let DATA=[{"id": 0, "group": "BRASIL", "subgroup": "Profissional", "name": "Brasileiro Série A", "country": "Brasil", "level": "Profissional", "start": "2026-01-01", "end": "2026-12-31", "scouts": []}, {"id": 1, "group": "BRASIL", "subgroup": "Profissional", "name": "Brasileiro Série B", "country": "Brasil", "level": "Profissional", "start": "2026-03-01", "end": "2026-11-30", "scouts": []}, {"id": 2, "group": "BRASIL", "subgroup": "Profissional", "name": "Brasileiro Série C", "country": "Brasil", "level": "Profissional", "start": "2026-04-01", "end": "2026-10-31", "scouts": []}, {"id": 3, "group": "BRASIL", "subgroup": "Profissional", "name": "Brasileiro Série D", "country": "Brasil", "level": "Profissional", "start": "2026-04-01", "end": "2026-09-30", "scouts": []}, {"id": 4, "group": "BRASIL", "subgroup": "Profissional", "name": "Campeonato Gaúcho", "country": "Brasil", "level": "Profissional", "start": "2026-01-01", "end": "2026-03-31", "scouts": []}, {"id": 5, "group": "BRASIL", "subgroup": "Profissional", "name": "Campeonato Gaúcho A2", "country": "Brasil", "level": "Profissional", "start": "2026-01-01", "end": "2026-03-31", "scouts": []}, {"id": 6, "group": "BRASIL", "subgroup": "Profissional", "name": "Campeonato Catarinense", "country": "Brasil", "level": "Profissional", "start": "2026-01-01", "end": "2026-03-31", "scouts": []}, {"id": 7, "group": "BRASIL", "subgroup": "Profissional", "name": "Campeonato Catarinense A2", "country": "Brasil", "level": "Profissional", "start": "2026-01-01", "end": "2026-03-31", "scouts": []}, {"id": 8, "group": "BRASIL", "subgroup": "Profissional", "name": "Campeonato Paranaense", "country": "Brasil", "level": "Profissional", "start": "2026-01-01", "end": "2026-03-31", "scouts": []}, {"id": 9, "group": "BRASIL", "subgroup": "Profissional", "name": "Campeonato Paranaense A2", "country": "Brasil", "level": "Profissional", "start": "2026-01-01", "end": "2026-03-31", "scouts": []}, {"id": 10, "group": "BRASIL", "subgroup": "Profissional", "name": "Campeonato Carioca", "country": "Brasil", "level": "Profissional", "start": "2026-01-01", "end": "2026-03-31", "scouts": []}, {"id": 11, "group": "BRASIL", "subgroup": "Profissional", "name": "Campeonato Carioca A2", "country": "Brasil", "level": "Profissional", "start": "2026-01-01", "end": "2026-03-31", "scouts": []}, {"id": 12, "group": "BRASIL", "subgroup": "Profissional", "name": "Campeonato Paulista", "country": "Brasil", "level": "Profissional", "start": "2026-01-01", "end": "2026-03-31", "scouts": []}, {"id": 13, "group": "BRASIL", "subgroup": "Profissional", "name": "Campeonato Paulista A2", "country": "Brasil", "level": "Profissional", "start": "2026-01-01", "end": "2026-03-31", "scouts": []}, {"id": 14, "group": "BRASIL", "subgroup": "Profissional", "name": "Campeonato Mineiro", "country": "Brasil", "level": "Profissional", "start": "2026-01-01", "end": "2026-03-31", "scouts": []}, {"id": 15, "group": "BRASIL", "subgroup": "Profissional", "name": "Campeonato Baiano", "country": "Brasil", "level": "Profissional", "start": "2026-01-01", "end": "2026-03-31", "scouts": []}, {"id": 16, "group": "BRASIL", "subgroup": "Profissional", "name": "Campeonato Goiano", "country": "Brasil", "level": "Profissional", "start": "2026-01-01", "end": "2026-03-31", "scouts": []}, {"id": 17, "group": "BRASIL", "subgroup": "Profissional", "name": "Copa Verde", "country": "Brasil", "level": "Profissional", "start": "2026-03-01", "end": "2026-06-30", "scouts": []}, {"id": 18, "group": "BRASIL", "subgroup": "Profissional", "name": "Copa Sul-Sudeste", "country": "Brasil", "level": "Profissional", "start": "2026-03-01", "end": "2026-06-30", "scouts": []}, {"id": 19, "group": "BRASIL", "subgroup": "Profissional", "name": "Copa do Nordeste", "country": "Brasil", "level": "Profissional", "start": "2026-03-01", "end": "2026-06-30", "scouts": []}, {"id": 20, "group": "BRASIL", "subgroup": "Profissional", "name": "Copa RS", "country": "Brasil", "level": "Profissional", "start": "2026-05-01", "end": "2026-07-31", "scouts": []}, {"id": 21, "group": "BRASIL", "subgroup": "Profissional", "name": "Copa Rio", "country": "Brasil", "level": "Profissional", "start": "2026-06-01", "end": "2026-09-30", "scouts": []}, {"id": 22, "group": "BRASIL", "subgroup": "Profissional", "name": "Copa Paulista", "country": "Brasil", "level": "Profissional", "start": "2026-02-01", "end": "2026-05-31", "scouts": []}, {"id": 23, "group": "BRASIL", "subgroup": "Profissional", "name": "Copa Santa Catarina", "country": "Brasil", "level": "Profissional", "start": "2026-09-01", "end": "2026-11-30", "scouts": []}, {"id": 24, "group": "BRASIL", "subgroup": "Profissional", "name": "Copa do Brasil", "country": "Brasil", "level": "Profissional", "start": "2026-02-01", "end": "2026-12-31", "scouts": []}, {"id": 25, "group": "BRASIL", "subgroup": "Profissional", "name": "Supercopa do Brasil", "country": "Brasil", "level": "Profissional", "start": "2026-02-01", "end": "2026-02-28", "scouts": []}, {"id": 26, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Campeonato Brasileiro U20 A", "country": "Brasil", "level": "Base", "start": "2026-02-01", "end": "2026-09-30", "scouts": []}, {"id": 27, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Campeonato Brasileiro U20 B", "country": "Brasil", "level": "Base", "start": "2026-04-01", "end": "2026-09-30", "scouts": []}, {"id": 28, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Campeonato Brasileiro U17", "country": "Brasil", "level": "Base", "start": "2026-02-01", "end": "2026-05-31", "scouts": []}, {"id": 29, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Copa do Brasil U20", "country": "Brasil", "level": "Base", "start": "2026-09-01", "end": "2026-12-31", "scouts": []}, {"id": 30, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Copa do Brasil U17", "country": "Brasil", "level": "Base", "start": "2026-02-01", "end": "2026-05-31", "scouts": []}, {"id": 31, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Copa Santiago RS U17", "country": "Brasil", "level": "Base", "start": "2026-01-01", "end": "2026-01-31", "scouts": []}, {"id": 32, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Copa São Paulo U20", "country": "Brasil", "level": "Base", "start": "2026-01-01", "end": "2026-01-31", "scouts": []}, {"id": 33, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "EFIPAN U15", "country": "Brasil", "level": "Base", "start": "2026-01-01", "end": "2026-01-31", "scouts": []}, {"id": 34, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Copa Sul U20", "country": "Brasil", "level": "Base", "start": "2026-04-01", "end": "2026-12-31", "scouts": []}, {"id": 35, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Copa Sul U17", "country": "Brasil", "level": "Base", "start": "2026-04-01", "end": "2026-12-31", "scouts": []}, {"id": 36, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Copa Gramado U16", "country": "Brasil", "level": "Base", "start": "2026-10-01", "end": "2026-10-31", "scouts": []}, {"id": 37, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Campeonato Gaúcho U20", "country": "Brasil", "level": "Base", "start": "2026-03-01", "end": "2026-07-31", "scouts": []}, {"id": 38, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Campeonato Gaúcho U20 A2", "country": "Brasil", "level": "Base", "start": "2026-05-01", "end": "2026-08-31", "scouts": []}, {"id": 39, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Campeonato Gaúcho U17", "country": "Brasil", "level": "Base", "start": "2026-03-01", "end": "2026-06-30", "scouts": []}, {"id": 40, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Campeonato Gaúcho U17 A2", "country": "Brasil", "level": "Base", "start": "2026-07-01", "end": "2026-11-30", "scouts": []}, {"id": 41, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Liga Serrana U19", "country": "Brasil", "level": "Base", "start": "2026-02-01", "end": "2026-12-31", "scouts": []}, {"id": 42, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Campeonato Catarinense U20", "country": "Brasil", "level": "Base", "start": "2026-04-01", "end": "2026-08-31", "scouts": []}, {"id": 43, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Campeonato Catarinense U21", "country": "Brasil", "level": "Base", "start": "2026-02-01", "end": "2026-04-30", "scouts": []}, {"id": 44, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Campeonato Catarinense U17", "country": "Brasil", "level": "Base", "start": "2026-03-01", "end": "2026-08-31", "scouts": []}, {"id": 45, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Copa Santa Catarina U20", "country": "Brasil", "level": "Base", "start": "2026-09-01", "end": "2026-11-30", "scouts": []}, {"id": 46, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Campeonato Carioca U20", "country": "Brasil", "level": "Base", "start": "2026-05-01", "end": "2026-08-31", "scouts": []}, {"id": 47, "group": "BRASIL BASE", "subgroup": "Sub / Base", "name": "Campeonato Paulista U20", "country": "Brasil", "level": "Base", "start": "2026-04-01", "end": "2026-11-30", "scouts": []}, {"id": 48, "group": "AMERICA DO SUL PRO", "subgroup": "Profissional", "name": "Campeonato Uruguaio", "country": "Uruguai", "level": "Profissional", "start": "2026-02-01", "end": "2026-12-31", "scouts": []}, {"id": 49, "group": "AMERICA DO SUL PRO", "subgroup": "Profissional", "name": "Campeonato Uruguaio 2a", "country": "Uruguai", "level": "Profissional", "start": "2026-02-01", "end": "2026-12-31", "scouts": []}, {"id": 50, "group": "AMERICA DO SUL PRO", "subgroup": "Profissional", "name": "Torneo de Verano", "country": "Uruguai", "level": "Profissional", "start": "2026-01-01", "end": "2026-01-31", "scouts": []}, {"id": 51, "group": "AMERICA DO SUL PRO", "subgroup": "Profissional", "name": "Campeonato Argentino", "country": "Argentina", "level": "Profissional", "start": "2026-01-01", "end": "2026-12-31", "scouts": []}, {"id": 52, "group": "AMERICA DO SUL PRO", "subgroup": "Profissional", "name": "Campeonato Argentino 2a", "country": "Argentina", "level": "Profissional", "start": "2026-02-01", "end": "2026-11-30", "scouts": []}, {"id": 53, "group": "AMERICA DO SUL PRO", "subgroup": "Profissional", "name": "Torneo Proyección", "country": "Argentina", "level": "Profissional", "start": "2026-01-01", "end": "2026-12-31", "scouts": []}, {"id": 54, "group": "AMERICA DO SUL PRO", "subgroup": "Profissional", "name": "Campeonato Colombiano", "country": "Colômbia", "level": "Profissional", "start": "2026-01-01", "end": "2026-12-31", "scouts": []}, {"id": 55, "group": "AMERICA DO SUL PRO", "subgroup": "Profissional", "name": "Campeonato Colombiano 2a", "country": "Colômbia", "level": "Profissional", "start": "2026-01-01", "end": "2026-11-30", "scouts": []}, {"id": 56, "group": "AMERICA DO SUL PRO", "subgroup": "Profissional", "name": "Campeonato Equatoriano", "country": "Equador", "level": "Profissional", "start": "2026-02-01", "end": "2026-11-30", "scouts": []}, {"id": 57, "group": "AMERICA DO SUL PRO", "subgroup": "Profissional", "name": "Campeonato Equatoriano 2a", "country": "Equador", "level": "Profissional", "start": "2026-02-01", "end": "2026-11-30", "scouts": []}, {"id": 58, "group": "AMERICA DO SUL PRO", "subgroup": "Profissional", "name": "Campeonato Paraguaio", "country": "Paraguai", "level": "Profissional", "start": "2026-01-01", "end": "2026-12-31", "scouts": []}, {"id": 59, "group": "AMERICA DO SUL PRO", "subgroup": "Profissional", "name": "Campeonato Chileno", "country": "Chile", "level": "Profissional", "start": "2026-01-01", "end": "2026-12-31", "scouts": []}, {"id": 60, "group": "AMERICA DO SUL PRO", "subgroup": "Profissional", "name": "Campeonato Chileno 2a", "country": "Chile", "level": "Profissional", "start": "2026-02-01", "end": "2026-11-30", "scouts": []}, {"id": 61, "group": "AMERICA DO SUL PRO", "subgroup": "Profissional", "name": "Copa Libertadores da América", "country": "América do Sul", "level": "Profissional", "start": "2026-02-01", "end": "2026-11-30", "scouts": []}, {"id": 62, "group": "AMERICA DO SUL PRO", "subgroup": "Profissional", "name": "Copa Sul-Americana", "country": "América do Sul", "level": "Profissional", "start": "2026-04-01", "end": "2026-11-30", "scouts": []}, {"id": 63, "group": "AMERICA DO SUL PRO", "subgroup": "Profissional", "name": "Recopa Sul-Americana", "country": "América do Sul", "level": "Profissional", "start": "2026-03-01", "end": "2026-03-31", "scouts": []}, {"id": 64, "group": "AMERICA DO SUL BASE", "subgroup": "Seleções Sub", "name": "Copa Libertadores U20", "country": "Equador", "level": "Base", "start": "2026-03-01", "end": "2026-03-31", "scouts": []}, {"id": 65, "group": "AMERICA DO SUL BASE", "subgroup": "Seleções Sub", "name": "Torneio Sul-Americano U17", "country": "Paraguai", "level": "Base", "start": "2026-04-01", "end": "2026-04-30", "scouts": []}, {"id": 66, "group": "AMERICA DO SUL BASE", "subgroup": "Seleções Sub", "name": "Copa Jovenes Promesas U17", "country": "Argentina", "level": "Base", "start": "2026-02-01", "end": "2026-02-28", "scouts": []}, {"id": 67, "group": "AMERICA DO SUL BASE", "subgroup": "Seleções Sub", "name": "Copa UC U17", "country": "Chile", "level": "Base", "start": "2026-12-01", "end": "2026-12-31", "scouts": []}, {"id": 68, "group": "AMERICA DO SUL BASE", "subgroup": "Seleções Sub", "name": "Torneio AUCAS First U16-U19", "country": "Equador", "level": "Base", "start": "2026-03-01", "end": "2026-03-31", "scouts": []}, {"id": 69, "group": "AMERICA DO SUL BASE", "subgroup": "Seleções Sub", "name": "Torneio AUCAS Second U16-U19", "country": "Equador", "level": "Base", "start": "2026-05-01", "end": "2026-06-30", "scouts": []}, {"id": 70, "group": "AMERICA DO SUL BASE", "subgroup": "Seleções Sub", "name": "Torneio Las Americas U17/U19", "country": "Colômbia", "level": "Base", "start": "2026-10-01", "end": "2026-10-31", "scouts": []}, {"id": 71, "group": "AMERICA DO SUL BASE", "subgroup": "Seleções Sub", "name": "Torneio Pioneros U16", "country": "Uruguai", "level": "Base", "start": "2026-02-01", "end": "2026-02-28", "scouts": []}, {"id": 72, "group": "AMERICA DO SUL BASE", "subgroup": "Seleções Sub", "name": "Copa Por La Paz U18", "country": "Colômbia", "level": "Base", "start": "2026-12-01", "end": "2026-12-31", "scouts": []}, {"id": 73, "group": "AMERICA DO SUL BASE", "subgroup": "Seleções Sub", "name": "Copa Imposible U17", "country": "Colômbia", "level": "Base", "start": "2026-05-01", "end": "2026-05-31", "scouts": []}, {"id": 74, "group": "AMERICA DO SUL BASE", "subgroup": "Seleções Sub", "name": "Torneio Mitad Del Mundo U18", "country": "Equador", "level": "Base", "start": "2026-05-01", "end": "2026-06-30", "scouts": []}, {"id": 75, "group": "AMERICAS MUNDO", "subgroup": "Internacional", "name": "Campeonato Mexicano", "country": "México", "level": "Profissional", "start": "2026-01-01", "end": "2026-12-31", "scouts": []}, {"id": 76, "group": "AMERICAS MUNDO", "subgroup": "Internacional", "name": "Campeonato Mexicano 2a", "country": "México", "level": "Profissional", "start": "2026-01-01", "end": "2026-12-31", "scouts": []}, {"id": 77, "group": "AMERICAS MUNDO", "subgroup": "Internacional", "name": "Major League Soccer", "country": "EUA", "level": "Profissional", "start": "2026-02-01", "end": "2026-12-31", "scouts": []}, {"id": 78, "group": "AMERICAS MUNDO", "subgroup": "Internacional", "name": "Campeonato Português", "country": "Portugal", "level": "Profissional", "start": "2026-08-01", "end": "2026-12-31", "scouts": []}, {"id": 79, "group": "AMERICAS MUNDO", "subgroup": "Internacional", "name": "Campeonato Português 2a", "country": "Portugal", "level": "Profissional", "start": "2026-08-01", "end": "2026-12-31", "scouts": []}, {"id": 80, "group": "AMERICAS MUNDO", "subgroup": "Internacional", "name": "Copa do Mundo", "country": "Internacional", "level": "Profissional", "start": "2026-06-01", "end": "2026-07-31", "scouts": []}, {"id": 81, "group": "AMERICAS MUNDO", "subgroup": "Internacional", "name": "Concacaf U20", "country": "América Central", "level": "Base", "start": "2026-07-01", "end": "2026-08-31", "scouts": []}, {"id": 82, "group": "AMERICAS MUNDO", "subgroup": "Internacional", "name": "Concacaf U17", "country": "América Central", "level": "Base", "start": "2026-02-01", "end": "2026-02-28", "scouts": []}, {"id": 83, "group": "AMERICAS MUNDO", "subgroup": "Internacional", "name": "Mundial U17", "country": "Internacional", "level": "Base", "start": "2026-11-01", "end": "2026-11-30", "scouts": []}, {"id": 84, "group": "AMERICAS MUNDO", "subgroup": "Datas FIFA", "name": "Data FIFA 1", "country": "Internacional", "level": "Profissional", "start": "2026-03-01", "end": "2026-03-31", "scouts": []}, {"id": 85, "group": "AMERICAS MUNDO", "subgroup": "Datas FIFA", "name": "Data FIFA 2", "country": "Internacional", "level": "Profissional", "start": "2026-06-01", "end": "2026-06-30", "scouts": []}, {"id": 86, "group": "AMERICAS MUNDO", "subgroup": "Datas FIFA", "name": "Data FIFA 3", "country": "Internacional", "level": "Profissional", "start": "2026-09-01", "end": "2026-10-31", "scouts": []}, {"id": 87, "group": "AMERICAS MUNDO", "subgroup": "Datas FIFA", "name": "Data FIFA 4", "country": "Internacional", "level": "Profissional", "start": "2026-11-01", "end": "2026-11-30", "scouts": []}, {"id": 88, "group": "AMERICAS MUNDO", "subgroup": "Janelas", "name": "Janela de Transferência 1", "country": "Internacional", "level": "Profissional", "start": "2026-01-05", "end": "2026-03-03", "scouts": []}, {"id": 89, "group": "AMERICAS MUNDO", "subgroup": "Janelas", "name": "Janela de Transferência 2", "country": "Internacional", "level": "Profissional", "start": "2026-07-20", "end": "2026-09-11", "scouts": []}, {"id": 90, "group": "AMERICAS MUNDO", "subgroup": "Janelas", "name": "Janela Transf. Especial", "country": "Internacional", "level": "Profissional", "start": "2026-03-03", "end": "2026-03-27", "scouts": []}];
 
@@ -462,25 +556,169 @@ let currentMTab='form';
 let editingReportId=null;
 let mScores={};         // current form dot scores
 
+/* ══ INDICADOS STATE ══ */
+let IND_JOG={};     // { id: {...} }
+let IND_TRE={};     // { id: {...} }
+let indTab='jog';   // 'jog' | 'tre'
+let indSortJog={col:'data',dir:'desc'};
+let indSortTre={col:'data',dir:'desc'};
+let indFilters={ano:'',pos:'',aval:'',resp:'',search:''};
+let indFiltersTre={ano:'',search:''};
+let editingIndId=null;
+
 /* ══════════════════════════════════════════
    STORAGE
 ══════════════════════════════════════════ */
-function loadData(){
+const SEED_REPORTS={64:[
+  {id:'seed_nannetti',data:'2026-03-24',timeA:'Flamengo',timeB:'Santiago Wanderers',placar:'1-1',scout:'Gabriel',
+   nome:'Leonardo Nannetti Lopes',dob:'2007-08-21',nac:'Brasil',clube:'Flamengo',pos:'GK',pe:'Left',alt:'191',fis:'Athletic',
+   contrato:'',tm:'',tmLink:'',ogolLink:'https://www.ogol.com.br/jogador/leo-nannetti/1047824',agencia:'',agenciaContato:'',
+   scores:{tecnica:8,velocidade:7,fisico:9,posicion:4,decisao:7,passe:9,drible:8,aereo:9,visao:7,intensidade:7,defensivo:7,mental:7},
+   photo:null,forcas:'General Saves\nAerial Exits\nBody type\n1x1 exits',fraquezas:'Distribution\nFoot Work',
+   obs:'',rec:'B',prio:'Medium',nota:'8',just:''},
+  {id:'seed_kauan',data:'2025-03-24',timeA:'Palmeiras',timeB:'Flamengo',placar:'2-2',scout:'Gabriel',
+   nome:'Kauan Lima da Cunha',dob:'2007-02-14',nac:'Brasil',clube:'Palmeiras',pos:'GK',pe:'Left',alt:'195',fis:'Strong',
+   contrato:'',tm:'',tmLink:'',ogolLink:'https://www.ogol.com.br/jogador/kauan-lima/1023414',agencia:'',agenciaContato:'',
+   scores:{tecnica:8,velocidade:7,fisico:7,posicion:0,decisao:7,passe:8,drible:1,aereo:8,visao:8,intensidade:9,defensivo:9,mental:9},
+   photo:null,forcas:'General Saves\n1x1 exits\nBody type\nSecurity',fraquezas:'Decision Making',
+   obs:'',rec:'C',prio:'Low',nota:'7',just:''},
+  {id:'seed_juan',data:'2026-03-24',timeA:'Nacional-URU',timeB:'Palmeiras',placar:'1-0',scout:'Gabriel',
+   nome:'Juan Felipe Bianchi Chebataroff',dob:'2006-02-16',nac:'Uruguai',clube:'Nacional-URU',pos:'GK',pe:'Right',alt:'192',fis:'Robust',
+   contrato:'',tm:'',tmLink:'',ogolLink:'https://www.ogol.com.br/jogador/juan-bianchi/3522843',agencia:'',agenciaContato:'',
+   scores:{tecnica:9,velocidade:10,fisico:0,posicion:8,decisao:6,passe:7,drible:9,aereo:9,visao:9,intensidade:9,defensivo:10,mental:5},
+   photo:null,forcas:'Bodytype\nGeneral Saves\nBrave\nStrength',fraquezas:'Agility\nDistribution\nFoot Work',
+   obs:'',rec:'A',prio:'High',nota:'9',just:''}
+]};
+
+function seedIfEmpty(){
+  Object.entries(SEED_REPORTS).forEach(([cid,players])=>{
+    const id=parseInt(cid);
+    if(!REPORTS[id]||REPORTS[id].length===0) REPORTS[id]=players;
+  });
+}
+
+const FIREBASE_CONFIG={
+  apiKey:"AIzaSyBi4pOl1hkP8t-NcIMAhYuTGWtMcm290HE",
+  authDomain:"scout-system-2026.firebaseapp.com",
+  databaseURL:"https://scout-system-2026-default-rtdb.firebaseio.com",
+  projectId:"scout-system-2026",
+  storageBucket:"scout-system-2026.firebasestorage.app",
+  messagingSenderId:"152294931768",
+  appId:"1:152294931768:web:91362c2bb38ad25acd55cd"
+};
+let db=null,firebaseReady=false;
+
+function initFirebase(){
+  if(typeof firebase==='undefined'){
+    setSyncBadge('local','⚠ Local only');
+    loadDataLocal();renderNav();renderViews();setTimeout(fixStickyTops,50);return;
+  }
+  try{
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db=firebase.database();
+    setSyncBadge('syncing','⟳ Connecting…');
+    db.ref('cal').on('value',snap=>{
+      const val=snap.val();
+      if(val) Object.entries(val).forEach(([id,c])=>{
+        const f=DATA.find(x=>x.id===parseInt(id));
+        if(f){f.scouts=c.scouts||[];if(c.start)f.start=c.start;if(c.end)f.end=c.end;}
+      });
+      db.ref('reports').on('value',snapR=>{
+        REPORTS=snapR.val()||{};
+        const wasEmpty=!snapR.val();
+        seedIfEmpty();
+        if(wasEmpty) saveData();
+        setSyncBadge('synced','● Live');
+        if(!firebaseReady){
+          // First load — load indicados then full render
+          firebaseReady=true;
+          db.ref('ind_jog').on('value',snap=>{ IND_JOG=snap.val()||{}; if(currentView==='indicados') document.getElementById('views').innerHTML=renderIndicados(); });
+          db.ref('ind_tre').on('value',snap=>{ IND_TRE=snap.val()||{}; if(currentView==='indicados') document.getElementById('views').innerHTML=renderIndicados(); });
+          renderNav();renderViews();setTimeout(fixStickyTops,50);
+        } else {
+          // Subsequent update (e.g. another scout made a change)
+          // Only refresh report badges surgically — no full re-render
+          Object.keys(REPORTS).forEach(cid=>updateReportBadge(parseInt(cid)));
+          if(currentCompId!==null){
+            const el=document.getElementById('mRepCount');
+            if(el) el.textContent=(REPORTS[currentCompId]||[]).length;
+            if(currentMTab==='list') renderModalList();
+          }
+          // If shortlist is open, refresh it in place
+          if(currentView==='shortlist'){
+            document.getElementById('views').innerHTML=renderShortlist();
+          }
+        }
+      },err=>{setSyncBadge('error','✕ DB error');console.error(err);});
+    },err=>{
+      setSyncBadge('error','✕ DB error');console.error(err);
+      loadDataLocal();renderNav();renderViews();setTimeout(fixStickyTops,50);
+    });
+  }catch(e){
+    console.error(e);setSyncBadge('error','✕ Offline');
+    loadDataLocal();renderNav();renderViews();setTimeout(fixStickyTops,50);
+  }
+}
+
+function setSyncBadge(state,text){
+  const b=document.getElementById('save-badge');
+  if(!b)return;b.textContent=text;b.className='save-badge '+state;
+}
+
+function loadDataLocal(){
   try{
     const s=localStorage.getItem('scout_cal_2026');
-    if(s){const d=JSON.parse(s);d.forEach(c=>{const f=DATA.find(x=>x.id===c.id);if(f){f.scouts=c.scouts||[];f.start=c.start;f.end=c.end;}})}
+    if(s){const d=JSON.parse(s);d.forEach(c=>{const f=DATA.find(x=>x.id===c.id);if(f){f.scouts=c.scouts||[];f.start=c.start;f.end=c.end;}});}
     const r=localStorage.getItem('scout_reports_2026');
     if(r) REPORTS=JSON.parse(r);
   }catch(e){}
+  seedIfEmpty();
 }
 
 function saveData(){
-  try{
-    localStorage.setItem('scout_cal_2026',JSON.stringify(DATA.map(c=>({id:c.id,scouts:c.scouts,start:c.start,end:c.end}))));
-    localStorage.setItem('scout_reports_2026',JSON.stringify(REPORTS));
-  }catch(e){}
-  const b=document.getElementById('save-badge');
-  if(b) b.textContent='Salvo ✓';
+  if(db&&firebaseReady){
+    setSyncBadge('syncing','⟳ Saving…');
+    const cal={};DATA.forEach(c=>{cal[c.id]={scouts:c.scouts,start:c.start,end:c.end};});
+    db.ref('/').update({cal,reports:REPORTS})
+      .then(()=>setSyncBadge('synced','● Live'))
+      .catch(e=>{setSyncBadge('error','✕ Save failed');console.error(e);});
+  }else{
+    try{
+      localStorage.setItem('scout_cal_2026',JSON.stringify(DATA.map(c=>({id:c.id,scouts:c.scouts,start:c.start,end:c.end}))));
+      localStorage.setItem('scout_reports_2026',JSON.stringify(REPORTS));
+    }catch(e){}
+    setSyncBadge('local','⚠ Saved locally');
+  }
+}
+
+function exportData(){
+  const payload={version:1,exportedAt:new Date().toISOString(),
+    cal:DATA.map(c=>({id:c.id,scouts:c.scouts,start:c.start,end:c.end})),reports:REPORTS};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='scout_backup_'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();URL.revokeObjectURL(url);
+}
+
+function importData(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const payload=JSON.parse(e.target.result);
+      const cal=payload.cal||(payload.scout_cal_2026&&JSON.parse(payload.scout_cal_2026));
+      const reports=payload.reports||(payload.scout_reports_2026&&JSON.parse(payload.scout_reports_2026));
+      if(!cal&&!reports){alert('Invalid file.');return;}
+      if(!confirm('Import and replace all current data?'))return;
+      if(cal) cal.forEach(c=>{const f=DATA.find(x=>x.id===c.id);if(f){f.scouts=c.scouts||[];if(c.start)f.start=c.start;if(c.end)f.end=c.end;}});
+      if(reports) REPORTS=reports;
+      saveData();renderNav();renderViews();
+      alert('✓ Data imported!');
+    }catch(err){alert('Error: '+err.message);}
+    input.value='';
+  };
+  reader.readAsText(file);
 }
 
 function getReports(compId){ return REPORTS[compId]||[]; }
@@ -529,16 +767,24 @@ function cellColor(comp){
 
 function renderNav(){
   const nav=document.getElementById('nav');
-  const views=[{id:'cal',label:'Calendário'},...SCOUTS.map(s=>({id:'scout_'+s,label:s,color:SCOUT_COLORS[s].btn}))];
-  nav.innerHTML=views.map(v=>`<button class="nav-btn${currentView===v.id?' active':''}" style="background:${v.color||'#3a3835'};color:#fff" onclick="switchView('${v.id}')">${v.label}</button>`).join('');
+  const views=[{id:'cal',label:'Calendar'},{id:'shortlist',label:'⭐ Shortlist',color:'#6b3fa0'},{id:'indicados',label:'📋 Indicados',color:'#1a6e3a'},...SCOUTS.map(s=>({id:'scout_'+s,label:s,color:SCOUT_COLORS[s].btn}))];
+  nav.innerHTML=views.map((v,i)=>(i===1?'<span style="width:8px;display:inline-block"></span>':'')+`<button class="nav-btn${currentView===v.id?' active':''}" style="background:${v.color||'#3a3835'};color:#fff" onclick="switchView('${v.id}')">${v.label}</button>`).join('')
+    +`<div style="margin-left:auto;display:flex;gap:6px;align-items:center">
+        <button class="nav-btn" style="background:#3a3835;color:#e8c84a;font-size:11px" onclick="exportData()">⬇ Export</button>
+        <label class="nav-btn" style="background:#3a3835;color:#8ed4a4;font-size:11px;cursor:pointer">⬆ Import<input type="file" accept=".json" style="display:none" onchange="importData(this)"></label>
+      </div>`;
 }
 
 function switchView(id){currentView=id;renderNav();renderViews();}
-function renderViews(){
+function renderViews(preserveScroll){
   const views=document.getElementById('views');
-  if(currentView==='cal'){views.innerHTML=renderCal();setTimeout(fixStickyTops,10);}
+  const wrap=document.querySelector('.scroll-wrap');
+  const sx=wrap?wrap.scrollLeft:0,sy=wrap?wrap.scrollTop:0;
+  if(currentView==='cal'){views.innerHTML=renderCal();setTimeout(()=>{fixStickyTops();if(preserveScroll){const w=document.querySelector('.scroll-wrap');if(w){w.scrollLeft=sx;w.scrollTop=sy;}}},10);}
   else if(currentView==='resumo'){views.innerHTML=renderResumo();setTimeout(fixStickyTops,10);}
-  else{const s=currentView.replace('scout_','');views.innerHTML=renderScoutView(s);setTimeout(fixStickyTops,10);}
+  else if(currentView==='shortlist'){views.innerHTML=renderShortlist();setTimeout(fixStickyTops,10);}
+  else if(currentView==='indicados'){views.innerHTML=renderIndicados();setTimeout(()=>{fixStickyTops();if(indTab==='jog')renderIndJogTable();else renderIndTreTable();fixIndHeight();},10);}
+  else{const s=currentView.replace('scout_','');views.innerHTML=renderScoutView(s);setTimeout(()=>{fixStickyTops();if(preserveScroll){const w=document.querySelector('.scroll-wrap');if(w){w.scrollLeft=sx;w.scrollTop=sy;}}},10);}
 }
 
 function renderCal(){
@@ -649,7 +895,10 @@ function renderScoutView(scout){
         return `<td style="background:${act?color.soft:ALT[p.m%2]};width:18px;min-width:18px;height:26px;border:0.5px solid #e0ded4${isEnd?';border-right:1.5px solid #b4b2a9':''}"></td>`;
       }).join('');
       return `<tr style="background:${rowbg}">
-        <td class="sv-name">${comp.name}${reps?` <span style="background:#2c2c2a;color:#e8c84a;border-radius:10px;padding:0 5px;font-size:9px;font-weight:700">${reps}</span>`:''}</td>
+        <td class="sv-name" style="display:flex;align-items:center;gap:4px;max-width:240px">
+          <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${comp.name}</span>
+          <button class="btn-report${reps>0?' has-reports':''}" onclick="openModal(${comp.id})" style="flex-shrink:0">${reps>0?`📋 <span class='report-count'>${reps}</span>`:'📋'}</button>
+        </td>
         <td class="sv-col">${comp.country}</td>
         <td class="sv-col"><span class="level-${comp.level==='Base'?'base':'pro'}">${comp.level}</span></td>
         <td class="sv-col sv-dates">${comp.start?comp.start.slice(5).replace('-','/'):'?'} → ${comp.end?comp.end.slice(5).replace('-','/'):'?'}</td>
@@ -679,6 +928,658 @@ function renderScoutView(scout){
     </table>
     </div></div>`;
 }
+
+/* ══════════════════════════════════════════
+   INDICADOS — CONSTANTS
+══════════════════════════════════════════ */
+const IND_POSITIONS=['1 - GK','2 - RB','3 - LB','4 - RCB/LCB','5 - DM','6 - CM','7 - AM','8 - RW/LW','9 - CF'];
+const IND_AVAL_AGRUP=['APROVADO - A Team','APROVADO - Squad Player','APROVADO - Time B/RWD','APROVADO - Youth Player','APROVADO U20','Em Avaliação','Monitorando/Monitorar','Descartado'];
+const IND_RESPONSAVEIS=['Brunno','Cristian','Gabriel','Humberto'];
+const IND_ANOS=['2022','2023','2024','2025','2026'];
+
+function avalClass(v){
+  if(!v) return '';
+  const vl=v.toLowerCase();
+  if(vl.includes('a team')) return 'a-team';
+  if(vl.includes('squad') || vl.includes('time b')) return 'squad';
+  if(vl.includes('youth') || vl.includes('u20')) return 'youth';
+  if(vl.includes('descart')) return 'descartado';
+  if(vl.includes('monitor') || vl.includes('avalia')) return 'monitorando';
+  return '';
+}
+
+/* ══════════════════════════════════════════
+   INDICADOS — SAVE / DELETE
+══════════════════════════════════════════ */
+function saveIndJog(data){
+  IND_JOG[data.id]=data;
+  if(db&&firebaseReady) db.ref('ind_jog/'+data.id).set(data).then(()=>setSyncBadge('synced','● Live')).catch(e=>setSyncBadge('error','✕ Save failed'));
+  else try{localStorage.setItem('ind_jog',JSON.stringify(IND_JOG));}catch(e){}
+}
+function saveIndTre(data){
+  IND_TRE[data.id]=data;
+  if(db&&firebaseReady) db.ref('ind_tre/'+data.id).set(data).then(()=>setSyncBadge('synced','● Live')).catch(e=>setSyncBadge('error','✕ Save failed'));
+  else try{localStorage.setItem('ind_tre',JSON.stringify(IND_TRE));}catch(e){}
+}
+function deleteIndJog(id){
+  delete IND_JOG[id];
+  if(db&&firebaseReady) db.ref('ind_jog/'+id).remove();
+  else try{localStorage.setItem('ind_jog',JSON.stringify(IND_JOG));}catch(e){}
+}
+function deleteIndTre(id){
+  delete IND_TRE[id];
+  if(db&&firebaseReady) db.ref('ind_tre/'+id).remove();
+  else try{localStorage.setItem('ind_tre',JSON.stringify(IND_TRE));}catch(e){}
+}
+
+/* ══════════════════════════════════════════
+   INDICADOS — RENDER MAIN VIEW
+══════════════════════════════════════════ */
+function renderIndicados(){
+  const html = `<div class="view active">
+    <div class="toolbar" style="padding:8px 12px">
+      <div><h1>📋 Indicados</h1><p>Jogadores e Treinadores indicados por empresários</p></div>
+    </div>
+    <div class="ind-wrap">
+      <div class="ind-tabs">
+        <button class="ind-tab${indTab==='jog'?' active':''}" onclick="setIndTab('jog')">⚽ Jogadores (${Object.keys(IND_JOG).length})</button>
+        <button class="ind-tab${indTab==='tre'?' active':''}" onclick="setIndTab('tre')">🏅 Treinadores (${Object.keys(IND_TRE).length})</button>
+      </div>
+      <div id="indControls" class="ind-controls-wrap"></div>
+      <div id="indTableWrap" class="ind-table-wrap">
+        <div id="indTableContent"></div>
+      </div>
+    </div>
+  </div>`;
+  return html;
+}
+
+function setIndTab(tab){
+  indTab=tab;
+  if(tab==='jog') renderIndJogTable(); else renderIndTreTable();
+  // Update tab buttons
+  document.querySelectorAll('.ind-tab').forEach((el,i)=>{
+    el.classList.toggle('active',(i===0&&tab==='jog')||(i===1&&tab==='tre'));
+  });
+}
+
+/* ══════════════════════════════════════════
+   JOGADORES TABLE
+══════════════════════════════════════════ */
+function renderIndJogTable(){
+  let rows=Object.values(IND_JOG);
+
+  // Filters
+  if(indFilters.ano) rows=rows.filter(r=>String(r.ano||'')===indFilters.ano);
+  if(indFilters.pos) rows=rows.filter(r=>(r.posicao||'')=== indFilters.pos);
+  if(indFilters.aval) rows=rows.filter(r=>(r.avalAgrup||'')===indFilters.aval);
+  if(indFilters.resp) rows=rows.filter(r=>(r.responsavel||'')===indFilters.resp);
+  if(indFilters.search){
+    const q=indFilters.search.toLowerCase();
+    rows=rows.filter(r=>(r.nome||'').toLowerCase().includes(q)||(r.clube||'').toLowerCase().includes(q)||(r.pais||'').toLowerCase().includes(q)||(r.indicacao||'').toLowerCase().includes(q));
+  }
+
+  // Sort
+  rows=[...rows].sort((a,b)=>{
+    const col=indSortJog.col, dir=indSortJog.dir==='asc'?1:-1;
+    const av=a[col]||'', bv=b[col]||'';
+    if(typeof av==='number'||!isNaN(parseFloat(av))) return (parseFloat(av)||0-parseFloat(bv)||0)*dir;
+    return String(av).localeCompare(String(bv))*dir;
+  });
+
+  const total=rows.length;
+  const thCls=col=>indSortJog.col===col?(indSortJog.dir==='asc'?'sort-asc':'sort-desc'):'';
+
+  const cols=[
+    {id:'nome',    label:'Atleta'},
+    {id:'posicao', label:'Pos.'},
+    {id:'geracao', label:'Ger.'},
+    {id:'pais',    label:'País'},
+    {id:'clube',   label:'Clube'},
+    {id:'data',    label:'Data'},
+    {id:'responsavel', label:'Resp.'},
+    {id:'recepcao',label:'Recepção'},
+    {id:'indicacao',label:'Indicação'},
+    {id:'avalAgrup',label:'Avaliação'},
+    {id:'eagle',   label:'Eagle'},
+    {id:'instat',  label:'Instat'},
+    {id:'monitorado',label:'Mon.'},
+    {id:'ano',     label:'Ano'},
+  ];
+
+  const tableRows=rows.map(r=>`
+    <tr onclick="openIndForm('jog','${r.id}')">
+      <td style="font-weight:500;min-width:140px">${r.nome||'—'}</td>
+      <td style="text-align:center"><span class="ind-pos">${r.posicao||'—'}</span></td>
+      <td style="text-align:center;color:#5f5e5a">${r.geracao||'—'}</td>
+      <td style="color:#5f5e5a;white-space:nowrap">${r.pais||'—'}</td>
+      <td style="min-width:120px;color:#5f5e5a">${r.clube||'—'}</td>
+      <td style="white-space:nowrap;color:#5f5e5a">${r.data||'—'}</td>
+      <td style="white-space:nowrap">${r.responsavel||'—'}</td>
+      <td style="color:#5f5e5a;min-width:100px">${r.recepcao||'—'}</td>
+      <td style="color:#5f5e5a;min-width:100px">${r.indicacao||'—'}</td>
+      <td>${r.avalAgrup?`<span class="ind-aval ${avalClass(r.avalAgrup)}">${r.avalAgrup}</span>`:''}</td>
+      <td style="text-align:center;color:#5f5e5a">${r.eagle||'—'}</td>
+      <td style="text-align:center;color:#5f5e5a">${r.instat||'—'}</td>
+      <td style="text-align:center;color:#5f5e5a">${r.monitorado||'—'}</td>
+      <td style="text-align:center;color:#888780">${r.ano||'—'}</td>
+    </tr>`).join('');
+
+  const emptyRow=`<tr><td colspan="${cols.length}" style="padding:40px;text-align:center;color:#888780">Nenhum registro encontrado</td></tr>`;
+
+  // Unique anos from data
+  const anosPresentes=[...new Set(Object.values(IND_JOG).map(r=>String(r.ano||'')).filter(Boolean))].sort().reverse();
+
+  // Populate controls
+  const ctrlEl = document.getElementById('indControls');
+  if(ctrlEl) ctrlEl.innerHTML = `
+    <div class="ind-controls">
+      <div class="ind-filter-group">
+        <span class="ind-filter-label">Ano:</span>
+        <select class="ind-select" onchange="indSetFilter('ano',this.value)">
+          <option value="">Todos</option>
+          ${anosPresentes.map(a=>`<option value="${a}"${indFilters.ano===a?' selected':''}>${a}</option>`).join('')}
+        </select>
+      </div>
+      <div class="ind-filter-group">
+        <span class="ind-filter-label">Posição:</span>
+        <select class="ind-select" onchange="indSetFilter('pos',this.value)">
+          <option value="">Todas</option>
+          ${IND_POSITIONS.map(p=>`<option value="${p}"${indFilters.pos===p?' selected':''}>${p}</option>`).join('')}
+        </select>
+      </div>
+      <div class="ind-filter-group">
+        <span class="ind-filter-label">Avaliação:</span>
+        <select class="ind-select" onchange="indSetFilter('aval',this.value)">
+          <option value="">Todas</option>
+          ${IND_AVAL_AGRUP.map(a=>`<option value="${a}"${indFilters.aval===a?' selected':''}>${a}</option>`).join('')}
+        </select>
+      </div>
+      <div class="ind-filter-group">
+        <span class="ind-filter-label">Responsável:</span>
+        <select class="ind-select" onchange="indSetFilter('resp',this.value)">
+          <option value="">Todos</option>
+          ${IND_RESPONSAVEIS.map(r=>`<option value="${r}"${indFilters.resp===r?' selected':''}>${r}</option>`).join('')}
+        </select>
+      </div>
+      <input class="ind-search" type="text" placeholder="Buscar atleta, clube, agente…" value="${indFilters.search}" oninput="indSetFilter('search',this.value)">
+      <span class="ind-count">${total} atleta${total!==1?'s':''}</span>
+      <button class="ind-add-btn" onclick="openIndForm('jog',null)">＋ Novo Atleta</button>
+      <label class="ind-add-btn" style="background:#1a4a6e;cursor:pointer" title="Importar histórico JSON">⬆ Histórico<input type="file" accept=".json" style="display:none" onchange="importIndicadosHistorico(this)"></label>
+    </div>`;
+
+  // Populate table
+  const tblEl = document.getElementById('indTableContent');
+  if(tblEl) tblEl.innerHTML = `
+    <table class="ind-table" style="width:100%">
+      <thead><tr>
+        ${cols.map(c=>`<th class="${thCls(c.id)}" onclick="indSetSort('jog','${c.id}')">${c.label}</th>`).join('')}
+        <th style="width:30px;cursor:default"></th>
+      </tr></thead>
+      <tbody>${rows.length?tableRows:emptyRow}</tbody>
+    </table>`;
+
+  setTimeout(fixIndHeight, 0);
+}
+
+/* ══════════════════════════════════════════
+   TREINADORES TABLE
+══════════════════════════════════════════ */
+function renderIndTreTable(){
+  let rows=Object.values(IND_TRE);
+
+  if(indFiltersTre.ano) rows=rows.filter(r=>String(r.ano||'')===indFiltersTre.ano);
+  if(indFiltersTre.search){
+    const q=indFiltersTre.search.toLowerCase();
+    rows=rows.filter(r=>(r.nome||'').toLowerCase().includes(q)||(r.pais||'').toLowerCase().includes(q)||(r.clubeAtual||'').toLowerCase().includes(q));
+  }
+
+  rows=[...rows].sort((a,b)=>{
+    const col=indSortTre.col, dir=indSortTre.dir==='asc'?1:-1;
+    const av=a[col]||'', bv=b[col]||'';
+    if(!isNaN(parseFloat(av))&&!isNaN(parseFloat(bv))) return (parseFloat(av)-parseFloat(bv))*dir;
+    return String(av).localeCompare(String(bv))*dir;
+  });
+
+  const total=rows.length;
+  const thCls=col=>indSortTre.col===col?(indSortTre.dir==='asc'?'sort-asc':'sort-desc'):'';
+
+  const cols=[
+    {id:'nome',       label:'Nome'},
+    {id:'pais',       label:'País'},
+    {id:'idade',      label:'Idade'},
+    {id:'sistema',    label:'Sistema'},
+    {id:'partidas',   label:'Jogos'},
+    {id:'ppj',        label:'PPJ'},
+    {id:'posse',      label:'Posse%'},
+    {id:'ppda',       label:'PPDA'},
+    {id:'xg',         label:'xG'},
+    {id:'golsMarcados',label:'GM'},
+    {id:'golsSofridos',label:'GS'},
+    {id:'golSaldo',   label:'Saldo'},
+    {id:'clubeAtual', label:'Clube Atual'},
+    {id:'data',       label:'Data'},
+    {id:'recepcao',   label:'Recepção'},
+    {id:'agente1',    label:'Agente 1'},
+    {id:'ano',        label:'Ano'},
+  ];
+
+  const stat=v=>v!=null&&v!==''?v:'—';
+
+  const tableRows=rows.map(r=>`
+    <tr onclick="openIndForm('tre','${r.id}')">
+      <td style="font-weight:500;min-width:140px">${r.nome||'—'}</td>
+      <td style="white-space:nowrap;color:#5f5e5a">${stat(r.pais)}</td>
+      <td style="text-align:center;color:#5f5e5a">${stat(r.idade)}</td>
+      <td style="white-space:nowrap">${stat(r.sistema)}</td>
+      <td style="text-align:center;color:#5f5e5a">${stat(r.partidas)}</td>
+      <td style="text-align:center">${stat(r.ppj)}</td>
+      <td style="text-align:center;color:#5f5e5a">${stat(r.posse)}</td>
+      <td style="text-align:center;color:#5f5e5a">${stat(r.ppda)}</td>
+      <td style="text-align:center;color:#5f5e5a">${stat(r.xg)}</td>
+      <td style="text-align:center;color:#1a8040">${stat(r.golsMarcados)}</td>
+      <td style="text-align:center;color:#c00">${stat(r.golsSofridos)}</td>
+      <td style="text-align:center">${stat(r.golSaldo)}</td>
+      <td style="min-width:110px;color:#5f5e5a">${stat(r.clubeAtual)}</td>
+      <td style="white-space:nowrap;color:#5f5e5a">${stat(r.data)}</td>
+      <td style="color:#5f5e5a;min-width:90px">${stat(r.recepcao)}</td>
+      <td style="color:#5f5e5a;min-width:90px">${stat(r.agente1)}</td>
+      <td style="text-align:center;color:#888780">${stat(r.ano)}</td>
+    </tr>`).join('');
+
+  const emptyRow=`<tr><td colspan="${cols.length+1}" style="padding:40px;text-align:center;color:#888780">Nenhum registro encontrado</td></tr>`;
+
+  const anosPresentes=[...new Set(Object.values(IND_TRE).map(r=>String(r.ano||'')).filter(Boolean))].sort().reverse();
+
+  const ctrlEl = document.getElementById('indControls');
+  if(ctrlEl) ctrlEl.innerHTML = `
+    <div class="ind-controls">
+      <div class="ind-filter-group">
+        <span class="ind-filter-label">Ano:</span>
+        <select class="ind-select" onchange="indSetFilterTre('ano',this.value)">
+          <option value="">Todos</option>
+          ${anosPresentes.map(a=>`<option value="${a}"${indFiltersTre.ano===a?' selected':''}>${a}</option>`).join('')}
+        </select>
+      </div>
+      <input class="ind-search" type="text" placeholder="Buscar treinador, país, clube…" value="${indFiltersTre.search}" oninput="indSetFilterTre('search',this.value)">
+      <span class="ind-count">${total} treinador${total!==1?'es':''}</span>
+      <button class="ind-add-btn" onclick="openIndForm('tre',null)">＋ Novo Treinador</button>
+    </div>`;
+
+  const tblEl = document.getElementById('indTableContent');
+  if(tblEl) tblEl.innerHTML = `
+    <table class="ind-table" style="width:100%">
+      <thead><tr>
+        ${cols.map(c=>`<th class="${thCls(c.id)}" onclick="indSetSort('tre','${c.id}')">${c.label}</th>`).join('')}
+        <th style="width:30px;cursor:default"></th>
+      </tr></thead>
+      <tbody>${rows.length?tableRows:emptyRow}</tbody>
+    </table>`;
+
+  setTimeout(fixIndHeight, 0);
+}
+
+/* ══════════════════════════════════════════
+   FILTER / SORT HELPERS
+══════════════════════════════════════════ */
+function indSetFilter(key,val){
+  indFilters[key]=val;
+  renderIndJogTable();
+}
+function indSetFilterTre(key,val){ indFiltersTre[key]=val; renderIndTreTable(); }
+function indSetSort(type,col){
+  const s=type==='jog'?indSortJog:indSortTre;
+  if(s.col===col) s.dir=s.dir==='asc'?'desc':'asc';
+  else{s.col=col;s.dir='asc';}
+  const body=document.getElementById('indBody');
+  if(body){ body.innerHTML=type==='jog'?renderIndJogTable():renderIndTreTable(); setTimeout(fixIndHeight,10); }
+}
+
+/* ══════════════════════════════════════════
+   INDICADOS FORM
+══════════════════════════════════════════ */
+function openIndForm(type,id){
+  editingIndId=id;
+  const isEdit=!!id;
+  const data=isEdit?(type==='jog'?IND_JOG[id]:IND_TRE[id])||{}:{};
+  document.getElementById('indModalTitle').textContent=(isEdit?'Editar ':'Novo ')+(type==='jog'?'Atleta Indicado':'Treinador Indicado');
+
+  if(type==='jog'){
+    document.getElementById('indModalBody').innerHTML=buildJogForm(data);
+  } else {
+    document.getElementById('indModalBody').innerHTML=buildTreForm(data);
+  }
+
+  // Store type for submit
+  document.getElementById('indModalBody').dataset.type=type;
+  document.getElementById('indModal').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+
+function closeIndModal(){
+  document.getElementById('indModal').classList.remove('open');
+  document.body.style.overflow='';
+  editingIndId=null;
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('indModal').classList.contains('open')) closeIndModal();});
+
+function gvi(id){const el=document.getElementById(id);return el?el.value.trim():'';}
+
+function buildJogForm(p){
+  const yr=new Date().getFullYear();
+  return `
+  <div style="display:flex;gap:.5rem;align-items:flex-end;margin-bottom:.8rem;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:.8rem">
+    <div style="flex:1;display:flex;flex-direction:column;gap:.3rem">
+      <label style="font-size:.65rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)">Link Ogol (auto-preenche campos)</label>
+      <input id="iOgolLink" type="url" value="${p.ogolLink||''}" placeholder="https://www.ogol.com.br/jogador/…" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'Barlow',sans-serif;font-size:.85rem;padding:.5rem .75rem;outline:none;width:100%">
+    </div>
+    <button id="btnOgolBuscar" onclick="buscarOgol()" style="background:#1a4a6e;color:#fff;border:none;border-radius:6px;padding:.55rem 1.1rem;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;white-space:nowrap">🔍 Buscar Ogol</button>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem">
+    ${ffl('Atleta *','iNome','text',p.nome||'','',true,'grid-column:span 2')}
+    ${ffls('Ano','iAno',IND_ANOS,p.ano||String(yr))}
+    ${ffls('Posição','iPosicao',['',...IND_POSITIONS],p.posicao||'')}
+    ${ffl('Geração (ano nasc.)','iGeracao','number',p.geracao||'','ex: 2004')}
+    ${ffl('País','iPais','text',p.pais||'','ex: Brasil')}
+    ${ffl('Clube','iClube','text',p.clube||'','ex: Flamengo')}
+    ${ffl('Data','iData','text',p.data||'','ex: 15/01')}
+    ${ffls('Responsável','iResponsavel',['',...IND_RESPONSAVEIS],p.responsavel||'')}
+    ${ffl('Recepção','iRecepcao','text',p.recepcao||'','Quem recebeu internamente')}
+    ${ffl('Indicação (Agente)','iIndicacao','text',p.indicacao||'','Nome do agente/intermediário')}
+    ${ffls('Avaliação Agrupado','iAvalAgrup',['',...IND_AVAL_AGRUP],p.avalAgrup||'')}
+    ${ffl('Eagle','iEagle','text',p.eagle||'','Nota ou link')}
+    ${ffl('Instat','iInstat','text',p.instat||'','Nota ou link')}
+    ${ffls('Monitorado','iMonitorado',['','SIM','NÃO'],p.monitorado||'')}
+    ${ffl('Transfermarkt Link','iTmLink','url',p.tmLink||'','https://www.transfermarkt.com/…')}
+    ${ffl('Agência','iAgencia','text',p.agencia||'','Nome da agência/representação')}
+    ${ffl('Contato Agência','iAgenciaContato','text',p.agenciaContato||'','Nome, telefone ou e-mail')}
+    <div style="grid-column:span 2;display:flex;flex-direction:column;gap:.3rem">
+      <label style="font-size:.65rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)">Avaliação Dep. de Mercado</label>
+      <textarea id="iAvalMkt" rows="3" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'Barlow',sans-serif;font-size:.85rem;padding:.5rem .75rem;outline:none;width:100%;resize:vertical" placeholder="Avaliação detalhada…">${p.avalMkt||''}</textarea>
+    </div>
+    <div style="grid-column:span 2;display:flex;flex-direction:column;gap:.3rem">
+      <label style="font-size:.65rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)">Comentários</label>
+      <textarea id="iComments" rows="2" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'Barlow',sans-serif;font-size:.85rem;padding:.5rem .75rem;outline:none;width:100%;resize:vertical" placeholder="Observações adicionais…">${p.comments||''}</textarea>
+    </div>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;padding-top:1rem;border-top:1px solid var(--border);margin-top:.5rem">
+    <div>
+      ${editingIndId?`<button onclick="confirmDeleteInd('jog','${editingIndId}')" style="background:transparent;border:1px solid rgba(232,74,74,.3);color:var(--red);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;padding:.5rem 1rem;border-radius:5px;cursor:pointer">✕ Excluir</button>`:''}
+    </div>
+    <div style="display:flex;gap:.6rem">
+      <button onclick="closeIndModal()" style="background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.82rem;letter-spacing:.08em;text-transform:uppercase;padding:.55rem 1.2rem;border-radius:5px;cursor:pointer">← Cancelar</button>
+      <button onclick="submitIndForm('jog')" style="background:var(--gold);color:#0b0d12;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.82rem;letter-spacing:.08em;text-transform:uppercase;padding:.55rem 1.4rem;border-radius:5px;border:none;cursor:pointer">Salvar ✓</button>
+    </div>
+  </div>`;
+}
+
+function buildTreForm(p){
+  const yr=new Date().getFullYear();
+  return `
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.8rem">
+    ${ffl('Nome *','tNome','text',p.nome||'','',true,'grid-column:span 2')}
+    ${ffls('Ano','tAno',IND_ANOS,p.ano||String(yr))}
+    ${ffl('País','tPais','text',p.pais||'','ex: Portugal')}
+    ${ffl('Idade','tIdade','number',p.idade||'','ex: 48')}
+    ${ffl('Sistema Principal','tSistema','text',p.sistema||'','ex: 4-3-3')}
+    ${ffl('Partidas','tPartidas','number',p.partidas||'','Total de jogos')}
+    ${ffl('PPJ','tPpj','number',p.ppj||'','Pontos por jogo')}
+    ${ffl('Posse Média %','tPosse','number',p.posse||'','ex: 54.2')}
+    ${ffl('PPDA','tPpda','number',p.ppda||'','Pressão defensiva')}
+    ${ffl('xG','tXg','number',p.xg||'','Expected goals')}
+    ${ffl('Gols Marcados (m.)','tGolsM','number',p.golsMarcados||'','Média por jogo')}
+    ${ffl('Gols Sofridos (m.)','tGolsS','number',p.golsSofridos||'','Média por jogo')}
+    ${ffl('Saldo de Gols','tGolSaldo','number',p.golSaldo||'')}
+    ${ffl('Clube Atual','tClubeAtual','text',p.clubeAtual||'','ex: Sem clube')}
+    ${ffl('Data','tData','text',p.data||'','ex: 22/03')}
+    ${ffl('Recepção','tRecepcao','text',p.recepcao||'')}
+    ${ffl('Agente / Intermediário 1','tAgente1','text',p.agente1||'')}
+    ${ffl('Agente / Intermediário 2','tAgente2','text',p.agente2||'')}
+    ${ffl('Agente / Intermediário 3','tAgente3','text',p.agente3||'')}
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;padding-top:1rem;border-top:1px solid var(--border);margin-top:.5rem">
+    <div>
+      ${editingIndId?`<button onclick="confirmDeleteInd('tre','${editingIndId}')" style="background:transparent;border:1px solid rgba(232,74,74,.3);color:var(--red);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;padding:.5rem 1rem;border-radius:5px;cursor:pointer">✕ Excluir</button>`:''}
+    </div>
+    <div style="display:flex;gap:.6rem">
+      <button onclick="closeIndModal()" style="background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.82rem;letter-spacing:.08em;text-transform:uppercase;padding:.55rem 1.2rem;border-radius:5px;cursor:pointer">← Cancelar</button>
+      <button onclick="submitIndForm('tre')" style="background:var(--gold);color:#0b0d12;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.82rem;letter-spacing:.08em;text-transform:uppercase;padding:.55rem 1.4rem;border-radius:5px;border:none;cursor:pointer">Salvar ✓</button>
+    </div>
+  </div>`;
+}
+
+// Form field helpers
+function ffl(lbl,id,type,val,ph,req,style){
+  return `<div style="display:flex;flex-direction:column;gap:.3rem${style?';'+style:''}">
+    <label style="font-size:.65rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)">${lbl}</label>
+    <input id="${id}" type="${type}" value="${val||''}" placeholder="${ph||''}" ${req?'required':''} style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'Barlow',sans-serif;font-size:.85rem;padding:.5rem .75rem;outline:none;width:100%">
+  </div>`;
+}
+function ffls(lbl,id,options,val){
+  return `<div style="display:flex;flex-direction:column;gap:.3rem">
+    <label style="font-size:.65rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)">${lbl}</label>
+    <select id="${id}" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'Barlow',sans-serif;font-size:.85rem;padding:.5rem .75rem;outline:none;width:100%;-webkit-appearance:none">
+      ${options.map(o=>`<option value="${o}"${o===val?' selected':''}>${o||'—'}</option>`).join('')}
+    </select>
+  </div>`;
+}
+
+function submitIndForm(type){
+  if(type==='jog'){
+    const nome=gvi('iNome');
+    if(!nome){alert('Informe o nome do atleta.');return;}
+    const data={
+      id:editingIndId||('ij'+Date.now()),
+      ano:gvi('iAno'),nome,posicao:gvi('iPosicao'),geracao:gvi('iGeracao'),
+      pais:gvi('iPais'),clube:gvi('iClube'),data:gvi('iData'),
+      responsavel:gvi('iResponsavel'),recepcao:gvi('iRecepcao'),
+      indicacao:gvi('iIndicacao'),avalAgrup:gvi('iAvalAgrup'),
+      eagle:gvi('iEagle'),instat:gvi('iInstat'),monitorado:gvi('iMonitorado'),
+      avalMkt:document.getElementById('iAvalMkt').value.trim(),
+      comments:document.getElementById('iComments').value.trim(),
+      ogolLink:gvi('iOgolLink')||'',
+      tmLink:gvi('iTmLink')||'',
+      agencia:gvi('iAgencia')||'',
+      agenciaContato:gvi('iAgenciaContato')||'',
+    };
+    saveIndJog(data);
+  } else {
+    const nome=gvi('tNome');
+    if(!nome){alert('Informe o nome do treinador.');return;}
+    const data={
+      id:editingIndId||('it'+Date.now()),
+      ano:gvi('tAno'),nome,pais:gvi('tPais'),idade:gvi('tIdade'),
+      sistema:gvi('tSistema'),partidas:gvi('tPartidas'),ppj:gvi('tPpj'),
+      posse:gvi('tPosse'),ppda:gvi('tPpda'),xg:gvi('tXg'),
+      golsMarcados:gvi('tGolsM'),golsSofridos:gvi('tGolsS'),golSaldo:gvi('tGolSaldo'),
+      clubeAtual:gvi('tClubeAtual'),data:gvi('tData'),recepcao:gvi('tRecepcao'),
+      agente1:gvi('tAgente1'),agente2:gvi('tAgente2'),agente3:gvi('tAgente3'),
+    };
+    saveIndTre(data);
+  }
+  closeIndModal();
+  // Refresh table
+  const body=document.getElementById('indBody');
+  if(body){ body.innerHTML=type==='jog'?renderIndJogTable():renderIndTreTable(); setTimeout(fixIndHeight,10); }
+  // Update tab counts
+  document.querySelectorAll('.ind-tab').forEach((el,i)=>{
+    if(i===0) el.textContent=`⚽ Jogadores (${Object.keys(IND_JOG).length})`;
+    if(i===1) el.textContent=`🏅 Treinadores (${Object.keys(IND_TRE).length})`;
+  });
+}
+
+function confirmDeleteInd(type,id){
+  if(!confirm('Excluir este registro?')) return;
+  if(type==='jog') deleteIndJog(id);
+  else deleteIndTre(id);
+  closeIndModal();
+  const body=document.getElementById('indBody');
+  if(body){ body.innerHTML=type==='jog'?renderIndJogTable():renderIndTreTable(); setTimeout(fixIndHeight,10); }
+  document.querySelectorAll('.ind-tab').forEach((el,i)=>{
+    if(i===0) el.textContent=`⚽ Jogadores (${Object.keys(IND_JOG).length})`;
+    if(i===1) el.textContent=`🏅 Treinadores (${Object.keys(IND_TRE).length})`;
+  });
+}
+
+/* ══════════════════════════════════════════
+   SHORTLIST — aggregated view of all players
+══════════════════════════════════════════ */
+let slSort={col:'nota',dir:'desc'};
+let slPosFilter='ALL';
+let slSearch='';
+
+function getAllPlayers(){
+  const rows=[];
+  Object.entries(REPORTS).forEach(([compId,reps])=>{
+    const comp=DATA.find(c=>c.id===parseInt(compId));
+    const compName=comp?comp.name:'—';
+    (reps||[]).forEach(r=>{
+      rows.push({...r,_compId:parseInt(compId),_compName:compName});
+    });
+  });
+  return rows;
+}
+
+function slSortFn(a,b){
+  const col=slSort.col;
+  const dir=slSort.dir==='asc'?1:-1;
+  const recOrder={A:4,B:3,C:2,D:1,'':-1};
+  const prioOrder={High:3,Medium:2,Low:1,'':-1};
+  let av,bv;
+  if(col==='nota'){av=parseFloat(a.nota)||0;bv=parseFloat(b.nota)||0;}
+  else if(col==='rec'){av=recOrder[a.rec]||0;bv=recOrder[b.rec]||0;}
+  else if(col==='prio'){av=prioOrder[a.prio]||0;bv=prioOrder[b.prio]||0;}
+  else if(col==='age'){
+    const age=s=>{if(!s)return 0;const d=new Date(s+'T12:00:00'),t=new Date();let a=t.getFullYear()-d.getFullYear();if(t.getMonth()-d.getMonth()<0||(t.getMonth()-d.getMonth()===0&&t.getDate()<d.getDate()))a--;return a;};
+    av=age(a.dob);bv=age(b.dob);
+  }
+  else if(col==='alt'){av=parseFloat(a.alt)||0;bv=parseFloat(b.alt)||0;}
+  else{av=(a[col]||'').toLowerCase();bv=(b[col]||'').toLowerCase();return av<bv?-dir:av>bv?dir:0;}
+  return (av-bv)*dir;
+}
+
+function renderShortlist(){
+  let players=getAllPlayers();
+
+  // Build position filter options
+  const positions=[...new Set(players.map(p=>p.pos||'').filter(Boolean))].sort();
+
+  // Apply filters
+  if(slPosFilter!=='ALL') players=players.filter(p=>p.pos===slPosFilter);
+  if(slSearch){
+    const q=slSearch.toLowerCase();
+    players=players.filter(p=>(p.nome||'').toLowerCase().includes(q)||(p.clube||'').toLowerCase().includes(q)||(p.nac||'').toLowerCase().includes(q)||(p._compName||'').toLowerCase().includes(q));
+  }
+
+  // Sort
+  players=[...players].sort(slSortFn);
+
+  const total=players.length;
+
+  // Column definitions
+  const cols=[
+    {id:'photo',  label:'',         sortable:false},
+    {id:'nome',   label:'Player',   sortable:true},
+    {id:'pos',    label:'Pos',      sortable:true},
+    {id:'age',    label:'Age',      sortable:true},
+    {id:'alt',    label:'Height',   sortable:true},
+    {id:'pe',     label:'Foot',     sortable:true},
+    {id:'nota',   label:'Score',    sortable:true},
+    {id:'rec',    label:'Rec.',     sortable:true},
+    {id:'prio',   label:'Priority', sortable:true},
+    {id:'_compName',label:'Competition',sortable:true},
+    {id:'scout',  label:'Scout',    sortable:true},
+    {id:'forcas', label:'Strengths',sortable:false},
+  ];
+
+  function thClass(col){
+    if(!col.sortable) return '';
+    if(slSort.col===col.id) return slSort.dir==='asc'?'sort-asc':'sort-desc';
+    return '';
+  }
+
+  const calcAge=s=>{if(!s)return'—';const d=new Date(s+'T12:00:00'),t=new Date();let a=t.getFullYear()-d.getFullYear();if(t.getMonth()-d.getMonth()<0||(t.getMonth()-d.getMonth()===0&&t.getDate()<d.getDate()))a--;return a+'a';};
+  const scoreColor=n=>{const v=parseFloat(n)||0;return v>=8?'#1a8040':v>=6?'#b8860b':'#c00';};
+  const recLabel={A:'A — Sign',B:'B — Monitor',C:'C — Watch',D:'D — Pass'};
+
+  const rows=players.map(r=>`
+    <tr onclick="openShortlistPlayer(${r._compId},'${r.id}')" title="Click to view full report">
+      <td style="padding:3px 6px;width:38px">
+        ${r.photo
+          ?`<img src="${r.photo}" class="sl-photo">`
+          :`<div class="sl-photo-ph">👤</div>`}
+      </td>
+      <td style="min-width:160px;padding:4px 8px">
+        <div class="sl-name">${r.nome||'—'}</div>
+        <div class="sl-sub">${r.clube||'—'}</div>
+      </td>
+      <td style="text-align:center;width:40px"><span class="sl-pos">${r.pos||'—'}</span></td>
+      <td style="text-align:center;width:36px;color:#5f5e5a">${calcAge(r.dob)}</td>
+      <td style="text-align:center;width:48px;color:#5f5e5a">${r.alt?r.alt+' cm':'—'}</td>
+      <td style="text-align:center;width:40px;color:#5f5e5a">${r.pe||'—'}</td>
+      <td style="text-align:center;width:44px"><span class="sl-score" style="color:${scoreColor(r.nota)}">${r.nota||'—'}</span></td>
+      <td style="text-align:center;width:80px">${r.rec?`<span class="sl-rec ${r.rec}">${recLabel[r.rec]||r.rec}</span>`:''}</td>
+      <td style="width:64px"><span class="sl-prio ${r.prio||''}">${r.prio||'—'}</span></td>
+      <td style="min-width:140px;font-size:10px;color:#5f5e5a;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r._compName}</td>
+      <td style="width:64px;font-size:10px;color:#5f5e5a">${r.scout||'—'}</td>
+      <td style="min-width:120px;font-size:10px;color:#5f5e5a;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(r.forcas||'').replace(/\n/g,', ')}</td>
+    </tr>`).join('');
+
+  const emptyRow=`<tr><td colspan="12" style="padding:40px;text-align:center;color:#888780">No players found</td></tr>`;
+
+  const filterBtns=['ALL',...positions].map(p=>`<button class="shortlist-filter${slPosFilter===p?' active':''}" onclick="slSetPos('${p}')">${p==='ALL'?'All Positions':p}</button>`).join('');
+
+  return `<div class="view active">
+    <div class="toolbar">
+      <div><h1>⭐ Shortlist — All Players</h1><p>Aggregated from all competitions · Click any row to view full report</p></div>
+    </div>
+    <div class="shortlist-wrap">
+      <div class="shortlist-controls">
+        ${filterBtns}
+        <input class="shortlist-search" type="text" placeholder="Search player, club, competition…" value="${slSearch}" oninput="slSetSearch(this.value)">
+        <span class="shortlist-count">${total} player${total!==1?'s':''}</span>
+      </div>
+      <div style="overflow-x:auto">
+      <table class="sl">
+        <thead><tr>
+          ${cols.map(c=>`<th class="${thClass(c)}" ${c.sortable?`onclick="slSetSort('${c.id}')"`:''}>${c.label}</th>`).join('')}
+        </tr></thead>
+        <tbody>${players.length?rows:emptyRow}</tbody>
+      </table>
+      </div>
+    </div>
+  </div>`;
+}
+
+function slSetSort(col){
+  if(slSort.col===col) slSort.dir=slSort.dir==='asc'?'desc':'asc';
+  else{slSort.col=col;slSort.dir=col==='nota'||col==='rec'||col==='prio'?'desc':'asc';}
+  if(currentView==='shortlist') document.getElementById('views').innerHTML=renderShortlist();
+}
+
+function slSetPos(pos){
+  slPosFilter=pos;
+  if(currentView==='shortlist') document.getElementById('views').innerHTML=renderShortlist();
+}
+
+function slSetSearch(val){
+  slSearch=val;
+  if(currentView==='shortlist') document.getElementById('views').innerHTML=renderShortlist();
+}
+
+function openShortlistPlayer(compId,repId){
+  openModal(compId);
+  // Wait for modal to open then switch to the specific report
+  setTimeout(()=>{
+    switchMTab('list');
+    // Scroll to the specific report card
+    setTimeout(()=>{
+      const el=document.getElementById('rc_'+repId);
+      if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
+    },100);
+  },50);
+}
+
 
 function renderResumo(){
   const calcs=SCOUTS.map(scout=>{
@@ -757,166 +1658,184 @@ function switchMTab(tab){
 ══════════════════════════════════════════ */
 function renderModalForm(preload){
   mScores={};
-  ATTRS.forEach(a=>mScores[a.key]=0);
-
   const p=preload||{};
+  const currentPos=p.pos||'';
+  const attrs=getAttrs(currentPos);
+  attrs.forEach(a=>mScores[a.key]=0);
+  if(p.scores) Object.keys(p.scores).forEach(k=>{mScores[k]=p.scores[k]||0;});
 
-  const attrHtml=ATTRS.map(a=>`
-    <div class="attr-row">
-      <div class="attr-row-top">
-        <span>${a.label}</span>
-        <span class="attr-score-disp" id="msc_${a.key}">${p.scores&&p.scores[a.key]?p.scores[a.key]:'—'}</span>
-      </div>
-      <div class="attr-dots" id="mdots_${a.key}">
-        ${Array.from({length:10},(_,i)=>`<div class="dot${p.scores&&p.scores[a.key]>i?' on'+(p.scores[a.key]<=3?' low':p.scores[a.key]<=6?' mid':' hi'):''}" data-k="${a.key}" data-v="${i+1}"></div>`).join('')}
-      </div>
-    </div>
-  `).join('');
-
-  if(p.scores) Object.keys(p.scores).forEach(k=>mScores[k]=p.scores[k]);
+  function buildAttrHtml(attrList,scores){
+    return attrList.map(a=>`
+      <div class="attr-row">
+        <div class="attr-row-top">
+          <span>${a.label}</span>
+          <span class="attr-score-disp" id="msc_${a.key}">${scores&&scores[a.key]?scores[a.key]:'—'}</span>
+        </div>
+        <div class="attr-dots" id="mdots_${a.key}">
+          ${Array.from({length:10},(_,i)=>`<div class="dot${scores&&scores[a.key]>i?' on'+(scores[a.key]<=3?' low':scores[a.key]<=6?' mid':' hi'):''}" data-k="${a.key}" data-v="${i+1}"></div>`).join('')}
+        </div>
+      </div>`).join('');
+  }
 
   document.getElementById('mBody').innerHTML=`
     <div class="fsec">
-      <div class="fsec-head"><span>⚽</span><h3>Jogo</h3></div>
+      <div class="fsec-head"><span>⚽</span><h3>Match</h3></div>
       <div class="fsec-body">
         <div class="fg fg3">
-          <div class="fl"><label>Data do Jogo</label><input id="mData" type="date" value="${p.data||''}"></div>
-          <div class="fl"><label>Time A</label><input id="mTimeA" type="text" placeholder="Clube / País" value="${p.timeA||''}"></div>
-          <div class="fl"><label>Time B</label><input id="mTimeB" type="text" placeholder="Clube / País" value="${p.timeB||''}"></div>
-          <div class="fl"><label>Placar</label><input id="mPlacar" type="text" placeholder="2 — 1" value="${p.placar||''}"></div>
+          <div class="fl"><label>Match Date</label><input id="mData" type="date" value="${p.data||''}"></div>
+          <div class="fl"><label>Team A</label><input id="mTimeA" type="text" placeholder="Club / Country" value="${p.timeA||''}"></div>
+          <div class="fl"><label>Team B</label><input id="mTimeB" type="text" placeholder="Club / Country" value="${p.timeB||''}"></div>
+          <div class="fl"><label>Score</label><input id="mPlacar" type="text" placeholder="2 — 1" value="${p.placar||''}"></div>
           <div class="fl"><label>Scout</label><select id="mScout"><option value="">—</option>${SCOUTS.map(s=>`<option value="${s}"${p.scout===s?' selected':''}>${s}</option>`).join('')}</select></div>
         </div>
       </div>
     </div>
-
     <div class="fsec">
-      <div class="fsec-head"><span>👤</span><h3>Atleta</h3></div>
+      <div class="fsec-head"><span>👤</span><h3>Player Profile</h3></div>
       <div class="fsec-body">
         <div class="fg fg4">
-          <div class="fl s2"><label>Nome Completo</label><input id="mNome" type="text" placeholder="Nome do Atleta" value="${p.nome||''}"></div>
-          <div class="fl"><label>Data de Nasc.</label><input id="mDob" type="date" value="${p.dob||''}"></div>
-          <div class="fl"><label>Nacionalidade</label><input id="mNac" type="text" placeholder="Brasil" value="${p.nac||''}"></div>
-          <div class="fl s2"><label>Clube</label><input id="mClube" type="text" placeholder="Ex.: Flamengo - BRA" value="${p.clube||''}"></div>
-          <div class="fl"><label>Posição</label>
-            <select id="mPos">
+          <div class="fl s2"><label>Full Name</label><input id="mNome" type="text" placeholder="Player Name" value="${p.nome||''}"></div>
+          <div class="fl"><label>Date of Birth</label><input id="mDob" type="date" value="${p.dob||''}"></div>
+          <div class="fl"><label>Nationality</label><input id="mNac" type="text" placeholder="Brazil" value="${p.nac||''}"></div>
+          <div class="fl s2"><label>Club</label><input id="mClube" type="text" placeholder="e.g. Flamengo - BRA" value="${p.clube||''}"></div>
+          <div class="fl"><label>Position</label>
+            <select id="mPos" onchange="onPosChange(this.value)">
               <option value="">—</option>
-              <optgroup label="Goleiro"><option${p.pos==='GK'?' selected':''}>GK</option></optgroup>
-              <optgroup label="Defensores">
-                <option${p.pos==='ZAG'?' selected':''}>ZAG</option>
-                <option${p.pos==='LD'?' selected':''}>LD</option>
-                <option${p.pos==='LE'?' selected':''}>LE</option>
+              <optgroup label="Goalkeeper"><option${p.pos==='GK'?' selected':''}>GK</option></optgroup>
+              <optgroup label="Defenders">
+                <option${p.pos==='CB'?' selected':''}>CB</option>
+                <option${p.pos==='RB'?' selected':''}>RB</option>
+                <option${p.pos==='LB'?' selected':''}>LB</option>
               </optgroup>
-              <optgroup label="Meio-Campo">
-                <option${p.pos==='VOL'?' selected':''}>VOL</option>
-                <option${p.pos==='MC'?' selected':''}>MC</option>
-                <option${p.pos==='MEI'?' selected':''}>MEI</option>
-                <option${p.pos==='MAD'?' selected':''}>MAD</option>
-                <option${p.pos==='MAE'?' selected':''}>MAE</option>
+              <optgroup label="Midfielders">
+                <option${p.pos==='DM'?' selected':''}>DM</option>
+                <option${p.pos==='CM'?' selected':''}>CM</option>
+                <option${p.pos==='AM'?' selected':''}>AM</option>
+                <option${p.pos==='RM'?' selected':''}>RM</option>
+                <option${p.pos==='LM'?' selected':''}>LM</option>
               </optgroup>
-              <optgroup label="Atacantes">
-                <option${p.pos==='ALD'?' selected':''}>ALD</option>
-                <option${p.pos==='ALE'?' selected':''}>ALE</option>
-                <option${p.pos==='SA'?' selected':''}>SA</option>
-                <option${p.pos==='CA'?' selected':''}>CA</option>
+              <optgroup label="Forwards">
+                <option${p.pos==='RW'?' selected':''}>RW</option>
+                <option${p.pos==='LW'?' selected':''}>LW</option>
+                <option${p.pos==='SS'?' selected':''}>SS</option>
+                <option${p.pos==='ST'?' selected':''}>ST</option>
               </optgroup>
             </select>
           </div>
-          <div class="fl"><label>Pé</label>
+          <div class="fl"><label>Foot</label>
             <select id="mPe"><option value="">—</option>
-              <option${p.pe==='Direito'?' selected':''}>Direito</option>
-              <option${p.pe==='Esquerdo'?' selected':''}>Esquerdo</option>
-              <option${p.pe==='Ambidestro'?' selected':''}>Ambidestro</option>
+              <option${p.pe==='Right'?' selected':''}>Right</option>
+              <option${p.pe==='Left'?' selected':''}>Left</option>
+              <option${p.pe==='Both'?' selected':''}>Both</option>
             </select>
           </div>
-          <div class="fl"><label>Altura (cm)</label><input id="mAlt" type="number" placeholder="185" value="${p.alt||''}"></div>
-          <div class="fl"><label>Tipo Físico</label>
+          <div class="fl"><label>Height (cm)</label><input id="mAlt" type="number" placeholder="185" value="${p.alt||''}"></div>
+          <div class="fl"><label>Body Type</label>
             <select id="mFis"><option value="">—</option>
-              <option${p.fis==='Magro'?' selected':''}>Magro</option>
-              <option${p.fis==='Atlético'?' selected':''}>Atlético</option>
-              <option${p.fis==='Forte'?' selected':''}>Forte</option>
-              <option${p.fis==='Robusto'?' selected':''}>Robusto</option>
+              <option${p.fis==='Lean'?' selected':''}>Lean</option>
+              <option${p.fis==='Athletic'?' selected':''}>Athletic</option>
+              <option${p.fis==='Strong'?' selected':''}>Strong</option>
+              <option${p.fis==='Robust'?' selected':''}>Robust</option>
             </select>
           </div>
-          <div class="fl"><label>Fim Contrato</label><input id="mContrato" type="date" value="${p.contrato||''}"></div>
-          <div class="fl"><label>Valor TM</label><input id="mTm" type="text" placeholder="€ 500k" value="${p.tm||''}"></div>
+          <div class="fl"><label>Contract End</label><input id="mContrato" type="date" value="${p.contrato||''}"></div>
+          <div class="fl"><label>TM Value</label><input id="mTm" type="text" placeholder="€ 500k" value="${p.tm||''}"></div>
+          <div class="fl s2"><label>Transfermarkt Link</label><input id="mTmLink" type="url" placeholder="https://www.transfermarkt.com/…" value="${p.tmLink||''}"></div>
+          <div class="fl s2"><label>Ogol Link</label><input id="mOgolLink" type="url" placeholder="https://www.ogol.com.br/…" value="${p.ogolLink||''}"></div>
         </div>
       </div>
     </div>
-
     <div class="fsec">
-      <div class="fsec-head"><span>📷</span><h3>Foto</h3></div>
+      <div class="fsec-head"><span>🏢</span><h3>Agency</h3></div>
+      <div class="fsec-body">
+        <div class="fg fg2">
+          <div class="fl"><label>Agency Name / Website</label><input id="mAgencia" type="text" placeholder="Agency name or https://…" value="${p.agencia||''}"></div>
+          <div class="fl"><label>Contact / Website</label><input id="mAgenciaContato" type="text" placeholder="Name, phone, email or https://…" value="${p.agenciaContato||''}"></div>
+        </div>
+      </div>
+    </div>
+    <div class="fsec">
+      <div class="fsec-head"><span>📷</span><h3>Photo</h3></div>
       <div class="fsec-body">
         <div class="photo-zone">
           <input type="file" id="mFoto" accept="image/*">
           <div class="pz-ico">📷</div>
-          <p>Clique para carregar</p>
+          <p>Click to upload</p>
           <img id="mPhotoPreview" src="${p.photo||''}" style="${p.photo?'display:block':'display:none'};width:80px;height:96px;border-radius:6px;object-fit:cover;object-position:top;margin:.6rem auto 0;border:2px solid #e8c84a">
         </div>
       </div>
     </div>
-
     <div class="fsec">
-      <div class="fsec-head"><span>⚽</span><h3>Atributos — Nota 1 a 10</h3></div>
-      <div class="fsec-body"><div class="attrs-grid" id="mAttrs">${attrHtml}</div></div>
+      <div class="fsec-head">
+        <span id="mAttrsIcon">${currentPos==='GK'?'🧤':'⚽'}</span>
+        <h3 id="mAttrsTitle">Technical Attributes${currentPos==='GK'?' — Goalkeeper':''} — Score 1 to 10</h3>
+        <span style="margin-left:auto;font-size:.65rem;color:var(--muted);font-style:italic">Click same dot again or right-click to clear</span>
+      </div>
+      <div class="fsec-body"><div class="attrs-grid" id="mAttrs">${buildAttrHtml(attrs,p.scores)}</div></div>
     </div>
-
     <div class="fsec">
-      <div class="fsec-head"><span>📋</span><h3>Análise</h3></div>
+      <div class="fsec-head"><span>📋</span><h3>Analysis</h3></div>
       <div class="fsec-body">
         <div class="fg fg2">
-          <div class="fl"><label>Pontos Fortes</label><textarea id="mForcas" placeholder="Strengths…">${p.forcas||''}</textarea></div>
-          <div class="fl"><label>Pontos Fracos</label><textarea id="mFraquezas" placeholder="Weaknesses…">${p.fraquezas||''}</textarea></div>
-          <div class="fl s2"><label>Observações Gerais</label><textarea id="mObs" placeholder="Contexto tático, comportamento…" style="min-height:80px">${p.obs||''}</textarea></div>
+          <div class="fl"><label>Strengths</label><textarea id="mForcas" placeholder="Key strengths observed…">${p.forcas||''}</textarea></div>
+          <div class="fl"><label>Weaknesses</label><textarea id="mFraquezas" placeholder="Areas to develop…">${p.fraquezas||''}</textarea></div>
+          <div class="fl s2"><label>General Notes</label><textarea id="mObs" placeholder="Tactical context, behaviour, leadership…" style="min-height:80px">${p.obs||''}</textarea></div>
         </div>
       </div>
     </div>
-
     <div class="fsec">
-      <div class="fsec-head"><span>🎯</span><h3>Recomendação</h3></div>
+      <div class="fsec-head"><span>🎯</span><h3>Recommendation</h3></div>
       <div class="fsec-body">
         <div class="fg fg3">
-          <div class="fl"><label>Recomendação</label>
+          <div class="fl"><label>Recommendation</label>
             <select id="mRec"><option value="">—</option>
-              <option value="A"${p.rec==='A'?' selected':''}>A — Contratar</option>
-              <option value="B"${p.rec==='B'?' selected':''}>B — Monitorar</option>
-              <option value="C"${p.rec==='C'?' selected':''}>C — Observar</option>
-              <option value="D"${p.rec==='D'?' selected':''}>D — Não recomendado</option>
+              <option value="A"${p.rec==='A'?' selected':''}>A — Sign now</option>
+              <option value="B"${p.rec==='B'?' selected':''}>B — Monitor closely</option>
+              <option value="C"${p.rec==='C'?' selected':''}>C — Watch again</option>
+              <option value="D"${p.rec==='D'?' selected':''}>D — Not recommended</option>
             </select>
           </div>
-          <div class="fl"><label>Prioridade</label>
+          <div class="fl"><label>Priority</label>
             <select id="mPrio"><option value="">—</option>
-              <option${p.prio==='Alta'?' selected':''}>Alta</option>
-              <option${p.prio==='Média'?' selected':''}>Média</option>
-              <option${p.prio==='Baixa'?' selected':''}>Baixa</option>
+              <option${p.prio==='High'?' selected':''}>High</option>
+              <option${p.prio==='Medium'?' selected':''}>Medium</option>
+              <option${p.prio==='Low'?' selected':''}>Low</option>
             </select>
           </div>
-          <div class="fl"><label>Nota Geral (0–10)</label><input id="mNota" type="number" placeholder="7.5" min="0" max="10" step="0.5" value="${p.nota||''}"></div>
-          <div class="fl s3"><label>Justificativa</label><textarea id="mJust" placeholder="Justifique a recomendação…">${p.just||''}</textarea></div>
+          <div class="fl"><label>Overall Score (0–10)</label><input id="mNota" type="number" placeholder="7.5" min="0" max="10" step="0.5" value="${p.nota||''}"></div>
+          <div class="fl s3"><label>Justification</label><textarea id="mJust" placeholder="Justify your final recommendation…">${p.just||''}</textarea></div>
         </div>
       </div>
     </div>
-
     <div class="form-actions">
-      <button class="dbtn dbtn-ghost" onclick="switchMTab('list')">← Cancelar</button>
-      <button class="dbtn dbtn-save" onclick="submitReport()">Salvar Relatório ✓</button>
+      <button class="dbtn dbtn-ghost" onclick="switchMTab('list')">← Cancel</button>
+      <button class="dbtn dbtn-save" onclick="submitReport()">Save Report ✓</button>
     </div>
   `;
 
-  // wire dots
-  document.getElementById('mAttrs').addEventListener('click', e=>{
-    const dot=e.target.closest('.dot');
-    if(!dot) return;
-    const k=dot.dataset.k, v=parseInt(dot.dataset.v);
-    mScores[k]=v;
+  function applyDotScore(k,newVal){
+    mScores[k]=newVal;
     const row=document.getElementById('mdots_'+k);
+    if(!row)return;
     row.querySelectorAll('.dot').forEach((d,i)=>{
       d.className='dot';
-      if(i<v){d.classList.add('on');d.classList.add(v<=3?'low':v<=6?'mid':'hi');}
+      if(i<newVal){d.classList.add('on');d.classList.add(newVal<=3?'low':newVal<=6?'mid':'hi');}
     });
-    document.getElementById('msc_'+k).textContent=v;
+    const sc=document.getElementById('msc_'+k);
+    if(sc) sc.textContent=newVal===0?'—':newVal;
+  }
+
+  document.getElementById('mAttrs').addEventListener('click',e=>{
+    const dot=e.target.closest('.dot');if(!dot)return;
+    const k=dot.dataset.k,v=parseInt(dot.dataset.v);
+    applyDotScore(k,mScores[k]===v?0:v);
   });
 
-  // photo
+  document.getElementById('mAttrs').addEventListener('contextmenu',e=>{
+    const dot=e.target.closest('.dot');if(!dot)return;
+    e.preventDefault();applyDotScore(dot.dataset.k,0);
+  });
+
   document.getElementById('mFoto').addEventListener('change',function(){
     const file=this.files[0];if(!file)return;
     const r=new FileReader();
@@ -928,36 +1847,50 @@ function renderModalForm(preload){
     r.readAsDataURL(file);
   });
 
-  // restore existing photo
   window._mPhoto=p.photo||null;
 }
 
-/* ══════════════════════════════════════════
-   SUBMIT
-══════════════════════════════════════════ */
+function onPosChange(pos){
+  const newAttrs=getAttrs(pos);
+  mScores={};newAttrs.forEach(a=>mScores[a.key]=0);
+  const grid=document.getElementById('mAttrs');if(!grid)return;
+  grid.innerHTML=newAttrs.map(a=>`
+    <div class="attr-row">
+      <div class="attr-row-top">
+        <span>${a.label}</span>
+        <span class="attr-score-disp" id="msc_${a.key}">—</span>
+      </div>
+      <div class="attr-dots" id="mdots_${a.key}">
+        ${Array.from({length:10},(_,i)=>`<div class="dot" data-k="${a.key}" data-v="${i+1}"></div>`).join('')}
+      </div>
+    </div>`).join('');
+  const icon=document.getElementById('mAttrsIcon');
+  const title=document.getElementById('mAttrsTitle');
+  if(icon) icon.textContent=pos==='GK'?'🧤':'⚽';
+  if(title) title.textContent=`Technical Attributes${pos==='GK'?' — Goalkeeper':''} — Score 1 to 10`;
+}
+
 function gv(id){ const el=document.getElementById(id); return el?el.value.trim():''; }
 
 function submitReport(){
   const nome=gv('mNome');
-  if(!nome){ alert('Informe o nome do atleta.'); return; }
-
+  if(!nome){alert('Please enter the player name.');return;}
   const rep={
-    id: editingReportId || ('r'+Date.now()),
-    data:gv('mData'), timeA:gv('mTimeA'), timeB:gv('mTimeB'),
-    placar:gv('mPlacar'), scout:gv('mScout'),
-    nome, dob:gv('mDob'), nac:gv('mNac'), clube:gv('mClube'),
-    pos:gv('mPos'), pe:gv('mPe'), alt:gv('mAlt'), fis:gv('mFis'),
-    contrato:gv('mContrato'), tm:gv('mTm'),
-    scores:{...mScores},
-    photo: window._mPhoto||null,
-    forcas:gv('mForcas'), fraquezas:gv('mFraquezas'),
-    obs:gv('mObs'), rec:gv('mRec'), prio:gv('mPrio'),
-    nota:gv('mNota'), just:gv('mJust'),
+    id:editingReportId||('r'+Date.now()),
+    data:gv('mData'),timeA:gv('mTimeA'),timeB:gv('mTimeB'),
+    placar:gv('mPlacar'),scout:gv('mScout'),
+    nome,dob:gv('mDob'),nac:gv('mNac'),clube:gv('mClube'),
+    pos:gv('mPos'),pe:gv('mPe'),alt:gv('mAlt'),fis:gv('mFis'),
+    contrato:gv('mContrato'),tm:gv('mTm'),
+    tmLink:gv('mTmLink'),ogolLink:gv('mOgolLink'),
+    agencia:gv('mAgencia'),agenciaContato:gv('mAgenciaContato'),
+    scores:{...mScores},photo:window._mPhoto||null,
+    forcas:gv('mForcas'),fraquezas:gv('mFraquezas'),
+    obs:gv('mObs'),rec:gv('mRec'),prio:gv('mPrio'),
+    nota:gv('mNota'),just:gv('mJust'),
   };
-
-  saveReport(currentCompId, rep);
-  editingReportId=null;
-  window._mPhoto=null;
+  saveReport(currentCompId,rep);
+  editingReportId=null;window._mPhoto=null;
   document.getElementById('mRepCount').textContent=(REPORTS[currentCompId]||[]).length;
   switchMTab('list');
 }
@@ -988,31 +1921,26 @@ function renderModalList(){
 }
 
 function buildReportCard(r){
-  const fmtDate=s=>{if(!s)return'—';const d=new Date(s+'T12:00:00');return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'})};
-  const calcAge=s=>{if(!s)return'';const d=new Date(s+'T12:00:00'),t=new Date();let a=t.getFullYear()-d.getFullYear();if(t.getMonth()-d.getMonth()<0||(t.getMonth()-d.getMonth()===0&&t.getDate()<d.getDate()))a--;return`${a}a`};
+  const fmtDate=s=>{if(!s)return'—';const d=new Date(s+'T12:00:00');return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'});};
+  const calcAge=s=>{if(!s)return'';const d=new Date(s+'T12:00:00'),t=new Date();let a=t.getFullYear()-d.getFullYear();if(t.getMonth()-d.getMonth()<0||(t.getMonth()-d.getMonth()===0&&t.getDate()<d.getDate()))a--;return`${a}a`;};
   const barColor=n=>n<=3?'#e84a4a':n<=6?'#e8a44a':n<=8?'#e8c84a':'#4ae890';
-  const recLabel={A:'✅ A — Contratar',B:'🔵 B — Monitorar',C:'🟡 C — Observar',D:'🔴 D — Não recom.'};
-
+  const recLabel={A:'✅ A — Sign now',B:'🔵 B — Monitor',C:'🟡 C — Watch again',D:'🔴 D — Not rec.'};
   const matchLine=r.timeA&&r.timeB?`${r.timeA} <span style="color:var(--muted);margin:0 .25rem">vs</span> ${r.timeB}`:(r.timeA||r.timeB||'');
-
   const photoHtml=r.photo
     ?`<img src="${r.photo}" style="width:100%;height:100%;object-fit:cover;object-position:top center;display:block;filter:grayscale(15%) contrast(1.05)">`
     :`<div class="rcard-photo-ph">👤</div>`;
 
-  const filledAttrs=ATTRS.filter(a=>r.scores&&r.scores[a.key]>0);
+  const allAttrs=[...ATTRS_GK,...ATTRS_FIELD];
+  const filledAttrs=allAttrs.filter(a=>r.scores&&r.scores[a.key]>0);
   const attrsHtml=filledAttrs.length?`
     <div class="rcard-attrs">
-      <div class="rcard-attrs-title">Atributos Técnicos</div>
+      <div class="rcard-attrs-title">Technical Attributes</div>
       <div class="rcard-attr-grid">
         ${filledAttrs.map(a=>`
           <div class="rcard-attr">
-            <div class="rcard-attr-top">
-              <span class="rcard-attr-name">${a.label}</span>
-              <span class="rcard-attr-num">${r.scores[a.key]}</span>
-            </div>
+            <div class="rcard-attr-top"><span class="rcard-attr-name">${a.label}</span><span class="rcard-attr-num">${r.scores[a.key]}</span></div>
             <div class="rcard-attr-bar"><div class="rcard-attr-fill" style="width:${r.scores[a.key]*10}%;background:${barColor(r.scores[a.key])}"></div></div>
-          </div>
-        `).join('')}
+          </div>`).join('')}
       </div>
     </div>`:'';
 
@@ -1024,18 +1952,37 @@ function buildReportCard(r){
 
   const notesHtml=(r.obs||r.just)?`
     <div class="rcard-notes">
-      <div class="rcard-notes-title">Observações</div>
+      <div class="rcard-notes-title">Notes</div>
       <div class="rcard-notes-text">${[r.obs,r.just].filter(Boolean).join('<br><br>')}</div>
     </div>`:'';
 
   const meta=[
-    {l:'D.O.B', v:r.dob?`${fmtDate(r.dob)} (${calcAge(r.dob)})`:'—'},
-    {l:'Nac.', v:r.nac||'—'},
-    {l:'Pé', v:r.pe||'—'},
-    {l:'Altura', v:r.alt?`${r.alt} cm`:'—'},
-    {l:'Físico', v:r.fis||'—'},
-    ...(r.tm?[{l:'TM',v:r.tm,gld:true}]:[]),
+    {l:'D.O.B',v:r.dob?`${fmtDate(r.dob)} (${calcAge(r.dob)})`:'—'},
+    {l:'Nat.',v:r.nac||'—'},
+    {l:'Foot',v:r.pe||'—'},
+    {l:'Height',v:r.alt?`${r.alt} cm`:'—'},
+    {l:'Body',v:r.fis||'—'},
+    ...(r.tm?[{l:'TM Val.',v:r.tm,gld:true}]:[]),
   ];
+
+  // helper: render agency/contact pill — link if URL, plain text otherwise
+  function agencyPill(val,icon){
+    if(!val) return '';
+    const isUrl=val.startsWith('http://')||val.startsWith('https://')||val.startsWith('www.');
+    const href=val.startsWith('www.')?'https://'+val:val;
+    const base="font-family:'Barlow Condensed',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-radius:4px;padding:.2rem .6rem;";
+    return isUrl
+      ?`<a href="${href}" target="_blank" style="${base}color:var(--gold);text-decoration:none;border:1px solid rgba(232,200,74,.3)">${icon} ${val} ↗</a>`
+      :`<span style="${base}color:var(--muted);border:1px solid var(--border)">${icon} ${val}</span>`;
+  }
+
+  const linksHtml=(r.tmLink||r.ogolLink||r.agencia||r.agenciaContato)?`
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap;padding:.6rem 1rem;border-top:1px solid var(--border);background:var(--card2)">
+      ${r.tmLink?`<a href="${r.tmLink}" target="_blank" style="font-family:'Barlow Condensed',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--blue);text-decoration:none;border:1px solid rgba(58,123,213,.3);border-radius:4px;padding:.2rem .6rem">🔗 Transfermarkt ↗</a>`:''}
+      ${r.ogolLink?`<a href="${r.ogolLink}" target="_blank" style="font-family:'Barlow Condensed',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-decoration:none;border:1px solid var(--border);border-radius:4px;padding:.2rem .6rem">🔗 Ogol ↗</a>`:''}
+      ${agencyPill(r.agencia,'🏢')}
+      ${agencyPill(r.agenciaContato,'📞')}
+    </div>`:'';
 
   return `
     <div class="rcard" id="rc_${r.id}">
@@ -1050,7 +1997,7 @@ function buildReportCard(r){
       <div class="rcard-body">
         <div class="rcard-left">
           <div class="rcard-photo">${photoHtml}
-            <div class="rcard-pos-tag"><div class="rcard-pos">${r.pos||'Campo'}</div></div>
+            <div class="rcard-pos-tag"><div class="rcard-pos">${r.pos||'Field'}</div></div>
           </div>
           <div class="rcard-meta">
             ${meta.map(m=>`<div class="rcard-meta-row"><span class="rcard-meta-lbl">${m.l}</span><span class="rcard-meta-val${m.gld?' gld':''}">${m.v}</span></div>`).join('')}
@@ -1062,20 +2009,19 @@ function buildReportCard(r){
             <div class="rcard-name">${r.nome}</div>
             ${r.nac||r.pos?`<div class="rcard-namesub">${[r.nac,r.pos].filter(Boolean).join(' · ')}</div>`:''}
           </div>
-          ${attrsHtml}
-          ${swHtml}
-          ${notesHtml}
+          ${attrsHtml}${swHtml}${notesHtml}
         </div>
       </div>
+      ${linksHtml}
       <div class="rcard-footer">
         <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">
           ${r.rec?`<span class="rcard-rec rec-${r.rec}">${recLabel[r.rec]||r.rec}</span>`:''}
-          ${r.prio?`<span style="font-size:.7rem;color:var(--muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase">Prioridade: <strong style="color:var(--text)">${r.prio}</strong></span>`:''}
+          ${r.prio?`<span style="font-size:.7rem;color:var(--muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase">Priority: <strong style="color:var(--text)">${r.prio}</strong></span>`:''}
         </div>
         <div style="display:flex;align-items:center;gap:.8rem">
-          ${r.nota?`<div class="rcard-overall"><span class="rcard-overall-lbl">Nota</span><span class="rcard-overall-num">${r.nota}</span></div>`:''}
+          ${r.nota?`<div class="rcard-overall"><span class="rcard-overall-lbl">Score</span><span class="rcard-overall-num">${r.nota}</span></div>`:''}
           <div class="rcard-footer-actions">
-            <button class="rcard-edit-btn" onclick="editReport('${r.id}')">✏ Editar</button>
+            <button class="rcard-edit-btn" onclick="editReport('${r.id}')">✏ Edit</button>
             <button class="rcard-del-btn" onclick="confirmDelete('${r.id}')">✕</button>
           </div>
         </div>
@@ -1092,7 +2038,7 @@ function editReport(repId){
 }
 
 function confirmDelete(repId){
-  if(!confirm('Excluir este relatório?')) return;
+  if(!confirm('Delete this report?')) return;
   deleteReport(currentCompId, repId);
   document.getElementById('mRepCount').textContent=(REPORTS[currentCompId]||[]).length;
   renderModalList();
@@ -1107,12 +2053,40 @@ function updateScout(id,slot,value){
   while(comp.scouts.length<=slot)comp.scouts.push('');
   comp.scouts[slot]=value;
   comp.scouts=comp.scouts.filter((s,i)=>i<=Math.max(...comp.scouts.map((_,i)=>comp.scouts[i]?i:-1)));
-  saveData();renderViews();
+  saveData();
+  refreshCalRow(id);
 }
 
 function updateDate(id,field,value){
   const comp=DATA.find(c=>c.id===id);
-  if(comp){comp[field]=value;saveData();renderViews();}
+  if(!comp)return;
+  comp[field]=value;
+  saveData();
+  refreshCalRow(id);
+}
+
+// Surgically update only the period cells of one row — no scroll jump
+function refreshCalRow(id){
+  const comp=DATA.find(c=>c.id===id);if(!comp)return;
+  const row=document.getElementById('row-'+id);if(!row)return;
+
+  const assigned=comp.scouts.filter(s=>s&&s!=='');
+  const color=cellColor(comp);
+  const textCol=assigned.length>1?'#fff':(assigned[0]?SCOUT_COLORS[assigned[0]]?.text||'#1a1a18':'#1a1a18');
+  const initials=assigned.length>1?assigned.map(s=>s[0]).join(''):(assigned[0]?assigned[0][0]:'');
+
+  // Update all period cells in this row
+  const periodCells=row.querySelectorAll('td.period');
+  periodCells.forEach((td,pi)=>{
+    const p=PERIODS[pi];
+    const act=isActive(comp,p);
+    const bg=act&&color?color:ALT[p.m%2];
+    const fc=act&&color?textCol:'transparent';
+    td.style.background=bg;
+    td.style.color=fc;
+    td.className='period'+(act?' active':'')+(((pi+1)%3===0)?' month-end':'');
+    td.textContent=act&&assigned.length?initials:act?'·':'';
+  });
 }
 
 /* ══════════════════════════════════════════
@@ -1132,15 +2106,156 @@ function fixStickyTops(){
   wrap.querySelectorAll('thead tr:nth-child(2) th').forEach(el=>el.style.top=rowH+'px');
   wrap.querySelectorAll('thead tr:first-child .hdr-name').forEach(el=>{el.style.top='0px';el.style.left='0px';});
 }
-window.addEventListener('resize',fixStickyTops);
+window.addEventListener('resize',()=>{ fixStickyTops(); if(currentView==='indicados') fixIndHeight(); });
+
+
+/* ══ INDICADOS HISTORICAL IMPORT ══ */
+function importIndicadosHistorico(input){
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      const jog=data.ind_jog||data;
+      const tre=data.ind_tre||{};
+      const totalJ=Object.keys(jog).length;
+      const totalT=Object.keys(tre).length;
+      if(!confirm('Importar '+totalJ+' jogadores e '+totalT+' treinadores?\nIsso VAI SOBRESCREVER dados existentes com mesma ID.')) return;
+      
+      // Batch write to Firebase
+      if(db&&firebaseReady){
+        setSyncBadge('syncing','⟳ Importando…');
+        const updates={};
+        Object.entries(jog).forEach(([k,v])=>{ updates['ind_jog/'+k]=v; });
+        Object.entries(tre).forEach(([k,v])=>{ updates['ind_tre/'+k]=v; });
+        db.ref('/').update(updates)
+          .then(()=>{
+            setSyncBadge('synced','● Live');
+            alert('✓ Importado: '+totalJ+' jogadores e '+totalT+' treinadores');
+          })
+          .catch(err=>{ setSyncBadge('error','✕ Erro'); alert('Erro: '+err.message); });
+      } else {
+        // Local fallback
+        Object.assign(IND_JOG, jog);
+        Object.assign(IND_TRE, tre);
+        try{
+          localStorage.setItem('ind_jog',JSON.stringify(IND_JOG));
+          localStorage.setItem('ind_tre',JSON.stringify(IND_TRE));
+        }catch(e){}
+        alert('✓ Importado localmente: '+totalJ+' jogadores e '+totalT+' treinadores');
+        if(currentView==='indicados') document.getElementById('views').innerHTML=renderIndicados();
+      }
+    }catch(err){ alert('Erro ao ler arquivo: '+err.message); }
+    input.value='';
+  };
+  reader.readAsText(file);
+}
+
+
+/* ══ OGOL AUTO-FILL ══ */
+async function buscarOgol(){
+  const url = document.getElementById('iOgolLink')?.value?.trim();
+  if(!url){ alert('Cole o link do Ogol primeiro.'); return; }
+
+  const btn = document.getElementById('btnOgolBuscar');
+  btn.textContent='⟳ Buscando…';
+  btn.disabled=true;
+
+  // Extract slug from Ogol URL → player name for search
+  // e.g. /jogador/vinicius-junior/547737 → "vinicius junior"
+  const slugMatch = url.match(/ogol\.com\.br\/jogador\/([^/]+)/);
+  const slug = slugMatch ? slugMatch[1].replace(/-/g,' ') : '';
+  if(!slug){ alert('URL do Ogol não reconhecida.'); btn.textContent='🔍 Buscar Ogol'; btn.disabled=false; return; }
+
+  try{
+    // TheSportsDB — free, no key, CORS enabled
+    const searchName = encodeURIComponent(slug);
+    const apiUrl = 'https://www.thesportsdb.com/api/v1/json/3/searchplayers.php?p='+searchName;
+    const res = await fetch(apiUrl);
+    const data = await res.json();
+    const p = data?.player?.[0];
+
+    if(p){
+      // Map TheSportsDB position to our codes
+      const posMap={
+        'Goalkeeper':'1 - GK','Defender':'4 - RCB/LCB',
+        'Right Back':'2 - RB','Left Back':'3 - LB',
+        'Midfielder':'6 - CM','Defensive Midfielder':'5 - DM',
+        'Attacking Midfielder':'7 - AM','Forward':'9 - CF',
+        'Winger':'8 - RW/LW','Centre-Forward':'9 - CF',
+        'Striker':'9 - CF'
+      };
+      const posCode = posMap[p.strPosition] || '';
+
+      if(p.strPlayer)    document.getElementById('iNome').value = p.strPlayer.toUpperCase();
+      if(p.dateBorn)     document.getElementById('iGeracao').value = p.dateBorn.slice(0,4);
+      if(p.strNationality) document.getElementById('iPais').value = p.strNationality;
+      if(p.strTeam)      document.getElementById('iClube').value = p.strTeam;
+      if(p.strHeight)    {} // optional
+      if(posCode){
+        const sel = document.getElementById('iPosicao');
+        if(sel) sel.value = posCode;
+      }
+
+      btn.textContent='✓ Preenchido!';
+      btn.style.background='#1a8040';
+      setTimeout(()=>{ btn.textContent='🔍 Buscar Ogol'; btn.style.background=''; btn.disabled=false; }, 3000);
+    } else {
+      // Fallback: pre-fill name from URL slug at minimum
+      const nameFmt = slug.split(' ').map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
+      document.getElementById('iNome').value = nameFmt.toUpperCase();
+
+      btn.textContent='⚠ Não encontrado — nome preenchido';
+      btn.style.background='#b8860b';
+      setTimeout(()=>{ btn.textContent='🔍 Buscar Ogol'; btn.style.background=''; btn.disabled=false; }, 3500);
+    }
+  } catch(err){
+    console.error('buscarOgol error:', err);
+    // Fallback: at least fill the name from the URL
+    try{
+      const nameFmt = slug.split(' ').map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
+      document.getElementById('iNome').value = nameFmt.toUpperCase();
+    }catch(e){}
+    btn.textContent='⚠ API indisponível — nome preenchido';
+    btn.style.background='#b8860b';
+    setTimeout(()=>{ btn.textContent='🔍 Buscar Ogol'; btn.style.background=''; btn.disabled=false; }, 3500);
+  }
+}
+
+function fixIndHeight(){
+  const nav=document.querySelector('.nav');
+  const toolbar=document.querySelector('.toolbar');
+  const indTabs=document.querySelector('.ind-tabs');
+  const ctrlWrap=document.getElementById('indControls');
+  const tblWrap=document.getElementById('indTableWrap');
+  if(!nav||!toolbar||!indTabs||!tblWrap) return;
+  const navH=nav.getBoundingClientRect().height;
+  const toolH=toolbar.getBoundingClientRect().height;
+  const tabsH=indTabs.getBoundingClientRect().height;
+  const ctrlH=ctrlWrap?ctrlWrap.getBoundingClientRect().height:0;
+  tblWrap.style.height=(window.innerHeight - navH - toolH - tabsH - ctrlH - 2)+'px';
+  tblWrap.style.overflow='auto';
+}
 
 /* ══════════════════════════════════════════
    BOOT
 ══════════════════════════════════════════ */
-loadData();
-renderNav();
-renderViews();
-setTimeout(fixStickyTops,50);
+setTimeout(function(){
+  renderNav();
+  initFirebase();
+}, 0);
 </script>
+
+<!-- ═══════ INDICADOS MODAL ═══════ -->
+<div id="indModal">
+  <div class="ind-modal-panel">
+    <div class="ind-modal-hdr">
+      <span class="ind-modal-title" id="indModalTitle">Novo Registro</span>
+      <button class="ind-modal-close" onclick="closeIndModal()">✕ Fechar</button>
+    </div>
+    <div class="ind-modal-body" id="indModalBody"></div>
+  </div>
+</div>
+
 </body>
 </html>
