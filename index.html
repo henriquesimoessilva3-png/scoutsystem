@@ -2874,323 +2874,508 @@ function renderPrStep(){
 /* ══════════════════════════════════════════
    PDF GENERATION — Eagle Football 16:9
 ══════════════════════════════════════════ */
+/* ══════════════════════════════════════════
+   PDF GENERATION — Eagle Football  
+   Design system: exact Keynote match
+══════════════════════════════════════════ */
+
+// ── Design tokens (measured from Keynote slides)
+const EF = {
+  // Dimensions 16:9
+  W: 297, H: 167.0625,
+  // Colors
+  bgPage:   [232,232,232],   // slide background
+  bgCover:  [237,237,237],   // cover background
+  hdrBand:  [52,52,52],      // top player header bar
+  secBar:   [68,68,68],      // section title bars
+  contentBg:[245,245,243],   // content box bg
+  cellBg:   [255,255,255],   // inner cell bg
+  finalBar: [90,85,80],      // final considerations bar
+  finalText:[62,58,54],      // final considerations text bg
+  green:    [76,175,80],     // strengths
+  orange:   [230,81,0],      // weaknesses
+  gold:     [180,155,70],    // eagle gold
+  white:    [255,255,255],
+  dark:     [20,20,18],
+  mid:      [100,100,98],
+  light:    [160,160,158],
+  // Typography
+  fontH1: 11, fontH2: 8.5, fontBody: 8, fontSm: 7, fontXs: 6.5
+};
+
 async function gerarPlayerReport(){
   if(!PR.nome){alert('Informe o nome do jogador (Slide 1).');PR.step=1;renderPrStep();return;}
   const btn=document.getElementById('prGenBtn');
   if(btn){btn.textContent='⟳ Gerando…';btn.disabled=true;}
-
   try{
     const {jsPDF}=window.jspdf;
-    const W=297, H=167.0625; // 16:9 landscape
+    const W=EF.W, H=EF.H;
     const pdf=new jsPDF({orientation:'landscape',unit:'mm',format:[W,H]});
 
-    // ══ HEADER BAND for slides 2–6 ══
-    const addSlideHeader=(nome,posicao,clube,clubeLogo)=>{
-      pdf.setFillColor(20,20,18);
-      pdf.rect(0,0,W,18,'F');
+    /* ────────────────────────────────────────
+       SHARED: Top player header (slides 2–6)
+    ──────────────────────────────────────── */
+    const drawHeader=(nome,pos,clube,clubeLogo)=>{
+      // Dark header band
+      pdf.setFillColor(...EF.hdrBand);
+      pdf.rect(0,0,W,19,'F');
+      // Gold accent line
+      pdf.setDrawColor(...EF.gold);pdf.setLineWidth(0.6);
+      pdf.line(0,19,W,19);
+
+      // Club logo circle (left)
+      if(clubeLogo){
+        try{pdf.addImage(clubeLogo,'PNG',4,1.5,16,16);}catch(e){}
+      } else {
+        pdf.setFillColor(80,80,78);pdf.circle(12,9.5,7,'F');
+      }
+
       // Player name
-      pdf.setFont('helvetica','bold');pdf.setFontSize(13);
-      pdf.setTextColor(255,255,255);
-      pdf.text(nome||'',12,12);
+      pdf.setFont('helvetica','bold');pdf.setFontSize(EF.fontH1*1.2);
+      pdf.setTextColor(...EF.white);
+      pdf.text((nome||'').toUpperCase(),24,12);
+
       // Position badge
-      if(posicao){
-        const px=pdf.getTextWidth(nome||'')+18;
-        pdf.setFillColor(232,200,74);
-        pdf.roundedRect(px,5,22,9,1.5,1.5,'F');
-        pdf.setFont('helvetica','bold');pdf.setFontSize(7);pdf.setTextColor(20,20,18);
-        pdf.text(posicao,px+11,11,{align:'center'});
+      if(pos){
+        const nx=24+pdf.getTextWidth((nome||'').toUpperCase())+3;
+        pdf.setFillColor(...EF.gold);
+        const bw=pdf.getTextWidth(pos)+5;
+        pdf.roundedRect(nx,5,bw,8,1,1,'F');
+        pdf.setFont('helvetica','bold');pdf.setFontSize(EF.fontXs);
+        pdf.setTextColor(...EF.dark);
+        pdf.text(pos,nx+bw/2,10.5,{align:'center'});
       }
-      // Clube
+
+      // Club | Country subtitle
       if(clube){
-        pdf.setFont('helvetica','normal');pdf.setFontSize(9);pdf.setTextColor(200,200,200);
-        pdf.text(clube,W-12,12,{align:'right'});
+        pdf.setFont('helvetica','normal');pdf.setFontSize(EF.fontSm);
+        pdf.setTextColor(...EF.light);
+        pdf.text(clube,W-8,12,{align:'right'});
       }
-      // Gold underline
-      pdf.setDrawColor(232,200,74);pdf.setLineWidth(0.5);
-      pdf.line(0,18,W,18);
+
+      // Eagle micro logo top-right
+      pdf.setFont('helvetica','bold');pdf.setFontSize(5);
+      pdf.setTextColor(...EF.gold);pdf.setCharSpace(1.5);
+      pdf.text('EAGLE',W-18,5);pdf.setCharSpace(0);
+      pdf.setFont('helvetica','normal');pdf.setFontSize(4);
+      pdf.setTextColor(...EF.light);pdf.setCharSpace(0.8);
+      pdf.text('FOOTBALL',W-18,8.5);pdf.setCharSpace(0);
+
+      // Club logos bottom-right (Botafogo/Lyon/RWDM) — stacked vertically
+      const miniLogos=[LOGO_BOTAFOGO,LOGO_LYON,LOGO_RWDM];
+      miniLogos.forEach((b,i)=>{
+        if(b) try{pdf.addImage(b,'PNG',W-10,H-8-((2-i)*9),7,7);}catch(e){}
+      });
     };
 
-    // ══ PAGE 1: COVER ══
-    pdf.setFillColor(237,237,237);
+    /* ── Helpers ── */
+    const secBar=(x,y,w,h,label,color)=>{
+      const c=color||EF.secBar;
+      pdf.setFillColor(...c);
+      pdf.roundedRect(x,y,w,h,0.5,0.5,'F');
+      pdf.setFont('helvetica','bold');pdf.setFontSize(EF.fontXs);
+      pdf.setTextColor(...EF.white);pdf.setCharSpace(1);
+      pdf.text(label.toUpperCase(),x+4,y+h/2+EF.fontXs*0.18);
+      pdf.setCharSpace(0);
+    };
+
+    const infoBlock=(x,y,w,label,value,color)=>{
+      pdf.setFillColor(...EF.contentBg);pdf.setDrawColor(220,220,218);pdf.setLineWidth(.2);
+      pdf.roundedRect(x,y,w,12,0.8,0.8,'FD');
+      pdf.setFont('helvetica','bold');pdf.setFontSize(EF.fontXs);
+      pdf.setTextColor(...EF.light);
+      pdf.text((label||'').toUpperCase(),x+3,y+5);
+      pdf.setFont('helvetica','bold');pdf.setFontSize(EF.fontH2);
+      pdf.setTextColor(color?color:EF.dark);
+      pdf.text(String(value||'—'),x+3,y+10);
+    };
+
+    /* ════════════════════════════════
+       PAGE 1 — COVER
+    ════════════════════════════════ */
+    pdf.setFillColor(...EF.bgCover);
     pdf.rect(0,0,W,H,'F');
 
-    // EAGLE FOOTBALL logo (text recreation)
-    pdf.setFont('helvetica','bold');
-    pdf.setTextColor(20,20,20);
-    pdf.setFontSize(46);
-    pdf.setCharSpace(7);
-    pdf.text('EAGLE',W/2,46,{align:'center'});
-    pdf.setCharSpace(0);
-
-    pdf.setFontSize(13);pdf.setCharSpace(5);
-    pdf.text('FOOTBALL',W/2,56,{align:'center'});
-    pdf.setCharSpace(0);
-
-    // Wing lines
+    // ── Eagle Football Logo (faithful recreation) ──
     const cx=W/2;
-    pdf.setDrawColor(180,155,70);pdf.setLineWidth(1.2);
-    pdf.line(cx-68,58.5,cx-40,58.5);
-    pdf.line(cx+40,58.5,cx+68,58.5);
-    // V chevron
-    pdf.setFillColor(180,155,70);
-    pdf.triangle(cx-4,60,cx+4,60,cx,65,'F');
-    // thin line above
-    pdf.setLineWidth(0.3);pdf.setDrawColor(160,140,60);
-    pdf.line(cx-68,57.5,cx-40,57.5);
-    pdf.line(cx+40,57.5,cx+68,57.5);
+    // Main EAGLE text
+    pdf.setFont('helvetica','bold');
+    pdf.setTextColor(...EF.dark);
+    pdf.setFontSize(44);pdf.setCharSpace(8);
+    pdf.text('EAGLE',cx,47,{align:'center'});
+    pdf.setCharSpace(0);
 
-    // Divider
-    pdf.setDrawColor(180,175,165);pdf.setLineWidth(0.3);
-    pdf.line(cx-55,70,cx+55,70);
+    // Wing lines (double lines with V-drop)
+    const wingY=54.5;
+    pdf.setDrawColor(...EF.gold);pdf.setLineWidth(1.0);
+    pdf.line(cx-72,wingY,cx-38,wingY);
+    pdf.line(cx+38,wingY,cx+72,wingY);
+    pdf.setLineWidth(0.35);
+    pdf.line(cx-72,wingY+2,cx-38,wingY+2);
+    pdf.line(cx+38,wingY+2,cx+72,wingY+2);
+    // V drop
+    pdf.setFillColor(...EF.gold);
+    pdf.triangle(cx-5,wingY+1,cx+5,wingY+1,cx,wingY+7,'F');
 
-    // Club logos
-    const logoSize=20;
-    const logoY=73;
-    const logoB64s=[LOGO_BOTAFOGO,LOGO_LYON,LOGO_RWDM];
-    const logoStartX=cx-logoSize*1.5-8;
-    logoB64s.forEach((b64,i)=>{
-      if(b64) try{pdf.addImage(b64,'PNG',logoStartX+i*(logoSize+8),logoY,logoSize,logoSize);}catch(e){}
+    // FOOTBALL text
+    pdf.setFont('helvetica','bold');pdf.setFontSize(13);pdf.setCharSpace(5.5);
+    pdf.setTextColor(...EF.dark);
+    pdf.text('FOOTBALL',cx,53.5,{align:'center'});
+    pdf.setCharSpace(0);
+
+    // Separator line
+    pdf.setDrawColor(180,180,175);pdf.setLineWidth(0.25);
+    pdf.line(cx-60,66,cx+60,66);
+
+    // Club crests
+    const logos=[LOGO_BOTAFOGO,LOGO_LYON,LOGO_RWDM];
+    const lSize=22, lGap=8;
+    const lStartX=cx-(logos.length*(lSize+lGap)-lGap)/2;
+    logos.forEach((b,i)=>{
+      if(b) try{pdf.addImage(b,'PNG',lStartX+i*(lSize+lGap),69,lSize,lSize);}catch(e){
+        // fallback circle
+        pdf.setFillColor(200,200,200);pdf.circle(lStartX+i*(lSize+lGap)+lSize/2,80,8,'F');
+      }
     });
 
     // "PLAYER REPORT" label
     pdf.setFont('helvetica','bolditalic');pdf.setFontSize(9);
-    pdf.setTextColor(160,140,60);pdf.setCharSpace(3);
-    pdf.text('PLAYER REPORT',cx,101,{align:'center'});
+    pdf.setTextColor(...EF.gold);pdf.setCharSpace(3.5);
+    pdf.text('PLAYER REPORT',cx,100,{align:'center'});
     pdf.setCharSpace(0);
 
-    // Player name
-    pdf.setFont('helvetica','bolditalic');pdf.setFontSize(32);pdf.setTextColor(20,20,20);
+    // Player name — large italic bold
+    const nameFontSize=PR.nome.length>18?26:PR.nome.length>14?30:34;
+    pdf.setFont('helvetica','bolditalic');pdf.setFontSize(nameFontSize);
+    pdf.setTextColor(...EF.dark);
     pdf.text(PR.nome,cx,115,{align:'center'});
     // Underline
     const nw=pdf.getTextWidth(PR.nome);
-    pdf.setDrawColor(20,20,20);pdf.setLineWidth(0.8);
+    pdf.setDrawColor(...EF.dark);pdf.setLineWidth(0.7);
     pdf.line(cx-nw/2,118,cx+nw/2,118);
 
-    // Subtitle
+    // Position | Club | Country
     const sub=[PR.posicao,PR.clube,PR.pais?`(${PR.pais})`:''].filter(Boolean).join(' | ');
-    pdf.setFont('helvetica','bold');pdf.setFontSize(10);pdf.setTextColor(50,50,50);
-    pdf.text(sub,cx,127,{align:'center'});
+    pdf.setFont('helvetica','bold');pdf.setFontSize(10);
+    pdf.setTextColor(55,55,52);
+    pdf.text(sub,cx,128,{align:'center'});
 
-    // Player photo bottom-right
+    // Cover photo (bottom right)
     if(PR.coverPhoto){
-      try{pdf.addImage(PR.coverPhoto,'JPEG',W-58,H-68,50,63);}catch(e){}
+      try{pdf.addImage(PR.coverPhoto,'JPEG',W-64,H-76,56,72);}catch(e){}
     }
 
-    // ══ PAGE 2: GENERAL INFO ══
+    /* ════════════════════════════════
+       PAGE 2 — GENERAL INFO
+    ════════════════════════════════ */
     pdf.addPage([W,H],'landscape');
-    pdf.setFillColor(255,255,255);pdf.rect(0,0,W,H,'F');
-    addSlideHeader(PR.nome,PR.posicao,PR.clube);
+    pdf.setFillColor(...EF.bgPage);pdf.rect(0,0,W,H,'F');
+    drawHeader(PR.nome,PR.posicao,PR.clube);
 
-    const col2Y=22;
-    // Left column
-    pdf.setFillColor(248,247,244);pdf.setDrawColor(224,222,212);pdf.setLineWidth(.3);
-    pdf.roundedRect(8,col2Y,85,H-col2Y-8,2,2,'FD');
-    pdf.setFont('helvetica','bold');pdf.setFontSize(8);pdf.setTextColor(100,100,100);
-    let y2=col2Y+8;
-    const infoRow=(lbl,val)=>{
-      if(!val) return;
-      pdf.setFont('helvetica','bold');pdf.setFontSize(7.5);pdf.setTextColor(120,120,120);
-      pdf.text(lbl.toUpperCase(),13,y2);
-      pdf.setFont('helvetica','normal');pdf.setFontSize(9);pdf.setTextColor(20,20,20);
-      pdf.text(String(val),13,y2+5);
-      y2+=11;
+    const Y2=21, PAD=4;
+    // LEFT column (0..115)
+    const LC=8, LCW=105;
+
+    // Basic Information bar
+    secBar(LC,Y2,LCW,7,'Basic Information');
+    let ly=Y2+9;
+
+    // Player photo inside basic info (if available)
+    if(PR.coverPhoto){
+      try{pdf.addImage(PR.coverPhoto,'JPEG',LC,ly,18,22);}catch(e){}
+    }
+    const dataX=LC+(PR.coverPhoto?20:0);
+    const dataW=LCW-(PR.coverPhoto?20:0);
+
+    // Info rows
+    const infoRow=(label,value,x,y,w)=>{
+      if(!value) return;
+      pdf.setFont('helvetica','bold');pdf.setFontSize(EF.fontXs);pdf.setTextColor(...EF.light);
+      pdf.text((label||'').toUpperCase(),x+1,y);
+      pdf.setFont('helvetica','normal');pdf.setFontSize(EF.fontBody);pdf.setTextColor(...EF.dark);
+      pdf.text(String(value),x+1,y+4.5);
+      return y+8.5;
     };
-    pdf.setFont('helvetica','bold');pdf.setFontSize(9);pdf.setTextColor(20,20,18);
-    pdf.text('BASIC INFORMATIONS',13,y2); y2+=8;
-    infoRow('Nationality',PR.pais);
-    infoRow('Date of Birth',PR.ano?PR.ano+' (Age '+(new Date().getFullYear()-parseInt(PR.ano))+')':'');
-    infoRow('Position',PR.posicao);
-    infoRow('Strong Foot',PR.pe);
-    infoRow('Height',PR.alt?PR.alt+' cm':'');
-    infoRow('Weight',PR.peso?PR.peso+' kg':'');
-    infoRow('Market Value',PR.valorMercado);
+
+    const rows=[
+      ['Nationality', PR.pais],
+      ['Date of Birth', PR.ano?(PR.ano+' (Age '+(new Date().getFullYear()-parseInt(PR.ano))+')'):''],
+      ['Position', PR.posicao],
+      ['Strong Foot', PR.pe],
+      ['Height', PR.alt?PR.alt+' cm':''],
+      ['Weight', PR.peso?PR.peso+' kg':''],
+      ['Market Value', PR.valorMercado?'EUR '+PR.valorMercado:''],
+    ].filter(r=>r[1]);
+
+    let ry=ly;
+    rows.forEach(([lbl,val])=>{
+      ry=infoRow(lbl,val,dataX,ry,dataW)||ry;
+    });
+
+    // Links section
     if(PR.ogolLink||PR.tmLink){
-      y2+=2;
-      pdf.setFont('helvetica','bold');pdf.setFontSize(7.5);pdf.setTextColor(120,120,120);
-      pdf.text('LINKS',13,y2); y2+=5;
-      if(PR.ogolLink){pdf.setFont('helvetica','normal');pdf.setFontSize(8);pdf.setTextColor(58,123,213);pdf.text('Ogol →',13,y2);y2+=7;}
-      if(PR.tmLink){pdf.setFont('helvetica','normal');pdf.setFontSize(8);pdf.setTextColor(58,123,213);pdf.text('Transfermarkt →',13,y2);y2+=7;}
+      pdf.setFont('helvetica','bold');pdf.setFontSize(EF.fontXs);pdf.setTextColor(...EF.light);
+      pdf.text('LINKS',dataX+1,ry);ry+=4.5;
+      if(PR.ogolLink){
+        pdf.setFont('helvetica','normal');pdf.setFontSize(EF.fontBody);
+        pdf.setTextColor(60,130,210);pdf.text('→ Ogol',dataX+2,ry);ry+=5;
+      }
+      if(PR.tmLink){
+        pdf.setTextColor(60,130,210);pdf.text('→ Transfermarkt',dataX+2,ry);ry+=5;
+      }
+      pdf.setTextColor(...EF.dark);
     }
 
-    // Right: injury report image
+    // RIGHT column (117..289)
+    const RC=117, RCW=W-RC-8;
+    let rx=RC, ry2=Y2;
+
+    // Right: injury report image  
     if(PR.injuryImg){
-      try{pdf.addImage(PR.injuryImg,'JPEG',97,col2Y,W-105,H-col2Y-8);}catch(e){}
+      try{
+        pdf.setFillColor(...EF.contentBg);pdf.setDrawColor(215,215,213);pdf.setLineWidth(.2);
+        pdf.roundedRect(RC,ry2,RCW,H-ry2-10,1,1,'FD');
+        pdf.addImage(PR.injuryImg,'JPEG',RC,ry2,RCW,H-ry2-10);
+      }catch(e){}
     } else {
-      pdf.setFillColor(248,247,244);pdf.setDrawColor(224,222,212);pdf.setLineWidth(.3);
-      pdf.roundedRect(97,col2Y,W-105,H-col2Y-8,2,2,'FD');
-      pdf.setFont('helvetica','italic');pdf.setFontSize(9);pdf.setTextColor(180,180,180);
-      pdf.text('Recent Injury Report',(97+(W-105)/2),(H/2),{align:'center'});
+      pdf.setFillColor(...EF.contentBg);pdf.setDrawColor(215,215,213);pdf.setLineWidth(.2);
+      pdf.roundedRect(RC,ry2,RCW,H-ry2-10,1,1,'FD');
+      pdf.setFont('helvetica','italic');pdf.setFontSize(8);pdf.setTextColor(195,195,193);
+      pdf.text('Recent Injury Report',RC+RCW/2,(H/2),{align:'center'});
+      pdf.text('Upload screenshot in Slide 2',RC+RCW/2,(H/2)+6,{align:'center'});
     }
 
-    // ══ PAGE 3: PLAYER HISTORY ══
+    /* ════════════════════════════════
+       PAGE 3 — PLAYER HISTORY
+    ════════════════════════════════ */
     pdf.addPage([W,H],'landscape');
-    pdf.setFillColor(255,255,255);pdf.rect(0,0,W,H,'F');
-    addSlideHeader(PR.nome,PR.posicao,PR.clube);
+    pdf.setFillColor(...EF.bgPage);pdf.rect(0,0,W,H,'F');
+    drawHeader(PR.nome,PR.posicao,PR.clube);
 
-    // Bar
-    pdf.setFillColor(20,20,18);
-    pdf.rect(8,21,W-16,9,'F');
-    pdf.setFont('helvetica','bold');pdf.setFontSize(9);pdf.setTextColor(232,200,74);pdf.setCharSpace(2);
-    pdf.text('PLAYER HISTORY',(W/2),27,{align:'center'});
-    pdf.setCharSpace(0);
+    const Y3=21;
+    // Full-width "Player History" bar
+    secBar(8,Y3,W-16,8,'Player History');
 
-    const col3W=(W-24)/3, col3Y=33;
+    const col3Y=Y3+10, col3H=H-col3Y-10;
+    const col3W=(W-20)/3;
     const col3Labels=['RESUME','LAST MATCHES 2025','LAST MATCHES 2024'];
     const col3Imgs=[PR.resumeImg,PR.matches25Img,PR.matches24Img];
+
     col3Labels.forEach((lbl,i)=>{
-      const cx3=8+i*(col3W+4);
-      pdf.setFillColor(40,40,38);pdf.rect(cx3,col3Y,col3W,7,'F');
-      pdf.setFont('helvetica','bold');pdf.setFontSize(7);pdf.setTextColor(200,200,200);pdf.setCharSpace(1);
+      const cx3=8+i*(col3W+2);
+      // Column header
+      const colColor=i===0?[75,75,73]:i===1?[60,100,60]:[40,60,110];
+      pdf.setFillColor(...colColor);
+      pdf.rect(cx3,col3Y,col3W,7,'F');
+      pdf.setFont('helvetica','bold');pdf.setFontSize(EF.fontXs);
+      pdf.setTextColor(...EF.white);pdf.setCharSpace(1.2);
       pdf.text(lbl,cx3+col3W/2,col3Y+5,{align:'center'});pdf.setCharSpace(0);
-      const imgH=H-col3Y-15;
+
+      // Image or placeholder
+      const imgY=col3Y+7, imgH=col3H-7;
       if(col3Imgs[i]){
-        try{pdf.addImage(col3Imgs[i],'JPEG',cx3,col3Y+7,col3W,imgH);}catch(e){}
+        try{pdf.addImage(col3Imgs[i],'JPEG',cx3,imgY,col3W,imgH);}catch(e){}
       } else {
-        pdf.setFillColor(248,247,244);pdf.setDrawColor(224,222,212);pdf.setLineWidth(.2);
-        pdf.rect(cx3,col3Y+7,col3W,imgH,'FD');
-        pdf.setFont('helvetica','italic');pdf.setFontSize(8);pdf.setTextColor(200,200,200);
-        pdf.text('Upload image',cx3+col3W/2,col3Y+7+imgH/2,{align:'center'});
+        pdf.setFillColor(...EF.contentBg);pdf.setDrawColor(215,215,213);pdf.setLineWidth(.2);
+        pdf.rect(cx3,imgY,col3W,imgH,'FD');
+        pdf.setFont('helvetica','italic');pdf.setFontSize(8);pdf.setTextColor(195,195,193);
+        pdf.text(lbl.charAt(0)+lbl.slice(1).toLowerCase()+' screenshot',cx3+col3W/2,imgY+imgH/2,{align:'center'});
       }
     });
 
-    // ══ PAGE 4: ANALYTICS ══
+    /* ════════════════════════════════
+       PAGE 4 — ANALYTICS (one per image)
+    ════════════════════════════════ */
     if(PR.analyticsImgs&&PR.analyticsImgs.length>0){
       for(const b64 of PR.analyticsImgs){
         pdf.addPage([W,H],'landscape');
-        pdf.setFillColor(255,255,255);pdf.rect(0,0,W,H,'F');
-        try{pdf.addImage(b64,'JPEG',0,0,W,H,'','FAST');}catch(e){}
+        pdf.setFillColor(...EF.bgPage);pdf.rect(0,0,W,H,'F');
+        drawHeader(PR.nome,PR.posicao,PR.clube);
+        secBar(8,21,W-16,7,'Analytics');
+        try{pdf.addImage(b64,'JPEG',8,30,W-16,H-38);}catch(e){}
       }
     } else {
       pdf.addPage([W,H],'landscape');
-      pdf.setFillColor(255,255,255);pdf.rect(0,0,W,H,'F');
-      addSlideHeader(PR.nome,PR.posicao,PR.clube);
-      pdf.setFillColor(248,247,244);pdf.roundedRect(8,22,W-16,H-30,3,3,'F');
-      pdf.setFont('helvetica','italic');pdf.setFontSize(10);pdf.setTextColor(180,180,180);
-      pdf.text('Analytics — Upload screenshot no Slide 4',W/2,H/2,{align:'center'});
+      pdf.setFillColor(...EF.bgPage);pdf.rect(0,0,W,H,'F');
+      drawHeader(PR.nome,PR.posicao,PR.clube);
+      secBar(8,21,W-16,7,'Analytics');
+      pdf.setFillColor(...EF.contentBg);pdf.roundedRect(8,30,W-16,H-38,1,1,'F');
+      pdf.setFont('helvetica','italic');pdf.setFontSize(9);pdf.setTextColor(195,195,193);
+      pdf.text('Upload EAGLE / Instat screenshot in Slide 4',W/2,H/2,{align:'center'});
     }
 
-    // ══ PAGE 5: SCOUTING ══
+    /* ════════════════════════════════
+       PAGE 5 — SCOUTING
+    ════════════════════════════════ */
     pdf.addPage([W,H],'landscape');
-    pdf.setFillColor(255,255,255);pdf.rect(0,0,W,H,'F');
-    addSlideHeader(PR.nome,PR.posicao,PR.clube);
+    pdf.setFillColor(...EF.bgPage);pdf.rect(0,0,W,H,'F');
+    drawHeader(PR.nome,PR.posicao,PR.clube);
 
-    let y5=22;
-    const colW5=(W-20)/2, col2start=12+colW5+4;
+    const Y5=21, colH5=W/2-12;
+    let y5L=Y5, y5R=Y5;
 
-    // Videos bar
-    if(PR.videoHighlights||PR.videoOffensive||PR.videoDefensive){
-      pdf.setFillColor(248,247,244);pdf.setDrawColor(220,218,210);pdf.setLineWidth(.2);
-      pdf.roundedRect(8,y5,W-16,14,1.5,1.5,'FD');
-      pdf.setFont('helvetica','bold');pdf.setFontSize(7);pdf.setTextColor(100,100,100);
-      pdf.text('VIDEOS',12,y5+5);
-      pdf.setFont('helvetica','normal');pdf.setFontSize(7.5);pdf.setTextColor(58,123,213);
-      const vids=[PR.videoHighlights&&'🎬 Highlights',PR.videoOffensive&&'⚔️ Offensive',PR.videoDefensive&&'🛡️ Defensive'].filter(Boolean);
-      pdf.text(vids.join('   '),30,y5+5);
-      y5+=18;
+    // ── LEFT COLUMN ──
+    const LC5=8, LC5W=colH5;
+
+    // Videos
+    secBar(LC5,y5L,LC5W,7,'Videos');y5L+=8;
+    pdf.setFillColor(...EF.contentBg);pdf.roundedRect(LC5,y5L,LC5W,28,0.5,0.5,'F');
+    const vidRows=[['Highlights',PR.videoHighlights],['Offensive Actions',PR.videoOffensive],['Defensive Actions',PR.videoDefensive]];
+    vidRows.forEach(([lbl,url],i)=>{
+      const vy=y5L+5+i*8;
+      pdf.setFont('helvetica','bold');pdf.setFontSize(EF.fontSm);pdf.setTextColor(...EF.mid);
+      pdf.text(lbl,LC5+3,vy);
+      if(url){
+        pdf.setFont('helvetica','normal');pdf.setFontSize(EF.fontXs);pdf.setTextColor(60,130,210);
+        const shortened=url.length>50?url.slice(0,48)+'…':url;
+        pdf.text(shortened,LC5+3,vy+3.5);
+      }
+    });
+    y5L+=30;
+
+    // Scouting History
+    secBar(LC5,y5L,LC5W,7,'Scouting History');y5L+=8;
+    pdf.setFillColor(...EF.contentBg);pdf.roundedRect(LC5,y5L,LC5W,12,0.5,0.5,'F');
+    if(PR.scoutingHistory){
+      pdf.setFont('helvetica','normal');pdf.setFontSize(EF.fontSm);pdf.setTextColor(60,130,210);
+      pdf.text(PR.scoutingHistory.slice(0,80),LC5+3,y5L+7);
     }
+    y5L+=14;
 
-    // Analysis left
+    // Relevant News
+    secBar(LC5,y5L,LC5W,7,'Relevant News');y5L+=8;
+    const newsH=H-y5L-30;
+    pdf.setFillColor(...EF.contentBg);pdf.roundedRect(LC5,y5L,LC5W,newsH,0.5,0.5,'F');
+    // Table header
+    pdf.setFillColor(55,55,53);pdf.rect(LC5,y5L,LC5W,6,'F');
+    pdf.setFont('helvetica','bold');pdf.setFontSize(EF.fontXs);pdf.setTextColor(...EF.white);
+    pdf.text('Headline',LC5+3,y5L+4.2);
+    pdf.text('Link',LC5+LC5W*0.6,y5L+4.2);
+    let ny=y5L+8;
+    PR.news.filter(n=>n.headline).forEach((n,i)=>{
+      if(ny>y5L+newsH-4) return;
+      if(i%2===0){pdf.setFillColor(240,240,238);pdf.rect(LC5,ny-2,LC5W,5.5,'F');}
+      pdf.setFont('helvetica','normal');pdf.setFontSize(EF.fontXs);pdf.setTextColor(...EF.dark);
+      pdf.text((n.headline||'').slice(0,45),LC5+2,ny+2);
+      if(n.link){pdf.setTextColor(60,130,210);pdf.text(n.link.slice(0,32),LC5+LC5W*0.6,ny+2);}
+      pdf.setTextColor(...EF.dark);ny+=5.5;
+    });
+    y5L+=newsH+2;
+
+    // ── RIGHT COLUMN ──
+    const RC5=LC5+LC5W+4, RC5W=W-RC5-8;
+
+    // Analysis
+    secBar(RC5,y5R,RC5W,7,'Analysis');y5R+=8;
+    const analysisH=60;
+    pdf.setFillColor(...EF.contentBg);pdf.roundedRect(RC5,y5R,RC5W,analysisH,0.5,0.5,'F');
     if(PR.analysis){
-      pdf.setFillColor(248,247,244);pdf.setDrawColor(220,218,210);pdf.setLineWidth(.2);
-      pdf.roundedRect(8,y5,colW5,42,1.5,1.5,'FD');
-      pdf.setFont('helvetica','bold');pdf.setFontSize(7);pdf.setTextColor(100,100,100);
-      pdf.text('ANALYSIS',12,y5+6);
-      pdf.setFont('helvetica','normal');pdf.setFontSize(8);pdf.setTextColor(30,30,30);
-      const alines=pdf.splitTextToSize(PR.analysis,colW5-8);
-      pdf.text(alines.slice(0,5),12,y5+12);
+      pdf.setFont('helvetica','normal');pdf.setFontSize(EF.fontBody);pdf.setTextColor(35,35,33);
+      const lines=pdf.splitTextToSize(PR.analysis,RC5W-6);
+      pdf.text(lines.slice(0,8),RC5+3,y5R+5);
     }
-
-    // Relevant news right
-    if(PR.news.some(n=>n.headline)){
-      pdf.setFillColor(248,247,244);pdf.setDrawColor(220,218,210);pdf.setLineWidth(.2);
-      pdf.roundedRect(col2start,y5,colW5,42,1.5,1.5,'FD');
-      pdf.setFont('helvetica','bold');pdf.setFontSize(7);pdf.setTextColor(100,100,100);
-      pdf.text('RELEVANT NEWS',col2start+4,y5+6);
-      let yn=y5+12;
-      PR.news.filter(n=>n.headline).slice(0,4).forEach(n=>{
-        pdf.setFont('helvetica','normal');pdf.setFontSize(7.5);pdf.setTextColor(30,30,30);
-        pdf.text('• '+n.headline.slice(0,60),col2start+4,yn);
-        if(n.link){pdf.setTextColor(100,150,220);pdf.text(n.link.slice(0,50),col2start+7,yn+4);}
-        pdf.setTextColor(30,30,30);yn+=10;
-      });
-    }
-
-    y5+=46;
+    y5R+=analysisH+2;
 
     // Key Attributes
-    const strF=PR.strengths.filter(Boolean);
-    const weakF=PR.weaknesses.filter(Boolean);
-    if(strF.length||weakF.length){
-      pdf.setFillColor(234,243,222);pdf.setDrawColor(180,218,140);pdf.setLineWidth(.2);
-      pdf.roundedRect(8,y5,colW5,H-y5-12,1.5,1.5,'FD');
-      pdf.setFont('helvetica','bold');pdf.setFontSize(7);pdf.setTextColor(30,100,30);
-      pdf.text('STRENGTHS',12,y5+6);
-      pdf.setFont('helvetica','normal');pdf.setFontSize(8);pdf.setTextColor(20,60,20);
-      strF.slice(0,6).forEach((s,i)=>{pdf.text('+ '+s,12,y5+13+i*7);});
+    secBar(RC5,y5R,RC5W,7,'Key Attributes');y5R+=8;
+    const attrH=H-y5R-32;
+    const attrHalf=(RC5W-2)/2;
+    // Strengths header
+    pdf.setFillColor(...EF.green);
+    pdf.roundedRect(RC5,y5R,attrHalf,7,0.5,0.5,'F');
+    pdf.setFont('helvetica','bold');pdf.setFontSize(EF.fontXs);pdf.setTextColor(...EF.white);pdf.setCharSpace(0.5);
+    pdf.text('Strengths',RC5+attrHalf/2,y5R+5,{align:'center'});pdf.setCharSpace(0);
+    // Weaknesses header
+    pdf.setFillColor(...EF.orange);
+    pdf.roundedRect(RC5+attrHalf+2,y5R,attrHalf,7,0.5,0.5,'F');
+    pdf.setFont('helvetica','bold');pdf.setFontSize(EF.fontXs);pdf.setTextColor(...EF.white);pdf.setCharSpace(0.5);
+    pdf.text('Weaknesses',RC5+attrHalf+2+attrHalf/2,y5R+5,{align:'center'});pdf.setCharSpace(0);
+    y5R+=8;
+    // Strengths bg
+    pdf.setFillColor(240,250,240);pdf.roundedRect(RC5,y5R,attrHalf,attrH,0.5,0.5,'F');
+    pdf.setFillColor(255,245,240);pdf.roundedRect(RC5+attrHalf+2,y5R,attrHalf,attrH,0.5,0.5,'F');
+    // Strengths list
+    pdf.setFont('helvetica','normal');pdf.setFontSize(EF.fontBody);pdf.setTextColor(30,80,30);
+    PR.strengths.filter(Boolean).slice(0,8).forEach((s,i)=>{pdf.text('◆ '+s,RC5+3,y5R+5+i*6);});
+    // Weaknesses list
+    pdf.setTextColor(100,30,10);
+    PR.weaknesses.filter(Boolean).slice(0,8).forEach((s,i)=>{pdf.text('◆ '+s,RC5+attrHalf+5,y5R+5+i*6);});
+    y5R+=attrH+2;
 
-      pdf.setFillColor(253,230,230);pdf.setDrawColor(220,160,160);
-      pdf.roundedRect(col2start,y5,colW5,H-y5-12,1.5,1.5,'FD');
-      pdf.setFont('helvetica','bold');pdf.setFontSize(7);pdf.setTextColor(160,30,30);
-      pdf.text('WEAKNESSES',col2start+4,y5+6);
-      pdf.setFont('helvetica','normal');pdf.setFontSize(8);pdf.setTextColor(120,20,20);
-      weakF.slice(0,6).forEach((s,i)=>{pdf.text('— '+s,col2start+4,y5+13+i*7);});
-    }
-
-    // Final Considerations bottom strip
+    // ── FINAL CONSIDERATIONS (full width) ──
+    const fcY=H-28;
+    secBar(8,fcY,W-16,7,'Final Considerations');
+    pdf.setFillColor(...EF.finalText);
+    pdf.roundedRect(8,fcY+7,W-16,17,0.5,0.5,'F');
     if(PR.finalConsiderations){
-      pdf.setFillColor(240,239,234);pdf.setDrawColor(210,208,198);pdf.setLineWidth(.2);
-      pdf.roundedRect(8,H-18,W-16,10,1.5,1.5,'FD');
-      pdf.setFont('helvetica','bold');pdf.setFontSize(7);pdf.setTextColor(100,100,100);
-      pdf.text('FINAL CONSIDERATIONS:',12,H-11);
-      pdf.setFont('helvetica','normal');pdf.setFontSize(7.5);pdf.setTextColor(30,30,30);
-      const fcLines=pdf.splitTextToSize(PR.finalConsiderations,W-70);
-      pdf.text(fcLines[0]||'',58,H-11);
+      pdf.setFont('helvetica','normal');pdf.setFontSize(EF.fontBody);pdf.setTextColor(...EF.white);
+      const fcLines=pdf.splitTextToSize(PR.finalConsiderations,W-22);
+      pdf.text(fcLines.slice(0,2),13,fcY+14);
     }
 
-    // ══ PAGE 6: PHOTO + FINANCES ══
-    pdf.addPage([W,H],'landscape');
-    pdf.setFillColor(20,20,18);pdf.rect(0,0,W,H,'F');
-    addSlideHeader(PR.nome,PR.posicao,PR.clube);
-
-    // Action photo — left half
-    if(PR.actionPhoto){
-      try{pdf.addImage(PR.actionPhoto,'JPEG',0,18,W/2,H-18);}catch(e){}
-    }
-
-    // Finances — right half
-    const fx=W/2+8, fw=W/2-16;
-    pdf.setFont('helvetica','bold');pdf.setFontSize(11);pdf.setTextColor(232,200,74);pdf.setCharSpace(2);
-    pdf.text('FINANCES',fx,32);pdf.setCharSpace(0);
-
-    pdf.setDrawColor(232,200,74);pdf.setLineWidth(0.5);
-    pdf.line(fx,35,fx+fw,35);
-
-    let yf=44;
-    const finRow=(lbl,val)=>{
-      if(!val) return;
-      pdf.setFillColor(35,35,33);pdf.roundedRect(fx,yf-5,fw,14,1.5,1.5,'F');
-      pdf.setFont('helvetica','bold');pdf.setFontSize(7.5);pdf.setTextColor(180,175,160);
-      pdf.text(lbl.toUpperCase(),fx+6,yf+1);
-      pdf.setFont('helvetica','bold');pdf.setFontSize(11);pdf.setTextColor(255,255,255);
-      pdf.text(val,fx+6,yf+8);
-      yf+=18;
-    };
-    finRow('Transfer Fee',PR.transferFee);
-    finRow('Signing Fee (% ER)',PR.signingFee);
-    finRow('Year Salary (Gross)',PR.yearSalary);
-    finRow('Contract',PR.contract);
-
-    // Scout / date at bottom
+    // Scout/date bottom-right
     if(PR.scout||PR.dataRelatorio){
-      pdf.setFont('helvetica','italic');pdf.setFontSize(8);pdf.setTextColor(130,130,120);
-      const scoutStr=[PR.scout&&'Scout: '+PR.scout, PR.dataRelatorio&&'Date: '+PR.dataRelatorio].filter(Boolean).join('   ');
-      pdf.text(scoutStr,fx,H-8);
+      pdf.setFont('helvetica','italic');pdf.setFontSize(EF.fontXs);pdf.setTextColor(...EF.light);
+      const ss=[PR.scout&&'Scout: '+PR.scout,PR.dataRelatorio&&'Date: '+PR.dataRelatorio].filter(Boolean).join('   ');
+      pdf.text(ss,W-8,H-3,{align:'right'});
     }
 
-    // Save
+    /* ════════════════════════════════
+       PAGE 6 — PHOTO + FINANCES
+    ════════════════════════════════ */
+    pdf.addPage([W,H],'landscape');
+    pdf.setFillColor(...EF.bgPage);pdf.rect(0,0,W,H,'F');
+    drawHeader(PR.nome,PR.posicao,PR.clube);
+
+    const Y6=21;
+    // LEFT: full-height photo
+    const photoW=W*0.52-4;
+    if(PR.actionPhoto){
+      try{pdf.addImage(PR.actionPhoto,'JPEG',0,Y6,photoW,H-Y6);}catch(e){
+        pdf.setFillColor(180,180,178);pdf.rect(0,Y6,photoW,H-Y6,'F');
+        pdf.setFont('helvetica','italic');pdf.setFontSize(8);pdf.setTextColor(220,220,218);
+        pdf.text('Action photo',photoW/2,H/2,{align:'center'});
+      }
+    } else {
+      pdf.setFillColor(200,200,198);pdf.rect(0,Y6,photoW,H-Y6,'F');
+      pdf.setFont('helvetica','italic');pdf.setFontSize(9);pdf.setTextColor(230,230,228);
+      pdf.text('Action Photo',photoW/2,H/2,{align:'center'});
+      pdf.text('Upload in Slide 6',photoW/2,H/2+6,{align:'center'});
+    }
+
+    // RIGHT: Finances
+    const FX=photoW+6, FW=W-FX-6;
+    secBar(FX,Y6,FW,8,'Finances');
+
+    const finItems=[
+      ['Transfer Fee',PR.transferFee],
+      ['Signing Fee (ER%)',PR.signingFee],
+      ['Year Salary (Gross)',PR.yearSalary],
+      ['Contract',PR.contract],
+    ].filter(r=>r[1]);
+
+    let fy=Y6+12;
+    finItems.forEach(([lbl,val])=>{
+      const fh=24;
+      pdf.setFillColor(...EF.contentBg);pdf.setDrawColor(215,215,213);pdf.setLineWidth(.2);
+      pdf.roundedRect(FX,fy,FW,fh,1,1,'FD');
+      pdf.setFont('helvetica','bold');pdf.setFontSize(EF.fontXs);pdf.setTextColor(...EF.light);
+      pdf.text(lbl.toUpperCase(),FX+4,fy+7);
+      pdf.setFont('helvetica','bold');pdf.setFontSize(13);pdf.setTextColor(...EF.dark);
+      pdf.text(String(val),FX+4,fy+18);
+      fy+=fh+3;
+    });
+
+    // Scout / date
+    if(PR.scout||PR.dataRelatorio){
+      pdf.setFont('helvetica','italic');pdf.setFontSize(EF.fontXs);pdf.setTextColor(...EF.light);
+      const ss=[PR.scout&&'Scout: '+PR.scout,PR.dataRelatorio&&'Date: '+PR.dataRelatorio].filter(Boolean).join('   ');
+      pdf.text(ss,W-8,H-3,{align:'right'});
+    }
+
+    /* ── SAVE ── */
     const safeName=(PR.nome||'player').replace(/[^a-z0-9]/gi,'_').toUpperCase();
     pdf.save(`PlayerReport_${PR.posicao||'POS'}_${safeName}.pdf`);
-
     if(btn){btn.textContent='✓ Gerado!';btn.style.background='#1a8040';}
     setTimeout(()=>{if(btn){btn.textContent='📄 Gerar PDF';btn.style.background='';btn.disabled=false;}},2500);
 
@@ -3200,6 +3385,7 @@ async function gerarPlayerReport(){
     if(btn){btn.textContent='📄 Gerar PDF';btn.style.background='';btn.disabled=false;}
   }
 }
+
 
 /* ══════════════════════════════════════════
    BOOT
