@@ -9,6 +9,7 @@
 <script>window._fbLoadErrors=0;</script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js" onerror="window._fbLoadErrors++"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js" onerror="window._fbLoadErrors++"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js" onerror="window._fbLoadErrors++"></script>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@300;400;600;700;800&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 /* ═══════════════════ CALENDAR (original) ═══════════════════ */
@@ -657,6 +658,75 @@ const FIREBASE_CONFIG={
 };
 let db=null,firebaseReady=false;
 
+/* ── Firebase Storage: upload base64 → URL ── */
+async function fbUploadImage(path, base64Data){
+  if(!window.fbStorage||!base64Data) return null;
+  try{
+    // Extrair mime e dados
+    const [meta,data]=base64Data.split(',');
+    const mime=meta.match(/:(.*?);/)[1];
+    const byteStr=atob(data);
+    const arr=new Uint8Array(byteStr.length);
+    for(let i=0;i<byteStr.length;i++) arr[i]=byteStr.charCodeAt(i);
+    const blob=new Blob([arr],{type:mime});
+    const ref=window.fbStorage.ref(path);
+    await ref.put(blob);
+    return await ref.getDownloadURL();
+  }catch(e){ console.warn('fbUploadImage error:',e); return null; }
+}
+
+async function fbDownloadImage(urlOrPath){
+  if(!urlOrPath) return null;
+  try{
+    // Se já é URL do Firebase Storage, usar direto; senão resolver via ref
+    const url=urlOrPath.startsWith('http')? urlOrPath : await window.fbStorage.ref(urlOrPath).getDownloadURL();
+    const resp=await fetch(url);
+    const blob=await resp.blob();
+    return await new Promise(res=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.readAsDataURL(blob); });
+  }catch(e){ console.warn('fbDownloadImage error:',e); return null; }
+}
+
+/* ── Upload todas as imagens de um PR para Storage ── */
+async function fbUploadPRImages(reportId, PR){
+  const imgKeys=['coverPhoto','injuryImg','resumeImg','matches25Img','matches24Img','actionPhoto'];
+  const urls={};
+  for(const k of imgKeys){
+    if(PR[k]&&PR[k].startsWith('data:')){
+      const ext=PR[k].includes('png')?'.png':'.jpg';
+      const url=await fbUploadImage('player_reports/'+reportId+'/'+k+ext, PR[k]);
+      if(url) urls[k]=url;
+    } else if(PR[k]) urls[k]=PR[k]; // já é URL
+  }
+  // analyticsImgs: array
+  if(PR.analyticsImgs&&PR.analyticsImgs.length){
+    urls.analyticsImgs=[];
+    for(let i=0;i<PR.analyticsImgs.length;i++){
+      const img=PR.analyticsImgs[i];
+      if(img&&img.startsWith('data:')){
+        const url=await fbUploadImage('player_reports/'+reportId+'/analyticsImg_'+i+'.jpg', img);
+        if(url) urls.analyticsImgs.push(url);
+      } else if(img) urls.analyticsImgs.push(img);
+    }
+  }
+  return urls;
+}
+
+/* ── Download imagens de um PR do Storage para base64 ── */
+async function fbDownloadPRImages(imgUrls){
+  const result={};
+  const imgKeys=['coverPhoto','injuryImg','resumeImg','matches25Img','matches24Img','actionPhoto'];
+  for(const k of imgKeys){
+    if(imgUrls[k]) result[k]=await fbDownloadImage(imgUrls[k]);
+  }
+  if(imgUrls.analyticsImgs&&imgUrls.analyticsImgs.length){
+    result.analyticsImgs=[];
+    for(const url of imgUrls.analyticsImgs){
+      const b64=await fbDownloadImage(url); if(b64) result.analyticsImgs.push(b64);
+    }
+  }
+  return result;
+}
+
 function initFirebase(){
   if(typeof firebase==='undefined'){
     setSyncBadge('local','⚠ Local only');
@@ -665,6 +735,7 @@ function initFirebase(){
   try{
     firebase.initializeApp(FIREBASE_CONFIG);
     db=firebase.database();
+    window.fbStorage=firebase.storage();
     setSyncBadge('syncing','⟳ Connecting…');
     db.ref('cal').on('value',snap=>{
       const val=snap.val();
@@ -686,7 +757,21 @@ function initFirebase(){
           db.ref('player_reports').on('value',snap=>{
             const data=snap.val()||{};
             Object.keys(data).forEach(id=>{
-              try{const full=localStorage.getItem('pr_'+id);PR_SAVED[id]=full?JSON.parse(full):{...data[id],_id:id};}
+              try{
+                const full=localStorage.getItem('pr_'+id);
+                if(full){
+                  PR_SAVED[id]=JSON.parse(full);
+                } else {
+                  PR_SAVED[id]={...data[id],_id:id};
+                  // Baixar imagens do Storage em background
+                  if(data[id]&&data[id]._imgUrls&&window.fbStorage){
+                    fbDownloadPRImages(data[id]._imgUrls).then(imgs=>{
+                      PR_SAVED[id]={...PR_SAVED[id],...imgs};
+                      try{localStorage.setItem('pr_'+id,JSON.stringify(PR_SAVED[id]));}catch(e){}
+                    }).catch(()=>{});
+                  }
+                }
+              }
               catch(e){PR_SAVED[id]={...data[id],_id:id};}
             });
             if(currentView==='indicados') document.getElementById('views').innerHTML=renderIndicados();
@@ -2494,6 +2579,8 @@ function initQts(){
   const weekId=qtsWeekId(monday);
   db.ref('qts').on('value',snap=>{
     QTS=snap.val()||{};
+    // Sincronizar localStorage
+    try{localStorage.setItem('qts',JSON.stringify(QTS));}catch(e){}
     // If scout view is open, refresh QTS grid
     if(currentView.startsWith('scout_')){
       const scout=currentView.replace('scout_','');
@@ -2951,9 +3038,11 @@ function renderPrStep(){
         ${PR.step<6?
           `<button onclick="PR.step++;renderPrStep()"
             style="background:#1a1a18;color:#e8c84a;font-weight:700;font-size:.82rem;padding:.55rem 1.4rem;border-radius:6px;border:none;cursor:pointer">Próximo →</button>`:
-          `<div style="display:flex;gap:.5rem">
+          `<div style="display:flex;gap:.5rem;flex-wrap:wrap">
             <button onclick="gerarPlayerReportPPTX()"
               style="background:#1e3a5f;color:#7fbfff;font-weight:700;font-size:.82rem;padding:.55rem 1.2rem;border-radius:6px;border:none;cursor:pointer" id="prPptxBtn">📊 Gerar PPTX</button>
+            <button onclick="gerarPlayerReportKeynote()"
+              style="background:#3b2a6e;color:#c9a8ff;font-weight:700;font-size:.82rem;padding:.55rem 1.2rem;border-radius:6px;border:none;cursor:pointer" id="prKeynoteBtn">🍎 Keynote</button>
             <button onclick="gerarPlayerReport()"
               style="background:#1a1a18;color:#e8c84a;font-weight:700;font-size:.82rem;padding:.55rem 1.2rem;border-radius:6px;border:none;cursor:pointer" id="prGenBtn">📄 Gerar PDF</button>
           </div>`
@@ -3864,13 +3953,19 @@ async function buildPlayerReportPDF(){
       pdf.text(ss,W-8,H-3,{align:'right'});
     }
 
-    /* ── SAVE metadata ── */
+    /* ── SAVE metadata + imagens no Firebase Storage ── */
     const reportId = PR._id || ('pr_'+Date.now());
     PR._id = reportId; PR._savedAt = new Date().toISOString();
     const imgKeys=['coverPhoto','injuryImg','resumeImg','matches25Img','matches24Img','analyticsImgs','actionPhoto'];
     const reportMeta = Object.fromEntries(Object.entries(PR).filter(([k])=>!imgKeys.includes(k)));
+    // Salvar localmente (fallback)
     try{ localStorage.setItem('pr_'+reportId, JSON.stringify(PR)); }catch(e){}
-    if(db&&firebaseReady) db.ref('player_reports/'+reportId).set(reportMeta).catch(e=>{});
+    if(db&&firebaseReady){
+      // Upload imagens para Storage e guardar URLs no Firebase
+      fbUploadPRImages(reportId,PR).then(imgUrls=>{
+        db.ref('player_reports/'+reportId).set({...reportMeta,_imgUrls:imgUrls}).catch(e=>{});
+      });
+    }
     PR_SAVED[reportId]={...PR};
     return pdf;
 }
@@ -3988,7 +4083,7 @@ function renderPrSavedList(){
    Sem PDF.js: cada slide construído diretamente
    com PptxGenJS. Slide 6 com finanças editáveis.
 ══════════════════════════════════════════ */
-async function gerarPlayerReportPPTX(){
+async function gerarPlayerReportPPTX(opts={}){
   if(!PR.nome){alert('Informe o nome do jogador (Slide 1).');PR.step=1;renderPrStep();return;}
   const btn=document.getElementById('prPptxBtn');
   if(btn){btn.textContent='⟳ Gerando…';btn.disabled=true;}
@@ -4028,20 +4123,20 @@ async function gerarPlayerReportPPTX(){
       const bx=PR.posicao ? nameX+Math.min(_nameLen*0.165, 5.2) : 99;
       // Largura do nome limitada para não sobrepor badge (deixa 0.1in de gap)
       const nameW=PR.posicao ? Math.max(bx-nameX-0.05, 1) : 7;
-      slide.addText((PR.nome||'').toUpperCase(),{x:nameX,y:0,w:nameW,h:18.5*MM,fontSize:18,bold:true,color:C.white,fontFace:'Calibri',valign:'middle'});
+      slide.addText((PR.nome||'').toUpperCase(),{x:nameX,y:0,w:nameW,h:18.5*MM,fontSize:18,bold:true,color:C.white,fontFace:'Helvetica Neue',valign:'middle'});
       // Badge de posição
       if(PR.posicao){
         slide.addShape(pptx.ShapeType.rect,{x:bx,y:3*MM,w:0.55,h:13.5*MM,fill:{color:C.gold},line:{color:C.gold}});
-        slide.addText(PR.posicao,{x:bx,y:3*MM,w:0.55,h:13.5*MM,fontSize:8,bold:true,color:C.white,align:'center',valign:'middle',fontFace:'Calibri'});
+        slide.addText(PR.posicao,{x:bx,y:3*MM,w:0.55,h:13.5*MM,fontSize:8,bold:true,color:C.white,align:'center',valign:'middle',fontFace:'Helvetica Neue'});
       }
       // Eagle Football (direito) — já está no template, mas reforçamos a cor escura por cima
-      slide.addText(['EAGLE','FOOTBALL',PR.clube||''].join('\n'),{x:W-2.2,y:0.04,w:2.15,h:18.5*MM,fontSize:6,color:'C8C4A0',align:'right',valign:'middle',fontFace:'Calibri'});
+      slide.addText(['EAGLE','FOOTBALL',PR.clube||''].join('\n'),{x:W-2.2,y:0.04,w:2.15,h:18.5*MM,fontSize:6,color:'C8C4A0',align:'right',valign:'middle',fontFace:'Helvetica Neue'});
     }
 
     // ── Helper: barra de seção ──
     function secBar(slide,x,y,w,h,label){
       slide.addShape(pptx.ShapeType.rect,{x,y,w,h,fill:{color:C.secBar},line:{color:C.secBar}});
-      slide.addText(label.toUpperCase(),{x:x+0.05,y,w:w-0.1,h,fontSize:6,bold:true,color:C.white,valign:'middle',charSpacing:1.5,fontFace:'Calibri'});
+      slide.addText(label.toUpperCase(),{x:x+0.05,y,w:w-0.1,h,fontSize:6,bold:true,color:C.white,valign:'middle',charSpacing:1.5,fontFace:'Helvetica Neue'});
     }
 
     // ── Helper: caixa de conteúdo ──
@@ -4052,8 +4147,8 @@ async function gerarPlayerReportPPTX(){
     // ── Helper: campo label+valor ──
     function field(slide,x,y,w,h,label,value){
       box(slide,x,y,w,h);
-      slide.addText(label.toUpperCase(),{x:x+0.05,y:y+0.03,w:w-0.1,h:0.14,fontSize:5.5,bold:true,color:C.light,fontFace:'Calibri'});
-      slide.addText(String(value||''),{x:x+0.05,y:y+0.18,w:w-0.1,h:h-0.2,fontSize:8,color:C.dark,fontFace:'Calibri',valign:'top'});
+      slide.addText(label.toUpperCase(),{x:x+0.05,y:y+0.03,w:w-0.1,h:0.14,fontSize:5.5,bold:true,color:C.light,fontFace:'Helvetica Neue'});
+      slide.addText(String(value||''),{x:x+0.05,y:y+0.18,w:w-0.1,h:h-0.2,fontSize:8,color:C.dark,fontFace:'Helvetica Neue',valign:'top'});
     }
 
     /* ════════════════════════════════
@@ -4111,7 +4206,7 @@ async function gerarPlayerReportPPTX(){
     let tx=LC;
     thCols.forEach((w,i)=>{
       const cw=LCW*w;
-      s2.addText(thLabels[i],{x:tx,y:ly,w:cw,h:6*MM,fontSize:5,bold:true,color:C.white,align:'center',valign:'middle',fontFace:'Calibri'});
+      s2.addText(thLabels[i],{x:tx,y:ly,w:cw,h:6*MM,fontSize:5,bold:true,color:C.white,align:'center',valign:'middle',fontFace:'Helvetica Neue'});
       tx+=cw;
     });
     ly+=6*MM;
@@ -4122,17 +4217,17 @@ async function gerarPlayerReportPPTX(){
       let tx2=LC+2*MM;
       [t.season,t.date,t.left,t.joined,t.mv,t.fee].forEach((v,i)=>{
         const cw=LCW*thCols[i];
-        s2.addText(String(v||'').slice(0,18),{x:tx2,y:ly,w:cw-1*MM,h:rowH,fontSize:5.5,color:C.dark,valign:'middle',fontFace:'Calibri'});
+        s2.addText(String(v||'').slice(0,18),{x:tx2,y:ly,w:cw-1*MM,h:rowH,fontSize:5.5,color:C.dark,valign:'middle',fontFace:'Helvetica Neue'});
         tx2+=cw;
       });
       ly+=rowH;
     });
     if(!validTH.length){
       box(s2,LC,ly,LCW,8*MM);
-      s2.addText('No transfer history',{x:LC,y:ly,w:LCW,h:8*MM,fontSize:7,italic:true,color:'C3C3C1',align:'center',valign:'middle',fontFace:'Calibri'});
+      s2.addText('No transfer history',{x:LC,y:ly,w:LCW,h:8*MM,fontSize:7,italic:true,color:'C3C3C1',align:'center',valign:'middle',fontFace:'Helvetica Neue'});
       ly+=9*MM;
     }
-    s2.addText('Source: Transfermarkt',{x:LC+2*MM,y:ly+1*MM,w:LCW,h:4*MM,fontSize:5.5,italic:true,color:C.light,fontFace:'Calibri'});
+    s2.addText('Source: Transfermarkt',{x:LC+2*MM,y:ly+1*MM,w:LCW,h:4*MM,fontSize:5.5,italic:true,color:C.light,fontFace:'Helvetica Neue'});
 
     // Coluna direita — painéis canvas
     let ry=Y2;
@@ -4151,22 +4246,22 @@ async function gerarPlayerReportPPTX(){
     const mvW=RCW*0.45, linksW=RCW*0.55-3*MM;
     secBar(s2,RC,ry,mvW,7*MM,'Market Value');
     box(s2,RC,ry+7*MM,mvW,22*MM);
-    s2.addText('EUR',{x:RC+3*MM,y:ry+10*MM,w:mvW-4*MM,h:4*MM,fontSize:5.5,bold:true,color:C.light,fontFace:'Calibri'});
-    s2.addText(PR.valorMercado||'—',{x:RC+3*MM,y:ry+14*MM,w:mvW-4*MM,h:11*MM,fontSize:13,bold:true,color:C.dark,fontFace:'Calibri',valign:'middle'});
-    s2.addText('Source: Transfermarkt',{x:RC+3*MM,y:ry+25*MM,w:mvW-4*MM,h:3*MM,fontSize:5.5,italic:true,color:C.light,fontFace:'Calibri'});
+    s2.addText('EUR',{x:RC+3*MM,y:ry+10*MM,w:mvW-4*MM,h:4*MM,fontSize:5.5,bold:true,color:C.light,fontFace:'Helvetica Neue'});
+    s2.addText(PR.valorMercado||'—',{x:RC+3*MM,y:ry+14*MM,w:mvW-4*MM,h:11*MM,fontSize:13,bold:true,color:C.dark,fontFace:'Helvetica Neue',valign:'middle'});
+    s2.addText('Source: Transfermarkt',{x:RC+3*MM,y:ry+25*MM,w:mvW-4*MM,h:3*MM,fontSize:5.5,italic:true,color:C.light,fontFace:'Helvetica Neue'});
 
     const linksX=RC+mvW+3*MM;
     secBar(s2,linksX,ry,linksW,7*MM,'Links');
     box(s2,linksX,ry+7*MM,linksW,22*MM);
     let lky=ry+13*MM;
     if(PR.ogolLink){
-      s2.addText('OGol',{x:linksX+3*MM,y:lky,w:15*MM,h:5*MM,fontSize:6.5,bold:true,color:C.dark,fontFace:'Calibri'});
-      s2.addText(PR.ogolLink.slice(0,42),{x:linksX+16*MM,y:lky,w:linksW-18*MM,h:5*MM,fontSize:5.5,color:'3C82D2',fontFace:'Calibri'});
+      s2.addText('OGol',{x:linksX+3*MM,y:lky,w:15*MM,h:5*MM,fontSize:6.5,bold:true,color:C.dark,fontFace:'Helvetica Neue'});
+      s2.addText(PR.ogolLink.slice(0,42),{x:linksX+16*MM,y:lky,w:linksW-18*MM,h:5*MM,fontSize:5.5,color:'3C82D2',fontFace:'Helvetica Neue'});
       lky+=8*MM;
     }
     if(PR.tmLink){
-      s2.addText('Transfermarkt',{x:linksX+3*MM,y:lky,w:linksW-4*MM,h:5*MM,fontSize:6.5,bold:true,color:C.dark,fontFace:'Calibri'});
-      s2.addText(PR.tmLink.slice(0,38),{x:linksX+3*MM,y:lky+5*MM,w:linksW-4*MM,h:5*MM,fontSize:5.5,color:'3C82D2',fontFace:'Calibri'});
+      s2.addText('Transfermarkt',{x:linksX+3*MM,y:lky,w:linksW-4*MM,h:5*MM,fontSize:6.5,bold:true,color:C.dark,fontFace:'Helvetica Neue'});
+      s2.addText(PR.tmLink.slice(0,38),{x:linksX+3*MM,y:lky+5*MM,w:linksW-4*MM,h:5*MM,fontSize:5.5,color:'3C82D2',fontFace:'Helvetica Neue'});
     }
     ry+=30*MM;
 
@@ -4185,7 +4280,7 @@ async function gerarPlayerReportPPTX(){
       }catch(e){}
     }else{
       box(s2,RC,ry+7*MM,RCW,injH);
-      s2.addText('Recent Injury Report\nUpload screenshot in Slide 2',{x:RC,y:ry+7*MM,w:RCW,h:injH,fontSize:8,italic:true,color:'C3C3C1',align:'center',valign:'middle',fontFace:'Calibri'});
+      s2.addText('Recent Injury Report\nUpload screenshot in Slide 2',{x:RC,y:ry+7*MM,w:RCW,h:injH,fontSize:8,italic:true,color:'C3C3C1',align:'center',valign:'middle',fontFace:'Helvetica Neue'});
     }
 
     /* ════════════════════════════════
@@ -4202,7 +4297,7 @@ async function gerarPlayerReportPPTX(){
     ['RESUME','LAST MATCHES 2025','LAST MATCHES 2024'].forEach((lbl,i)=>{
       const cx=9*MM+i*(col3W+2*MM);
       s3.addShape(pptx.ShapeType.rect,{x:cx,y:col3Y,w:col3W,h:7*MM,fill:{color:col3Colors[i]},line:{color:col3Colors[i]}});
-      s3.addText(lbl,{x:cx,y:col3Y,w:col3W,h:7*MM,fontSize:5.5,bold:true,color:C.white,align:'center',valign:'middle',charSpacing:1.2,fontFace:'Calibri'});
+      s3.addText(lbl,{x:cx,y:col3Y,w:col3W,h:7*MM,fontSize:5.5,bold:true,color:C.white,align:'center',valign:'middle',charSpacing:1.2,fontFace:'Helvetica Neue'});
       const img=[PR.resumeImg,PR.matches25Img,PR.matches24Img][i];
       if(img){
         try{ s3.addImage({data:img,x:cx,y:col3Y+7*MM,w:col3W,h:col3H-7*MM}); }catch(e){}
@@ -4210,9 +4305,9 @@ async function gerarPlayerReportPPTX(){
         // ── Tabela editável nativa no PowerPoint ──
         const tY=col3Y+7*MM, tH=col3H-7*MM, cw=col3W;
         const hdrFill={color:col3Colors[i]};
-        const hdrOpt=(t)=>({text:t,options:{bold:true,fontSize:5,color:'FFFFFF',fill:hdrFill,align:'center',valign:'middle',fontFace:'Calibri'}});
-        const cellOpt=(r)=>({text:'',options:{fontSize:5.5,color:'141412',fill:{color:r%2===0?'F5F5F3':'FFFFFF'},fontFace:'Calibri'}});
-        const cellCtr=(r)=>({text:'',options:{fontSize:5.5,color:'141412',fill:{color:r%2===0?'F5F5F3':'FFFFFF'},align:'center',fontFace:'Calibri'}});
+        const hdrOpt=(t)=>({text:t,options:{bold:true,fontSize:5,color:'FFFFFF',fill:hdrFill,align:'center',valign:'middle',fontFace:'Helvetica Neue'}});
+        const cellOpt=(r)=>({text:'',options:{fontSize:5.5,color:'141412',fill:{color:r%2===0?'F5F5F3':'FFFFFF'},fontFace:'Helvetica Neue'}});
+        const cellCtr=(r)=>({text:'',options:{fontSize:5.5,color:'141412',fill:{color:r%2===0?'F5F5F3':'FFFFFF'},align:'center',fontFace:'Helvetica Neue'}});
         if(i===0){
           // RESUME — histórico de carreira: Temporada | Equipe | J | G | ASS
           const rows=[[hdrOpt('TEMPORADA'),hdrOpt('EQUIPE'),hdrOpt('J'),hdrOpt('G'),hdrOpt('ASS')]];
@@ -4246,7 +4341,7 @@ async function gerarPlayerReportPPTX(){
         try{ s4.addImage({data:b64,x:9.5*MM,y:s4imgY,w:W-9.5*MM-20*MM,h:s4imgH}); }catch(e){}
       }else{
         box(s4,9.5*MM,s4imgY,W-9.5*MM-20*MM,s4imgH);
-        s4.addText('Upload EAGLE / Instat screenshot in Slide 4',{x:9.5*MM,y:s4imgY,w:W-9.5*MM-20*MM,h:s4imgH,fontSize:9,italic:true,color:'C3C3C1',align:'center',valign:'middle',fontFace:'Calibri'});
+        s4.addText('Upload EAGLE / Instat screenshot in Slide 4',{x:9.5*MM,y:s4imgY,w:W-9.5*MM-20*MM,h:s4imgH,fontSize:9,italic:true,color:'C3C3C1',align:'center',valign:'middle',fontFace:'Helvetica Neue'});
       }
     }
 
@@ -4267,28 +4362,28 @@ async function gerarPlayerReportPPTX(){
     box(s5,LC5,y5L,LC5W,28*MM);
     [[PR.videoHighlights,'Highlights'],[PR.videoOffensive,'Offensive Actions'],[PR.videoDefensive,'Defensive Actions']].forEach(([url,lbl],i)=>{
       const vy=y5L+3*MM+i*8*MM;
-      s5.addText(lbl,{x:LC5+3*MM,y:vy,w:LC5W-6*MM,h:5*MM,fontSize:6,bold:true,color:C.mid,fontFace:'Calibri'});
-      if(url) s5.addText(url.length>50?url.slice(0,48)+'…':url,{x:LC5+3*MM,y:vy+3.5*MM,w:LC5W-6*MM,h:4*MM,fontSize:5.5,color:'3C82D2',fontFace:'Calibri'});
+      s5.addText(lbl,{x:LC5+3*MM,y:vy,w:LC5W-6*MM,h:5*MM,fontSize:6,bold:true,color:C.mid,fontFace:'Helvetica Neue'});
+      if(url) s5.addText(url.length>50?url.slice(0,48)+'…':url,{x:LC5+3*MM,y:vy+3.5*MM,w:LC5W-6*MM,h:4*MM,fontSize:5.5,color:'3C82D2',fontFace:'Helvetica Neue'});
     });
     y5L+=30*MM;
 
     secBar(s5,LC5,y5L,LC5W,7*MM,'Scouting History'); y5L+=7*MM;
     box(s5,LC5,y5L,LC5W,12*MM);
-    if(PR.scoutingHistory) s5.addText(PR.scoutingHistory.slice(0,80),{x:LC5+3*MM,y:y5L+3*MM,w:LC5W-6*MM,h:8*MM,fontSize:6,color:'3C82D2',fontFace:'Calibri'});
+    if(PR.scoutingHistory) s5.addText(PR.scoutingHistory.slice(0,80),{x:LC5+3*MM,y:y5L+3*MM,w:LC5W-6*MM,h:8*MM,fontSize:6,color:'3C82D2',fontFace:'Helvetica Neue'});
     y5L+=14*MM;
 
     secBar(s5,LC5,y5L,LC5W,7*MM,'Relevant News'); y5L+=7*MM;
     const newsH5=H-y5L-30*MM;
     box(s5,LC5,y5L,LC5W,newsH5);
     s5.addShape(pptx.ShapeType.rect,{x:LC5,y:y5L,w:LC5W,h:6*MM,fill:{color:'373735'},line:{color:'373735'}});
-    s5.addText('Headline',{x:LC5+3*MM,y:y5L,w:LC5W*0.55,h:6*MM,fontSize:5.5,bold:true,color:C.white,valign:'middle',fontFace:'Calibri'});
-    s5.addText('Link',{x:LC5+LC5W*0.6,y:y5L,w:LC5W*0.38,h:6*MM,fontSize:5.5,bold:true,color:C.white,valign:'middle',fontFace:'Calibri'});
+    s5.addText('Headline',{x:LC5+3*MM,y:y5L,w:LC5W*0.55,h:6*MM,fontSize:5.5,bold:true,color:C.white,valign:'middle',fontFace:'Helvetica Neue'});
+    s5.addText('Link',{x:LC5+LC5W*0.6,y:y5L,w:LC5W*0.38,h:6*MM,fontSize:5.5,bold:true,color:C.white,valign:'middle',fontFace:'Helvetica Neue'});
     let ny5=y5L+8*MM;
     PR.news.filter(n=>n.headline).forEach((n,i)=>{
       if(ny5>y5L+newsH5-4*MM) return;
       if(i%2===0) s5.addShape(pptx.ShapeType.rect,{x:LC5,y:ny5-2*MM,w:LC5W,h:5.5*MM,fill:{color:'F0F0EE'},line:{color:'F0F0EE'}});
-      s5.addText((n.headline||'').slice(0,45),{x:LC5+2*MM,y:ny5,w:LC5W*0.55,h:5*MM,fontSize:5.5,color:C.dark,fontFace:'Calibri'});
-      if(n.link) s5.addText(n.link.slice(0,32),{x:LC5+LC5W*0.6,y:ny5,w:LC5W*0.38,h:5*MM,fontSize:5.5,color:'3C82D2',fontFace:'Calibri'});
+      s5.addText((n.headline||'').slice(0,45),{x:LC5+2*MM,y:ny5,w:LC5W*0.55,h:5*MM,fontSize:5.5,color:C.dark,fontFace:'Helvetica Neue'});
+      if(n.link) s5.addText(n.link.slice(0,32),{x:LC5+LC5W*0.6,y:ny5,w:LC5W*0.38,h:5*MM,fontSize:5.5,color:'3C82D2',fontFace:'Helvetica Neue'});
       ny5+=5.5*MM;
     });
 
@@ -4296,31 +4391,31 @@ async function gerarPlayerReportPPTX(){
     secBar(s5,RC5,y5R,RC5W,7*MM,'Analysis'); y5R+=7*MM;
     const analysisH=60*MM;
     box(s5,RC5,y5R,RC5W,analysisH);
-    if(PR.analysis) s5.addText(PR.analysis,{x:RC5+3*MM,y:y5R+3*MM,w:RC5W-6*MM,h:analysisH-6*MM,fontSize:7,color:'232321',fontFace:'Calibri',wrap:true,valign:'top'});
+    if(PR.analysis) s5.addText(PR.analysis,{x:RC5+3*MM,y:y5R+3*MM,w:RC5W-6*MM,h:analysisH-6*MM,fontSize:7,color:'232321',fontFace:'Helvetica Neue',wrap:true,valign:'top'});
     y5R+=analysisH+2*MM;
 
     secBar(s5,RC5,y5R,RC5W,7*MM,'Key Attributes'); y5R+=7*MM;
     const attrH5=H-y5R-32*MM;
     const attrHalf=(RC5W-2*MM)/2;
     s5.addShape(pptx.ShapeType.rect,{x:RC5,y:y5R,w:attrHalf,h:7*MM,fill:{color:C.green},line:{color:C.green}});
-    s5.addText('STRENGTHS',{x:RC5,y:y5R,w:attrHalf,h:7*MM,fontSize:5.5,bold:true,color:C.white,align:'center',valign:'middle',fontFace:'Calibri'});
+    s5.addText('STRENGTHS',{x:RC5,y:y5R,w:attrHalf,h:7*MM,fontSize:5.5,bold:true,color:C.white,align:'center',valign:'middle',fontFace:'Helvetica Neue'});
     s5.addShape(pptx.ShapeType.rect,{x:RC5+attrHalf+2*MM,y:y5R,w:attrHalf,h:7*MM,fill:{color:C.orange},line:{color:C.orange}});
-    s5.addText('WEAKNESSES',{x:RC5+attrHalf+2*MM,y:y5R,w:attrHalf,h:7*MM,fontSize:5.5,bold:true,color:C.white,align:'center',valign:'middle',fontFace:'Calibri'});
+    s5.addText('WEAKNESSES',{x:RC5+attrHalf+2*MM,y:y5R,w:attrHalf,h:7*MM,fontSize:5.5,bold:true,color:C.white,align:'center',valign:'middle',fontFace:'Helvetica Neue'});
     y5R+=7*MM;
     s5.addShape(pptx.ShapeType.rect,{x:RC5,y:y5R,w:attrHalf,h:attrH5,fill:{color:'F0FAF0'},line:{color:'E8F5E8'}});
     s5.addShape(pptx.ShapeType.rect,{x:RC5+attrHalf+2*MM,y:y5R,w:attrHalf,h:attrH5,fill:{color:'FFF5F0'},line:{color:'FFE8E0'}});
     PR.strengths.filter(Boolean).slice(0,8).forEach((s,i)=>
-      s5.addText('+ '+String(s),{x:RC5+3*MM,y:y5R+3*MM+i*6*MM,w:attrHalf-5*MM,h:6*MM,fontSize:7,color:'1E501E',fontFace:'Calibri'}));
+      s5.addText('+ '+String(s),{x:RC5+3*MM,y:y5R+3*MM+i*6*MM,w:attrHalf-5*MM,h:6*MM,fontSize:7,color:'1E501E',fontFace:'Helvetica Neue'}));
     PR.weaknesses.filter(Boolean).slice(0,8).forEach((s,i)=>
-      s5.addText('- '+String(s),{x:RC5+attrHalf+5*MM,y:y5R+3*MM+i*6*MM,w:attrHalf-5*MM,h:6*MM,fontSize:7,color:'641E0A',fontFace:'Calibri'}));
+      s5.addText('- '+String(s),{x:RC5+attrHalf+5*MM,y:y5R+3*MM+i*6*MM,w:attrHalf-5*MM,h:6*MM,fontSize:7,color:'641E0A',fontFace:'Helvetica Neue'}));
 
     // Final Considerations
     const fcY=H-28*MM;
     secBar(s5,9*MM,fcY,W-9*MM-20*MM,7*MM,'Final Considerations');
     s5.addShape(pptx.ShapeType.rect,{x:9*MM,y:fcY+7*MM,w:W-9*MM-20*MM,h:17*MM,fill:{color:'5A5550'},line:{color:'5A5550'}});
-    if(PR.finalConsiderations) s5.addText(PR.finalConsiderations,{x:13*MM,y:fcY+10*MM,w:W-13*MM-22*MM,h:12*MM,fontSize:7,color:C.white,fontFace:'Calibri',wrap:true,valign:'top'});
+    if(PR.finalConsiderations) s5.addText(PR.finalConsiderations,{x:13*MM,y:fcY+10*MM,w:W-13*MM-22*MM,h:12*MM,fontSize:7,color:C.white,fontFace:'Helvetica Neue',wrap:true,valign:'top'});
     const ss5=[PR.scout&&'Scout: '+PR.scout,PR.dataRelatorio&&'Date: '+PR.dataRelatorio].filter(Boolean).join('   ');
-    if(ss5) s5.addText(ss5,{x:W-5.5,y:H-3*MM,w:5.3,h:3*MM,fontSize:5.5,italic:true,color:C.light,align:'right',fontFace:'Calibri'});
+    if(ss5) s5.addText(ss5,{x:W-5.5,y:H-3*MM,w:5.3,h:3*MM,fontSize:5.5,italic:true,color:C.light,align:'right',fontFace:'Helvetica Neue'});
 
     /* ════════════════════════════════
        SLIDE 6 — FOTO + FINANÇAS (editável)
@@ -4355,13 +4450,13 @@ async function gerarPlayerReportPPTX(){
       }
     }else{
       s6.addShape(pptx.ShapeType.rect,{x:0,y:Y6,w:photoW,h:H-Y6,fill:{color:'C8C8C6'},line:{color:'C8C8C6'}});
-      s6.addText('Action Photo\nUpload in Slide 6',{x:0,y:H/2-0.3,w:photoW,h:0.6,fontSize:9,italic:true,color:'E0E0DE',align:'center',fontFace:'Calibri'});
+      s6.addText('Action Photo\nUpload in Slide 6',{x:0,y:H/2-0.3,w:photoW,h:0.6,fontSize:9,italic:true,color:'E0E0DE',align:'center',fontFace:'Helvetica Neue'});
     }
 
     // Finanças editáveis
     const finX=photoW+6*MM, finW=Math.round((W-finX-6*MM)*0.65);  // FW=65%
     s6.addShape(pptx.ShapeType.rect,{x:finX,y:Y6,w:finW,h:8*MM,fill:{color:'444444'},line:{color:'444444'}});
-    s6.addText('FINANCES',{x:finX,y:Y6,w:finW,h:8*MM,fontSize:10,bold:true,color:C.white,align:'center',valign:'middle',charSpacing:4,fontFace:'Calibri'});
+    s6.addText('FINANCES',{x:finX,y:Y6,w:finW,h:8*MM,fontSize:10,bold:true,color:C.white,align:'center',valign:'middle',charSpacing:4,fontFace:'Helvetica Neue'});
 
     const finDefs=[
       ['TRANSFER FEE',       PR.transferFee  ||''],
@@ -4373,20 +4468,21 @@ async function gerarPlayerReportPPTX(){
     let fy=Y6+9*MM;
     finDefs.forEach(([lbl,val])=>{
       s6.addShape(pptx.ShapeType.rect,{x:finX,y:fy,w:finW,h:boxH6,fill:{color:'F5F5F3'},line:{color:'D7D7D5',pt:0.5}});
-      s6.addText(lbl,{x:finX+0.12,y:fy+0.07,w:finW-0.24,h:0.18,fontSize:6.5,bold:true,color:'9E9E9C',fontFace:'Calibri'});
-      s6.addText(val,{x:finX+0.12,y:fy+0.3,w:finW-0.24,h:boxH6-0.35,fontSize:18,bold:true,color:C.dark,fontFace:'Calibri',valign:'top'});
+      s6.addText(lbl,{x:finX+0.12,y:fy+0.07,w:finW-0.24,h:0.18,fontSize:6.5,bold:true,color:'9E9E9C',fontFace:'Helvetica Neue'});
+      s6.addText(val,{x:finX+0.12,y:fy+0.3,w:finW-0.24,h:boxH6-0.35,fontSize:18,bold:true,color:C.dark,fontFace:'Helvetica Neue',valign:'top'});
       fy+=boxH6+0.5*MM;
     });
 
     s6.addText('💡 Edite os valores financeiros diretamente neste arquivo antes de enviar.  •  Para salvar em Keynote: abra o .pptx no Keynote → File → Save As → Keynote (.key)',{
-      x:finX,y:H-0.22,w:finW,h:0.2,fontSize:5.5,italic:true,color:'AAAAAA',align:'center',fontFace:'Calibri'
+      x:finX,y:H-0.22,w:finW,h:0.2,fontSize:5.5,italic:true,color:'AAAAAA',align:'center',fontFace:'Helvetica Neue'
     });
     const ss6=[PR.scout&&'Scout: '+PR.scout,PR.dataRelatorio&&'Date: '+PR.dataRelatorio].filter(Boolean).join('   ');
-    if(ss6) s6.addText(ss6,{x:W-5.5,y:H-0.2,w:5.3,h:0.18,fontSize:5.5,italic:true,color:'B0B0AE',align:'right',fontFace:'Calibri'});
+    if(ss6) s6.addText(ss6,{x:W-5.5,y:H-0.2,w:5.3,h:0.18,fontSize:5.5,italic:true,color:'B0B0AE',align:'right',fontFace:'Helvetica Neue'});
 
     /* ── Download ── */
     const safeName=(PR.nome||'player').replace(/[^a-z0-9]/gi,'_').toUpperCase();
-    await pptx.writeFile({fileName:`PlayerReport_${PR.posicao||'POS'}_${safeName}.pptx`});
+    const suffix=opts.keynoteMode?'_Keynote':'';
+    await pptx.writeFile({fileName:`PlayerReport_${PR.posicao||'POS'}_${safeName}${suffix}.pptx`});
 
     if(btn){btn.textContent='✓ PPTX Gerado!';btn.style.background='#1a8040';}
     setTimeout(()=>{if(btn){btn.textContent='📊 Gerar PPTX';btn.style.background='';btn.disabled=false;}},2500);
@@ -4398,6 +4494,26 @@ async function gerarPlayerReportPPTX(){
   }
 }
 
+/* ════════════════════════════════════════════
+   KEYNOTE EXPORT — gera PPTX com nome _Keynote
+   No Mac: duplo clique → abre direto no Keynote
+════════════════════════════════════════════ */
+async function gerarPlayerReportKeynote(){
+  // Gera o mesmo PPTX — no Mac duplo clique abre direto no Keynote
+  const btn=document.getElementById('prKeynoteBtn');
+  if(btn){btn.disabled=true;btn.textContent='⏳ Gerando...';}
+  try{
+    await gerarPlayerReportPPTX({keynoteMode:true});
+    if(btn){btn.textContent='✓ Keynote pronto!';}
+    setTimeout(()=>{
+      alert('✅ Arquivo gerado!\n\n🍎 No Mac:\nDuplo clique no arquivo → abre automaticamente no Keynote.\n\nSe preferir o PowerPoint, clique com botão direito → "Abrir com..."');
+      if(btn){btn.textContent='🍎 Keynote';btn.style.background='';btn.disabled=false;}
+    },300);
+  }catch(err){
+    if(btn){btn.textContent='🍎 Keynote';btn.style.background='';btn.disabled=false;}
+  }
+}
+
 
 function prSaveDraft(){
   if(!PR.nome){alert('Informe o nome do jogador primeiro.');return;}
@@ -4406,7 +4522,11 @@ function prSaveDraft(){
   const imgKeys=['coverPhoto','injuryImg','resumeImg','matches25Img','matches24Img','analyticsImgs','actionPhoto'];
   const meta=Object.fromEntries(Object.entries(PR).filter(([k])=>!imgKeys.includes(k)));
   try{localStorage.setItem('pr_'+id,JSON.stringify(PR));}catch(e){}
-  if(db&&firebaseReady) db.ref('player_reports/'+id).set(meta).catch(e=>{});
+  if(db&&firebaseReady){
+    fbUploadPRImages(id,PR).then(imgUrls=>{
+      db.ref('player_reports/'+id).set({...meta,_imgUrls:imgUrls}).catch(e=>{});
+    });
+  }
   PR_SAVED[id]={...PR};
   // Flash feedback
   const btns=document.querySelectorAll('button');
