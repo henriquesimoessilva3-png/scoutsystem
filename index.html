@@ -106,6 +106,9 @@ th.hdr-col{background:#2c2c2a;color:#f1efe8;font-weight:500;padding:5px 4px;text
 
 .col-name-inner{display:flex;align-items:center;gap:0;width:100%}
 .col-name-text{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.btn-del-comp{background:transparent;border:none;color:#7a3030;cursor:pointer;font-size:10px;padding:1px 3px;border-radius:3px;opacity:0;transition:opacity .15s;flex-shrink:0}
+.col-name-inner:hover .btn-del-comp{opacity:1}
+.btn-del-comp:hover{background:#3a1818;color:#ff8080}
 
 /* ═══════════════════ MODAL OVERLAY ═══════════════════ */
 :root{
@@ -555,12 +558,13 @@ table.ind-table tr:hover td{background:#f0eeea;cursor:pointer}
 ══════════════════════════════════════════ */
 const MONTHS=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 const MONTHS_FULL=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-const SCOUTS=['Brunno','Cristian','Gabriel','Humberto'];
+const SCOUTS=['Brunno','Cristian','Gabriel','Humberto','Base'];
 const SCOUT_COLORS={
   Brunno:{soft:'#F5C86A',strong:'#D07000',text:'#7A3D00',btn:'#E8940A'},
   Cristian:{soft:'#90C4F0',strong:'#1562B8',text:'#042C53',btn:'#1562B8'},
   Gabriel:{soft:'#8ED4A4',strong:'#1A8038',text:'#04342C',btn:'#1A8038'},
-  Humberto:{soft:'#D4909A',strong:'#7a1830',text:'#3d0010',btn:'#8B1A2E'}
+  Humberto:{soft:'#D4909A',strong:'#7a1830',text:'#3d0010',btn:'#8B1A2E'},
+  Base:{soft:'#B0D4E8',strong:'#2A6080',text:'#0D2E3D',btn:'#2A6080'}
 };
 const MULTI_COLOR='#2c2c2a';
 const ALT=['#eeece9','#f4f3ec'];
@@ -955,6 +959,7 @@ function renderCal(){
             <div class="col-name-inner">
               <span class="col-name-text" title="${comp.name}">${comp.name}</span>
               <button class="btn-report${hasr?' has-reports':''}" id="rbtn-${comp.id}" onclick="openModal(${comp.id})" title="Relatórios de ${comp.name}">${hasr?`📋 <span class='report-count'>${reps}</span>`:'📋'}</button>
+              <button class="btn-del-comp" onclick="deleteComp(${comp.id})" title="Excluir competição">✕</button>
             </div>
           </td>
           <td class="col-start"><input class="date-input" type="date" value="${comp.start||''}" onchange="updateDate(${comp.id},'start',this.value)"></td>
@@ -984,8 +989,11 @@ function renderCal(){
 
   return `<div class="view active">
     <div class="toolbar">
-      <div><h1>Calendário de Cobertura 2026</h1>
-      <p>Clique em 📋 ao lado de qualquer campeonato para adicionar relatórios de jogadores</p></div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div><h1>Calendário de Cobertura 2026</h1>
+        <p>Clique em 📋 ao lado de qualquer campeonato para adicionar relatórios de jogadores</p></div>
+        <button onclick="openAddCompModal()" style="background:#e8c84a;color:#1a1a18;border:none;border-radius:6px;padding:6px 14px;font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap">+ Competição</button>
+      </div>
       <div class="legend">
         ${SCOUTS.map(s=>`<span class="leg"><span class="leg-dot" style="background:${SCOUT_COLORS[s].soft}"></span>${s}</span>`).join('')}
         <span class="leg"><span class="leg-dot" style="background:#2c2c2a"></span>2+ scouts</span>
@@ -1082,7 +1090,7 @@ function renderScoutView(scout){
 ══════════════════════════════════════════ */
 const IND_POSITIONS=['1 - GK','2 - RB','3 - LB','4 - RCB/LCB','5 - DM','6 - CM','7 - AM','8 - RW/LW','9 - CF'];
 const IND_AVAL_AGRUP=['APROVADO - A Team','APROVADO - Squad Player','APROVADO - Time B/RWD','APROVADO - Youth Player','APROVADO U20','Em Avaliação','Monitorando/Monitorar','Descartado'];
-const IND_RESPONSAVEIS=['Brunno','Cristian','Gabriel','Humberto'];
+const IND_RESPONSAVEIS=['Brunno','Cristian','Gabriel','Humberto','Base'];
 const IND_ANOS=['2022','2023','2024','2025','2026'];
 
 function avalClass(v){
@@ -4560,6 +4568,48 @@ async function gerarPlayerReportKeynote(){
 }
 
 
+// ── Adicionar / Excluir competição ──
+function openAddCompModal(){
+  document.getElementById("addCompModal").style.display="flex";
+  document.getElementById("acName").value="";
+  document.getElementById("acSub").value="";
+  document.getElementById("acCountry").value="";
+  document.getElementById("acStart").value="";
+  document.getElementById("acEnd").value="";
+}
+function closeAddCompModal(){
+  document.getElementById("addCompModal").style.display="none";
+}
+function saveNewComp(){
+  const name=document.getElementById("acName").value.trim();
+  const start=document.getElementById("acStart").value;
+  const end=document.getElementById("acEnd").value;
+  if(!name||!start||!end){alert("Preencha Nome, Início e Fim.");return;}
+  const newId=Math.max(0,...DATA.map(c=>c.id))+1;
+  const newComp={
+    id:newId,
+    group:document.getElementById("acGroup").value,
+    subgroup:document.getElementById("acSub").value||"Outros",
+    name, start, end,
+    country:document.getElementById("acCountry").value||"",
+    level:document.getElementById("acLevel").value,
+    scouts:[]
+  };
+  DATA.push(newComp);
+  saveData();
+  closeAddCompModal();
+  renderViews();
+}
+function deleteComp(id){
+  const comp=DATA.find(c=>c.id===id);
+  if(!comp)return;
+  if(!confirm(`Excluir "${comp.name}"?\nOs relatórios desta competição também serão removidos.`))return;
+  DATA=DATA.filter(c=>c.id!==id);
+  delete REPORTS[id];
+  saveData();
+  renderViews();
+}
+
 function prSaveDraft(){
   if(!PR.nome){alert('Informe o nome do jogador primeiro.');return;}
   const id=PR._id||('pr_'+Date.now());
@@ -4619,5 +4669,42 @@ setTimeout(function(){
   </div>
 </div>
 
+<!-- Modal adicionar competição -->
+<div id="addCompModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9000;align-items:center;justify-content:center">
+  <div style="background:#2c2c2a;border-radius:10px;padding:22px;width:420px;max-width:95vw;color:#f1efe8">
+    <h3 style="margin-bottom:16px;font-size:14px;letter-spacing:.06em">+ NOVA COMPETIÇÃO</h3>
+    <div style="display:grid;gap:10px">
+      <div><label style="font-size:10px;color:#888;display:block;margin-bottom:3px">NOME *</label>
+        <input id="acName" placeholder="Ex: Campeonato Mineiro A2" style="width:100%;background:#1a1a18;border:1px solid #3a3835;border-radius:5px;color:#f1efe8;padding:6px 8px;font-size:12px"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><label style="font-size:10px;color:#888;display:block;margin-bottom:3px">GRUPO</label>
+          <select id="acGroup" style="width:100%;background:#1a1a18;border:1px solid #3a3835;border-radius:5px;color:#f1efe8;padding:6px 8px;font-size:12px">
+            <option>BRASIL</option><option>BRASIL BASE</option><option>AMERICA DO SUL PRO</option>
+            <option>AMERICA DO SUL BASE</option><option>AMERICAS MUNDO</option><option>OUTRO</option>
+          </select></div>
+        <div><label style="font-size:10px;color:#888;display:block;margin-bottom:3px">SUBGRUPO</label>
+          <input id="acSub" placeholder="Ex: Profissional" style="width:100%;background:#1a1a18;border:1px solid #3a3835;border-radius:5px;color:#f1efe8;padding:6px 8px;font-size:12px"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><label style="font-size:10px;color:#888;display:block;margin-bottom:3px">INÍCIO *</label>
+          <input id="acStart" type="date" style="width:100%;background:#1a1a18;border:1px solid #3a3835;border-radius:5px;color:#f1efe8;padding:6px 8px;font-size:12px"></div>
+        <div><label style="font-size:10px;color:#888;display:block;margin-bottom:3px">FIM *</label>
+          <input id="acEnd" type="date" style="width:100%;background:#1a1a18;border:1px solid #3a3835;border-radius:5px;color:#f1efe8;padding:6px 8px;font-size:12px"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><label style="font-size:10px;color:#888;display:block;margin-bottom:3px">PAÍS</label>
+          <input id="acCountry" placeholder="Ex: Brasil" style="width:100%;background:#1a1a18;border:1px solid #3a3835;border-radius:5px;color:#f1efe8;padding:6px 8px;font-size:12px"></div>
+        <div><label style="font-size:10px;color:#888;display:block;margin-bottom:3px">NÍVEL</label>
+          <select id="acLevel" style="width:100%;background:#1a1a18;border:1px solid #3a3835;border-radius:5px;color:#f1efe8;padding:6px 8px;font-size:12px">
+            <option>Profissional</option><option>Base</option>
+          </select></div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px">
+      <button onclick="closeAddCompModal()" style="background:transparent;border:1px solid #3a3835;color:#888;border-radius:5px;padding:6px 16px;cursor:pointer;font-size:12px">Cancelar</button>
+      <button onclick="saveNewComp()" style="background:#e8c84a;color:#1a1a18;border:none;border-radius:5px;padding:6px 16px;font-weight:700;cursor:pointer;font-size:12px">+ Adicionar</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
