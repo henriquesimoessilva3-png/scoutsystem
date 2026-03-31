@@ -4083,6 +4083,24 @@ function renderPrSavedList(){
    Sem PDF.js: cada slide construído diretamente
    com PptxGenJS. Slide 6 com finanças editáveis.
 ══════════════════════════════════════════ */
+// Retorna {w, h} da imagem base64 via canvas
+function getImgDims(src){
+  return new Promise((res,rej)=>{
+    const img=new Image();
+    img.onload=()=>res({w:img.naturalWidth,h:img.naturalHeight});
+    img.onerror=()=>res({w:1,h:1}); // fallback seguro
+    img.src=src;
+  });
+}
+
+// Calcula dimensões contain: cabe dentro de boxW x boxH mantendo proporção
+function containDims(imgW,imgH,boxW,boxH){
+  const asp=imgW/imgH;
+  let w=boxW, h=boxH;
+  if(w/h>asp){w=h*asp;}else{h=w/asp;}
+  return {w, h, x:(boxW-w)/2, y:(boxH-h)/2};
+}
+
 async function gerarPlayerReportPPTX(opts={}){
   if(!PR.nome){alert('Informe o nome do jogador (Slide 1).');PR.step=1;renderPrStep();return;}
   const btn=document.getElementById('prPptxBtn');
@@ -4289,10 +4307,10 @@ async function gerarPlayerReportPPTX(opts={}){
     const s3=pptx.addSlide();
     s3.background={color:C.bg};
     addHeader(s3);
-    const Y3=(18.5+5)*MM;  // começa 5mm abaixo do header
+    // S3: começa 6mm abaixo do header (18.5mm)
+    const Y3=(18.5+6)*MM;
     secBar(s3,9*MM,Y3,W-9*MM-20*MM,8*MM,'Player History');
-    // S3: LC=9mm LC_R=20mm LC_T=6mm pad=5.5mm
-    const col3Y=Y3+8*MM+5.5*MM, col3H=H-col3Y-10*MM, col3W=(W-9*MM-20*MM-4*MM)/3;
+    const col3Y=Y3+8*MM+4*MM, col3H=H-col3Y-8*MM, col3W=(W-9*MM-20*MM-4*MM)/3;
     const col3Colors=['4B4B49','3C643C','28507A'];
     const s3Cols=['RESUME','LAST MATCHES 2025','LAST MATCHES 2024'];
     const s3Imgs=[PR.resumeImg,PR.matches25Img,PR.matches24Img];
@@ -4304,13 +4322,10 @@ async function gerarPlayerReportPPTX(opts={}){
       const img=s3Imgs[i];
       if(img){
         try{
-          // Calcular dimensões mantendo proporção (contain)
-          const im3=await new Promise((res,rej)=>{const _i=new Image();_i.onload=()=>res(_i);_i.onerror=rej;_i.src=img;});
-          const asp3=im3.naturalWidth/im3.naturalHeight;
-          let iw3=col3W, ih3=col3H-7*MM;
-          if(iw3/ih3>asp3){iw3=ih3*asp3;}else{ih3=iw3/asp3;}
-          const ix3=cx+(col3W-iw3)/2, iy3=col3Y+7*MM+(col3H-7*MM-ih3)/2;
-          s3.addImage({data:img,x:ix3,y:iy3,w:iw3,h:ih3});
+          const {w:iW,h:iH}=await getImgDims(img);
+          const bW=col3W, bH=col3H-7*MM;
+          const cd=containDims(iW,iH,bW,bH);
+          s3.addImage({data:img,x:cx+cd.x,y:col3Y+7*MM+cd.y,w:cd.w,h:cd.h});
         }catch(e){}
       }else{
         // ── Tabela editável nativa no PowerPoint ──
@@ -4350,13 +4365,10 @@ async function gerarPlayerReportPPTX(opts={}){
       const s4imgY=(18.5+4.5+7)*MM, s4imgH=H-s4imgY-20*MM;
       if(b64){
         try{
-          const im4=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=b64;});
-          const asp4=im4.naturalWidth/im4.naturalHeight;
-          const boxW4=W-9.5*MM-20*MM;
-          let iw4=boxW4, ih4=s4imgH;
-          if(iw4/ih4>asp4){iw4=ih4*asp4;}else{ih4=iw4/asp4;}
-          const ix4=9.5*MM+(boxW4-iw4)/2, iy4=s4imgY+(s4imgH-ih4)/2;
-          s4.addImage({data:b64,x:ix4,y:iy4,w:iw4,h:ih4});
+          const {w:iW4,h:iH4}=await getImgDims(b64);
+          const bW4=W-9.5*MM-20*MM, bH4=s4imgH;
+          const cd4=containDims(iW4,iH4,bW4,bH4);
+          s4.addImage({data:b64,x:9.5*MM+cd4.x,y:s4imgY+cd4.y,w:cd4.w,h:cd4.h});
         }catch(e){}
       }else{
         box(s4,9.5*MM,s4imgY,W-9.5*MM-20*MM,s4imgH);
