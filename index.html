@@ -4289,18 +4289,29 @@ async function gerarPlayerReportPPTX(opts={}){
     const s3=pptx.addSlide();
     s3.background={color:C.bg};
     addHeader(s3);
-    const Y3=21*MM;
-    secBar(s3,9*MM,Y3+6*MM,W-9*MM-20*MM,8*MM,'Player History');
+    const Y3=(18.5+5)*MM;  // começa 5mm abaixo do header
+    secBar(s3,9*MM,Y3,W-9*MM-20*MM,8*MM,'Player History');
     // S3: LC=9mm LC_R=20mm LC_T=6mm pad=5.5mm
-    const col3Y=Y3+6*MM+5.5*MM, col3H=H-col3Y-20*MM, col3W=(W-9*MM-20*MM-4*MM)/3;
+    const col3Y=Y3+8*MM+5.5*MM, col3H=H-col3Y-10*MM, col3W=(W-9*MM-20*MM-4*MM)/3;
     const col3Colors=['4B4B49','3C643C','28507A'];
-    ['RESUME','LAST MATCHES 2025','LAST MATCHES 2024'].forEach((lbl,i)=>{
+    const s3Cols=['RESUME','LAST MATCHES 2025','LAST MATCHES 2024'];
+    const s3Imgs=[PR.resumeImg,PR.matches25Img,PR.matches24Img];
+    for(let i=0;i<s3Cols.length;i++){
+      const lbl=s3Cols[i];
       const cx=9*MM+i*(col3W+2*MM);
       s3.addShape(pptx.ShapeType.rect,{x:cx,y:col3Y,w:col3W,h:7*MM,fill:{color:col3Colors[i]},line:{color:col3Colors[i]}});
       s3.addText(lbl,{x:cx,y:col3Y,w:col3W,h:7*MM,fontSize:5.5,bold:true,color:C.white,align:'center',valign:'middle',charSpacing:1.2,fontFace:'Helvetica Neue'});
-      const img=[PR.resumeImg,PR.matches25Img,PR.matches24Img][i];
+      const img=s3Imgs[i];
       if(img){
-        try{ s3.addImage({data:img,x:cx,y:col3Y+7*MM,w:col3W,h:col3H-7*MM}); }catch(e){}
+        try{
+          // Calcular dimensões mantendo proporção (contain)
+          const im3=await new Promise((res,rej)=>{const _i=new Image();_i.onload=()=>res(_i);_i.onerror=rej;_i.src=img;});
+          const asp3=im3.naturalWidth/im3.naturalHeight;
+          let iw3=col3W, ih3=col3H-7*MM;
+          if(iw3/ih3>asp3){iw3=ih3*asp3;}else{ih3=iw3/asp3;}
+          const ix3=cx+(col3W-iw3)/2, iy3=col3Y+7*MM+(col3H-7*MM-ih3)/2;
+          s3.addImage({data:img,x:ix3,y:iy3,w:iw3,h:ih3});
+        }catch(e){}
       }else{
         // ── Tabela editável nativa no PowerPoint ──
         const tY=col3Y+7*MM, tH=col3H-7*MM, cw=col3W;
@@ -4324,7 +4335,7 @@ async function gerarPlayerReportPPTX(opts={}){
             rowH:tH/17,border:{color:'D0D0CE',pt:0.3}});
         }
       }
-    });
+    }
 
     /* ════════════════════════════════
        SLIDE 4 — ANALYTICS
@@ -4338,7 +4349,15 @@ async function gerarPlayerReportPPTX(opts={}){
       secBar(s4,9.5*MM,(18.5+4.5)*MM,W-9.5*MM-20*MM,7*MM,'Analytics');
       const s4imgY=(18.5+4.5+7)*MM, s4imgH=H-s4imgY-20*MM;
       if(b64){
-        try{ s4.addImage({data:b64,x:9.5*MM,y:s4imgY,w:W-9.5*MM-20*MM,h:s4imgH}); }catch(e){}
+        try{
+          const im4=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=b64;});
+          const asp4=im4.naturalWidth/im4.naturalHeight;
+          const boxW4=W-9.5*MM-20*MM;
+          let iw4=boxW4, ih4=s4imgH;
+          if(iw4/ih4>asp4){iw4=ih4*asp4;}else{ih4=iw4/asp4;}
+          const ix4=9.5*MM+(boxW4-iw4)/2, iy4=s4imgY+(s4imgH-ih4)/2;
+          s4.addImage({data:b64,x:ix4,y:iy4,w:iw4,h:ih4});
+        }catch(e){}
       }else{
         box(s4,9.5*MM,s4imgY,W-9.5*MM-20*MM,s4imgH);
         s4.addText('Upload EAGLE / Instat screenshot in Slide 4',{x:9.5*MM,y:s4imgY,w:W-9.5*MM-20*MM,h:s4imgH,fontSize:9,italic:true,color:'C3C3C1',align:'center',valign:'middle',fontFace:'Helvetica Neue'});
@@ -4506,7 +4525,21 @@ async function gerarPlayerReportKeynote(){
     await gerarPlayerReportPPTX({keynoteMode:true});
     if(btn){btn.textContent='✓ Keynote pronto!';}
     setTimeout(()=>{
-      alert('✅ Arquivo gerado!\n\n🍎 No Mac:\nDuplo clique no arquivo → abre automaticamente no Keynote.\n\nSe preferir o PowerPoint, clique com botão direito → "Abrir com..."');
+      alert(
+'✅ Arquivo .pptx gerado!\n\n' +
+'🍎 ABRIR NO KEYNOTE (Mac):\n' +
+'━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+'→ Clique com botão direito no arquivo\n' +
+'→ "Abrir com" → Keynote\n\n' +
+'💡 DICA — Para abrir sempre no Keynote:\n' +
+'━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+'1. Clique direito no arquivo → "Obter informações"\n' +
+'2. Em "Abrir com" → selecione Keynote\n' +
+'3. Clique "Alterar todos..."\n' +
+'4. Confirme → pronto! Todo .pptx abrirá\n' +
+'   direto no Keynote com duplo clique.\n\n' +
+'💻 WINDOWS: abrir normalmente no PowerPoint.'
+      );
       if(btn){btn.textContent='🍎 Keynote';btn.style.background='';btn.disabled=false;}
     },300);
   }catch(err){
