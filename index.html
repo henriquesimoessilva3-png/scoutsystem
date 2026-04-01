@@ -31,9 +31,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .scroll-wrap{overflow:auto;-webkit-overflow-scrolling:touch}
 table.cal{border-collapse:collapse;font-size:11px;min-width:900px;width:100%}
 .cal th,.cal td{border:0.5px solid #e0ded4}
-.cal .col-name{position:sticky;left:0;z-index:2;background:#fff;min-width:220px;max-width:260px;padding:2px 4px 2px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal .col-name{position:sticky;left:0;z-index:2;background:#fff;min-width:150px;max-width:160px;padding:2px 4px 2px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cal .col-start,.cal .col-end{min-width:120px;width:120px;padding:3px 5px;text-align:center;background:#ebf4fd;color:#0a3d6b;font-size:10px}
-.cal .col-s{min-width:58px;max-width:64px;width:60px;padding:2px 3px;text-align:center}
+.cal .col-s{min-width:70px;max-width:77px;width:72px;padding:2px 3px;text-align:center}
 .cal .col-s select{width:100%;border:none;background:transparent;font-size:10px;cursor:pointer;color:#1a1a18;padding:1px}
 .cal .period{width:20px;min-width:20px;height:22px;text-align:center;vertical-align:middle;font-size:7px;font-weight:500;cursor:default;padding:0}
 .cal .period.active{color:#fff}
@@ -383,6 +383,8 @@ th.hdr-col{background:#2c2c2a;color:#f1efe8;font-weight:500;padding:5px 4px;text
 .rcard-edit-btn:hover{border-color:var(--blue);color:var(--text)}
 .rcard-del-btn{background:transparent;border:1px solid rgba(232,74,74,.3);color:var(--red)}
 .rcard-del-btn:hover{background:rgba(232,74,74,.15)}
+.rcard-export-btn{background:transparent;border:1px solid rgba(232,200,74,.3);color:#e8c84a;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;padding:.22rem .55rem;border-radius:4px;cursor:pointer;transition:all .12s}
+.rcard-export-btn:hover{background:rgba(232,200,74,.15);border-color:#e8c84a}
 
 /* print */
 @media print{
@@ -1913,6 +1915,7 @@ function renderModalForm(preload){
           <div class="fl"><label>TM Value</label><input id="mTm" type="text" placeholder="€ 500k" value="${p.tm||''}"></div>
           <div class="fl s2"><label>Transfermarkt Link</label><input id="mTmLink" type="url" placeholder="https://www.transfermarkt.com/…" value="${p.tmLink||''}"></div>
           <div class="fl s2"><label>Ogol Link</label><input id="mOgolLink" type="url" placeholder="https://www.ogol.com.br/…" value="${p.ogolLink||''}"></div>
+          <div class="fl s2"><label>Besoccer Link</label><input id="mBesoccerLink" type="url" placeholder="https://pro.besoccer.com/player/…" value="${p.besoccerLink||''}"></div>
         </div>
       </div>
     </div>
@@ -2053,7 +2056,7 @@ function submitReport(){
     nome,dob:gv('mDob'),nac:gv('mNac'),clube:gv('mClube'),
     pos:gv('mPos'),pe:gv('mPe'),alt:gv('mAlt'),fis:gv('mFis'),
     contrato:gv('mContrato'),tm:gv('mTm'),
-    tmLink:gv('mTmLink'),ogolLink:gv('mOgolLink'),
+    tmLink:gv('mTmLink'),ogolLink:gv('mOgolLink'),besoccerLink:gv('mBesoccerLink'),
     agencia:gv('mAgencia'),agenciaContato:gv('mAgenciaContato'),
     scores:{...mScores},photo:window._mPhoto||null,
     forcas:gv('mForcas'),fraquezas:gv('mFraquezas'),
@@ -2191,7 +2194,10 @@ function buildReportCard(r){
         </div>
         <div style="display:flex;align-items:center;gap:.8rem">
           ${r.nota?`<div class="rcard-overall"><span class="rcard-overall-lbl">Score</span><span class="rcard-overall-num">${r.nota}</span></div>`:''}
-          <div class="rcard-footer-actions">
+          <div class="rcard-footer-actions" style="display:flex;gap:.35rem;flex-wrap:wrap;align-items:center">
+            <button class="rcard-export-btn" onclick="exportRcardSimplePDF('${r.id}')">📄 PDF</button>
+            <button class="rcard-export-btn" onclick="exportRcardSimplePPTX('${r.id}')">📊 PPTX</button>
+            <button class="rcard-export-btn" onclick="exportRcardSimplePPTX('${r.id}',true)">🍎 Keynote</button>
             <button class="rcard-edit-btn" onclick="editReport('${r.id}')">✏ Edit</button>
             <button class="rcard-del-btn" onclick="confirmDelete('${r.id}')">✕</button>
           </div>
@@ -2718,7 +2724,7 @@ function prSearchPlayers(q){
 function prLoadFromPlayer(r){
   PR.nome=r.nome||''; PR.posicao=r.posicao||''; PR.clube=r.clube||'';
   PR.pais=r.pais||''; PR.ano=r.geracao||''; PR.pe=r.pe||''; PR.alt=r.alt||'';
-  PR.ogolLink=r.ogolLink||''; PR.tmLink=r.tmLink||'';
+  PR.ogolLink=r.ogolLink||''; PR.tmLink=r.tmLink||''; PR.besoccerLink=r.besoccerLink||'';
   document.getElementById('prSearchResults').style.display='none';
   renderPrStep();
 }
@@ -3423,7 +3429,8 @@ async function renderSFCanvas(PR, canvasW, canvasH){
   return cv.toDataURL('image/jpeg',0.95);
 }
 
-async function buildPlayerReportPDF(){
+async function buildPlayerReportPDF(prOverride){
+  const PR = prOverride || window.PR;
   const {jsPDF}=window.jspdf;
     const W=EF.W, H=EF.H;
     const pdf=new jsPDF({orientation:'landscape',unit:'mm',format:[W,H]});
@@ -4610,6 +4617,291 @@ function deleteComp(id){
   renderViews();
 }
 
+/* ═══════════════════════════════════════════════════════
+   EXPORTAR SCOUT CARD  — capa (=Player Report) + pág interna
+   Layout pág 2 baseado no modelo visual dos rcards
+════════════════════════════════════════════════════════ */
+
+const POS_LABEL={GK:'Goalkeeper',CB:'Centre-Back',LB:'Left Back',RB:'Right Back',
+  CDM:'Def. Midfielder',CM:'Central Mid.',CAM:'Att. Midfielder',
+  LM:'Left Midfielder',RM:'Right Midfielder',LW:'Left Winger',RW:'Right Winger',
+  SS:'Second Striker',CF:'Centre Forward',ST:'Striker'};
+
+function fmtDob(dob){
+  if(!dob)return'—';
+  const[y,m,d]=dob.split('-');
+  const mn=['Jan.','Feb.','Mar.','Apr.','May','Jun.','Jul.','Aug.','Sep.','Oct.','Nov.','Dec.'];
+  return`${mn[parseInt(m)-1]} ${parseInt(d)}, ${y}`;
+}
+
+// Converte rep → PR mínimo só para renderCoverCanvas
+function repToCoverPR(rep){
+  return{nome:rep.nome||'',posicao:rep.pos||'',clube:rep.clube||'',
+    pais:rep.nac||'',coverPhoto:rep.photo||null,scout:rep.scout||'',
+    dataRelatorio:rep.data||''};
+}
+
+async function exportRcardSimplePDF(repId){
+  const rep=getReports(currentCompId).find(r=>r.id===repId);
+  if(!rep){alert('Relatório não encontrado.');return;}
+  const btn=event.target; btn.textContent='⏳'; btn.disabled=true;
+  try{
+    const{jsPDF}=window.jspdf;
+    const W=297,H=167.0625;
+    const pdf=new jsPDF({orientation:'landscape',unit:'mm',format:[W,H]});
+    pdf.setCharSpace(0);
+    // ── Pág 1: capa igual ao Player Report ──
+    const coverPR=repToCoverPR(rep);
+    const coverImg=await renderCoverCanvas(coverPR);
+    pdf.addImage(coverImg,'JPEG',0,0,W,H);
+    // ── Pág 2: layout do print ──
+    pdf.addPage();
+    const comp=DATA.find(c=>c.id===currentCompId)||{};
+    await drawScoutCardPage(pdf,rep,comp,W,H);
+    const safe=(rep.nome||'player').replace(/[^a-z0-9]/gi,'_').toUpperCase();
+    pdf.save(`ScoutCard_${rep.pos||'POS'}_${safe}.pdf`);
+    btn.textContent='✓ PDF';
+    setTimeout(()=>{btn.textContent='📄 PDF';btn.disabled=false;},2000);
+  }catch(e){console.error(e);alert('Erro: '+e.message);btn.textContent='📄 PDF';btn.disabled=false;}
+}
+
+async function exportRcardSimplePPTX(repId,keynoteMode){
+  const rep=getReports(currentCompId).find(r=>r.id===repId);
+  if(!rep){alert('Relatório não encontrado.');return;}
+  const btn=event.target; btn.textContent='⏳'; btn.disabled=true;
+  try{
+    const comp=DATA.find(c=>c.id===currentCompId)||{};
+    const pptx=new PptxGenJS();
+    pptx.defineLayout({name:'L169',width:10.236,height:5.906});
+    pptx.layout='L169';
+    const W=10.236,H=5.906,MM=W/297;
+    // ── Slide 1: capa ──
+    const coverPR=repToCoverPR(rep);
+    const coverImg=await renderCoverCanvas(coverPR);
+    const s1=pptx.addSlide();
+    s1.addImage({data:coverImg,x:0,y:0,w:W,h:H});
+    // ── Slide 2: scout card ──
+    await drawScoutCardPPTX(pptx,rep,comp,W,H,MM);
+    const safe=(rep.nome||'player').replace(/[^a-z0-9]/gi,'_').toUpperCase();
+    const suffix=keynoteMode?'_Keynote':'';
+    await pptx.writeFile({fileName:`ScoutCard_${rep.pos||'POS'}_${safe}${suffix}.pptx`});
+    btn.textContent=keynoteMode?'✓ Keynote':'✓ PPTX';
+    setTimeout(()=>{btn.textContent=keynoteMode?'🍎 Keynote':'📊 PPTX';btn.disabled=false;},2000);
+  }catch(e){console.error(e);alert('Erro: '+e.message);btn.textContent=keynoteMode?'🍎 Keynote':'📊 PPTX';btn.disabled=false;}
+}
+
+// ═══════════════════════════════════════════════════════
+//  PÁGINA INTERNA — PDF
+// ═══════════════════════════════════════════════════════
+async function drawScoutCardPage(pdf,rep,comp,W,H){
+  const BG='#EDEBE7',CARD='#FFFFFF',HDR='#7A6645';
+  const GRN='#2D7A3A',GRNBG='#E4F5E7',RED='#B03830',REDBG='#FAECEA';
+  const DARK='#1a1a18',LIGHT='#777772',MUTED='#AAAAAA';
+  const PAD=7,BNH=9.5,IP=7;
+  const C1W=69,PHH=55,badge_h=10,badge_fs=6;
+  const FH=11.5,FGAP=2,field_fs_lbl=3,field_fs_val=5;
+  const ogol_h=8.5,ogol_lbl_fs=4.5,ogol_url_fs=3.5;
+  const bs_h=8.5,bs_lbl_fs=4.5,bs_url_fs=3.5,bs_lbl_w=25;
+  const C2W=64,field_h_pct=86;
+  const sw_col_gap=4.5,sw_hdr_h=11,sw_hdr_fs=7.5;
+  const sw_item_fs=6,sw_gap=10,sw_start=21;
+  const banner_title_fs=5.5,banner_sub_fs=4;
+  const FS=2.835;
+
+  pdf.setFillColor(BG); pdf.rect(0,0,W,H,'F');
+
+  // Banner
+  pdf.setFillColor(HDR); pdf.roundedRect(PAD,PAD,W-PAD*2,BNH,1.5,1.5,'F');
+  pdf.setFont('helvetica','bolditalic'); pdf.setFontSize(banner_title_fs*FS);
+  pdf.setTextColor('#FFFFFF'); pdf.setCharSpace(0);
+  pdf.text(`${(rep.nome||'').toUpperCase()} (${rep.clube||''} - ${rep.nac||''})`,PAD+4,PAD+BNH*0.73);
+  pdf.setFont('helvetica','normal'); pdf.setFontSize(banner_sub_fs*FS);
+  pdf.setTextColor('#E8C84A'); pdf.setCharSpace(0);
+  pdf.text(`${comp.name||''} · Scout: ${rep.scout||''} · ${rep.data||''}`,W-PAD-2,PAD+BNH*0.73,{align:'right'});
+
+  // Card
+  const CX=PAD,CY=PAD+BNH+3,CW=W-PAD*2,CH=H-CY-PAD;
+  pdf.setFillColor(CARD); pdf.setDrawColor('#CCCAC6');
+  pdf.roundedRect(CX,CY,CW,CH,2,2,'FD');
+  const iX=CX+IP,iY=CY+IP,iH=CH-IP*2;
+
+  // Foto
+  const pW=C1W,pH=PHH;
+  if(rep.photo){
+    try{
+      const{w:iW2,h:iH2}=await getImgDims(rep.photo);
+      const cd=containDims(iW2,iH2,pW,pH);
+      pdf.roundedRect(iX,iY,pW,pH,1.5,1.5,'S');
+      pdf.addImage(rep.photo,iX+cd.x,iY+cd.y,cd.w,cd.h);
+    }catch(e){pdf.setFillColor('#C8C4BE');pdf.roundedRect(iX,iY,pW,pH,1.5,1.5,'F');}
+  }else{pdf.setFillColor('#C8C4BE');pdf.roundedRect(iX,iY,pW,pH,1.5,1.5,'F');}
+  pdf.setFillColor(HDR); pdf.rect(iX,iY+pH-badge_h,pW,badge_h,'F');
+  pdf.setFont('helvetica','bold'); pdf.setFontSize(badge_fs*FS); pdf.setTextColor('#E8C84A');
+  pdf.setCharSpace(0); pdf.text(rep.pos||'',iX+pW/2,iY+pH-badge_h*0.28,{align:'center'});
+
+  // Campos
+  let fy=iY+pH+3;
+  const fld=(lbl,val,x,y,w,hl)=>{
+    pdf.setFillColor(hl?'#D8E8F8':CARD); pdf.setDrawColor('#CCCAC6');
+    pdf.roundedRect(x,y,w,FH,0.8,0.8,'FD');
+    pdf.setFont('helvetica','normal'); pdf.setFontSize(field_fs_lbl*FS); pdf.setTextColor(LIGHT);
+    pdf.setCharSpace(0); pdf.text(lbl,x+1.8,y+FH*0.38);
+    pdf.setFont('helvetica','bold'); pdf.setFontSize(field_fs_val*FS); pdf.setTextColor(DARK);
+    pdf.setCharSpace(0); pdf.text(String(val||'—'),x+1.8,y+FH*0.82);
+  };
+  const box=(lbl,val,x,y,w)=>{
+    pdf.setFillColor('#E2DEDB'); pdf.roundedRect(x,y,w,FH,0.8,0.8,'F');
+    pdf.setFont('helvetica','normal'); pdf.setFontSize(field_fs_lbl*FS); pdf.setTextColor(LIGHT);
+    pdf.setCharSpace(0); pdf.text(lbl,x+1.8,y+FH*0.38);
+    pdf.setFont('helvetica','bold'); pdf.setFontSize(field_fs_val*FS); pdf.setTextColor(DARK);
+    pdf.setCharSpace(0); pdf.text(String(val||'—'),x+1.8,y+FH*0.82);
+  };
+
+  fld('Name',rep.nome||'',iX,fy,pW,true); fy+=FH+FGAP;
+  fld('D.O.B',fmtDob(rep.dob),iX,fy,pW*0.54-0.5); fld('Contract',rep.contrato||'—',iX+pW*0.54,fy,pW*0.46); fy+=FH+FGAP;
+  const BW=(pW-2)/3;
+  box('Height',rep.alt?(rep.alt+' cm'):'—',iX,fy,BW);
+  box('Strong Foot',rep.pe||'—',iX+BW+1,fy,BW);
+  box('Build',rep.fis||'—',iX+BW*2+2,fy,BW); fy+=FH+FGAP;
+  fld('TM Value (EUR)',rep.tm||'—',iX,fy,pW); fy+=FH+FGAP;
+
+  // OGol
+  const linkW=Math.min(pW*2,CX+CW-IP-iX);
+  pdf.setFillColor('#16203A'); pdf.roundedRect(iX,fy,linkW,ogol_h,0.8,0.8,'F');
+  pdf.setFont('helvetica','bold'); pdf.setFontSize(ogol_lbl_fs*FS); pdf.setTextColor('#7fbfff');
+  pdf.setCharSpace(0); pdf.text('OGol',iX+2,fy+ogol_h*0.65);
+  if(rep.ogolLink){
+    pdf.setFont('helvetica','normal'); pdf.setFontSize(ogol_url_fs*FS); pdf.setTextColor('#aaddff');
+    pdf.setCharSpace(0);
+    const og=pdf.splitTextToSize(rep.ogolLink,linkW-bs_lbl_w-1);
+    pdf.text(og[0]||'',iX+bs_lbl_w,fy+ogol_h*0.65);
+  }
+  fy+=ogol_h+FGAP;
+
+  // Besoccer
+  pdf.setFillColor('#1a2e4a'); pdf.roundedRect(iX,fy,linkW,bs_h,0.8,0.8,'F');
+  pdf.setFont('helvetica','bold'); pdf.setFontSize(bs_lbl_fs*FS); pdf.setTextColor('#7fbfff');
+  pdf.setCharSpace(0); pdf.text('Besoccer',iX+2,fy+bs_h*0.65);
+  pdf.setFont('helvetica','normal'); pdf.setFontSize(bs_url_fs*FS); pdf.setTextColor('#aaddff');
+  pdf.setCharSpace(0);
+  const bsLink=rep.besoccerLink||('https://pro.besoccer.com/player/'+encodeURIComponent(rep.nome||''));
+  const bsL=pdf.splitTextToSize(bsLink,linkW-bs_lbl_w-1);
+  pdf.text(bsL[0]||'',iX+bs_lbl_w,fy+bs_h*0.65);
+
+  // Campo futebol
+  const C2X=iX+pW+4,fw=C2W;
+  const FLH=iH*(field_h_pct/100);
+  const ppCv=await renderPPCanvas({posicao:rep.pos,posicaoSec:'',sistema:''},
+    Math.round(fw/0.154688),Math.round(FLH/0.154688));
+  try{pdf.addImage(ppCv.toDataURL('image/png'),C2X,iY,fw,FLH);}catch(e){}
+
+  // Strengths
+  const C3X=C2X+fw+sw_col_gap,SWCW=(CX+CW-IP-C3X)/2-2;
+  pdf.setFillColor(GRN); pdf.roundedRect(C3X,iY,SWCW,sw_hdr_h,1.5,1.5,'F');
+  pdf.setFont('helvetica','bold'); pdf.setFontSize(sw_hdr_fs*FS); pdf.setTextColor('#FFFFFF');
+  pdf.setCharSpace(0); pdf.text('Strengths',C3X+SWCW/2,iY+sw_hdr_h*0.68,{align:'center'});
+  pdf.setFillColor(GRNBG); pdf.roundedRect(C3X,iY+sw_hdr_h+0.5,SWCW,iH-sw_hdr_h-1,1,1,'F');
+  const frc=(rep.forcas||'').split('\n').filter(Boolean);
+  pdf.setFont('helvetica','normal'); pdf.setFontSize(sw_item_fs*FS); pdf.setTextColor('#1a3d22');
+  frc.forEach((f,i)=>{pdf.setCharSpace(0);pdf.text(`- ${f}`,C3X+3,iY+sw_start+i*sw_gap);});
+
+  // Weaknesses
+  const C4X=C3X+SWCW+3,C4W=CX+CW-IP-C4X;
+  pdf.setFillColor(RED); pdf.roundedRect(C4X,iY,C4W,sw_hdr_h,1.5,1.5,'F');
+  pdf.setFont('helvetica','bold'); pdf.setFontSize(sw_hdr_fs*FS); pdf.setTextColor('#FFFFFF');
+  pdf.setCharSpace(0); pdf.text('Weaknesses',C4X+C4W/2,iY+sw_hdr_h*0.68,{align:'center'});
+  pdf.setFillColor(REDBG); pdf.roundedRect(C4X,iY+sw_hdr_h+0.5,C4W,iH-sw_hdr_h-1,1,1,'F');
+  const frq=(rep.fraquezas||'').split('\n').filter(Boolean);
+  pdf.setFont('helvetica','normal'); pdf.setFontSize(sw_item_fs*FS); pdf.setTextColor('#3d1818');
+  frq.forEach((f,i)=>{pdf.setCharSpace(0);pdf.text(`- ${f}`,C4X+3,iY+sw_start+i*sw_gap);});
+}
+async function drawScoutCardPPTX(pptx,rep,comp,W,H,MM){
+  const s=pptx.addSlide(); s.background={color:'EDEBE7'};
+  const PAD=7*MM,BNH=9.5*MM,IP=7*MM;
+  const C1W=69*MM,PHH=55*MM,badge_h=10*MM,badge_fs=6;
+  const FH=11.5*MM,FGAP=2*MM,field_fs_lbl=3,field_fs_val=5;
+  const ogol_h=8.5*MM,ogol_lbl_fs=4.5,ogol_url_fs=3.5;
+  const bs_h=8.5*MM,bs_lbl_fs=4.5,bs_url_fs=3.5,bs_lbl_w=25*MM;
+  const C2W=64*MM,field_h_pct=86;
+  const sw_col_gap=4.5*MM,sw_hdr_h=11*MM,sw_hdr_fs=7.5;
+  const sw_item_fs=6,sw_gap=10*MM,sw_start=21*MM;
+  const banner_title_fs=5.5,banner_sub_fs=4;
+  const HDR='7A6645',GRN='2D7A3A',GRNBG='E4F5E7',RED='B03830',REDBG='FAECEA';
+  const DARK='1a1a18',LIGHT='777772',CARD='FFFFFF';
+
+  s.addShape(pptx.ShapeType.roundRect,{x:PAD,y:PAD,w:W-PAD*2,h:BNH,fill:{color:HDR},line:{color:HDR},rectRadius:0.015});
+  s.addText(`${(rep.nome||'').toUpperCase()} (${rep.clube||''} - ${rep.nac||''})`,
+    {x:PAD+4*MM,y:PAD,w:W-PAD*3,h:BNH,fontSize:banner_title_fs,bold:true,italic:true,color:CARD,valign:'middle',fontFace:'Helvetica Neue'});
+  s.addText(`${comp.name||''} · Scout: ${rep.scout||''} · ${rep.data||''}`,
+    {x:PAD,y:PAD,w:W-PAD*2,h:BNH,fontSize:banner_sub_fs,color:'E8C84A',align:'right',valign:'middle',fontFace:'Helvetica Neue'});
+
+  const CX=PAD,CY=PAD+BNH+3*MM,CW=W-PAD*2,CH=H-CY-PAD;
+  s.addShape(pptx.ShapeType.roundRect,{x:CX,y:CY,w:CW,h:CH,fill:{color:CARD},line:{color:'CCCAC6',pt:0.5},rectRadius:0.02});
+  const iX=CX+IP,iY=CY+IP,iH=CH-IP*2;
+
+  const pW=C1W,pH=PHH;
+  if(rep.photo){
+    try{
+      const{w:iW2,h:iH2}=await getImgDims(rep.photo);
+      const cd=containDims(iW2,iH2,pW/MM,pH/MM);
+      s.addImage({data:rep.photo,x:iX+cd.x*MM,y:iY+cd.y*MM,w:cd.w*MM,h:cd.h*MM});
+    }catch(e){}
+  }else{
+    s.addShape(pptx.ShapeType.roundRect,{x:iX,y:iY,w:pW,h:pH,fill:{color:'C8C4BE'},line:{color:'C8C4BE'},rectRadius:0.015});
+  }
+  s.addShape(pptx.ShapeType.rect,{x:iX,y:iY+pH-badge_h,w:pW,h:badge_h,fill:{color:HDR},line:{color:HDR}});
+  s.addText(rep.pos||'',{x:iX,y:iY+pH-badge_h,w:pW,h:badge_h,fontSize:badge_fs,bold:true,color:'E8C84A',align:'center',valign:'middle',fontFace:'Helvetica Neue'});
+
+  const addFld=(lbl,val,x,y,w,hl)=>{
+    s.addShape(pptx.ShapeType.roundRect,{x,y,w,h:FH,fill:{color:hl?'D8E8F8':CARD},line:{color:'CCCAC6',pt:0.3},rectRadius:0.008});
+    s.addText(lbl,{x:x+1.8*MM,y,w,h:FH*0.42,fontSize:field_fs_lbl,color:LIGHT,valign:'bottom',fontFace:'Helvetica Neue'});
+    s.addText(String(val||'—'),{x:x+1.8*MM,y:y+FH*0.42,w,h:FH*0.58,fontSize:field_fs_val,bold:true,color:DARK,valign:'top',fontFace:'Helvetica Neue'});
+  };
+  const addBox=(lbl,val,x,y,w)=>{
+    s.addShape(pptx.ShapeType.roundRect,{x,y,w,h:FH,fill:{color:'E2DEDB'},line:{color:'E2DEDB'},rectRadius:0.008});
+    s.addText(lbl,{x:x+1.8*MM,y,w,h:FH*0.42,fontSize:field_fs_lbl,color:LIGHT,valign:'bottom',fontFace:'Helvetica Neue'});
+    s.addText(String(val||'—'),{x:x+1.8*MM,y:y+FH*0.42,w,h:FH*0.58,fontSize:field_fs_val,bold:true,color:DARK,valign:'top',fontFace:'Helvetica Neue'});
+  };
+
+  let fy=iY+pH+3*MM;
+  addFld('Name',rep.nome||'',iX,fy,pW,true); fy+=FH+FGAP;
+  addFld('D.O.B',fmtDob(rep.dob),iX,fy,pW*0.54-0.5*MM); addFld('Contract',rep.contrato||'—',iX+pW*0.54,fy,pW*0.46); fy+=FH+FGAP;
+  const BW=(pW-2*MM)/3;
+  addBox('Height',rep.alt?(rep.alt+' cm'):'—',iX,fy,BW);
+  addBox('Strong Foot',rep.pe||'—',iX+BW+1*MM,fy,BW);
+  addBox('Build',rep.fis||'—',iX+BW*2+2*MM,fy,BW); fy+=FH+FGAP;
+  addFld('TM Value (EUR)',rep.tm||'—',iX,fy,pW); fy+=FH+FGAP;
+
+  const linkW2=Math.min(pW*2,CX+CW-IP-iX);
+  s.addShape(pptx.ShapeType.roundRect,{x:iX,y:fy,w:linkW2,h:ogol_h,fill:{color:'16203A'},line:{color:'16203A'},rectRadius:0.008});
+  s.addText('OGol',{x:iX+2*MM,y:fy,w:bs_lbl_w-2*MM,h:ogol_h,fontSize:ogol_lbl_fs,bold:true,color:'7fbfff',valign:'middle',fontFace:'Helvetica Neue'});
+  if(rep.ogolLink) s.addText(rep.ogolLink,{x:iX+bs_lbl_w,y:fy,w:linkW2-bs_lbl_w-1*MM,h:ogol_h,fontSize:ogol_url_fs,color:'aaddff',valign:'middle',fontFace:'Helvetica Neue'});
+  fy+=ogol_h+FGAP;
+
+  s.addShape(pptx.ShapeType.roundRect,{x:iX,y:fy,w:linkW2,h:bs_h,fill:{color:'1a2e4a'},line:{color:'1a2e4a'},rectRadius:0.008});
+  s.addText('Besoccer',{x:iX+2*MM,y:fy,w:bs_lbl_w-2*MM,h:bs_h,fontSize:bs_lbl_fs,bold:true,color:'7fbfff',valign:'middle',fontFace:'Helvetica Neue'});
+  s.addText(rep.besoccerLink||('https://pro.besoccer.com/player/'+encodeURIComponent(rep.nome||'')),
+    {x:iX+bs_lbl_w,y:fy,w:linkW2-bs_lbl_w-1*MM,h:bs_h,fontSize:bs_url_fs,color:'aaddff',valign:'middle',fontFace:'Helvetica Neue'});
+
+  const C2X=iX+pW+4*MM,fw=C2W,FLH=iH*(field_h_pct/100);
+  const ppCv=await renderPPCanvas({posicao:rep.pos,posicaoSec:'',sistema:''},
+    Math.round(fw/MM/0.154688)*2,Math.round(FLH/MM/0.154688)*2);
+  try{s.addImage({data:ppCv.toDataURL('image/png'),x:C2X,y:iY,w:fw,h:FLH});}catch(e){}
+
+  const C3X=C2X+fw+sw_col_gap,SWCW=(CX+CW-IP-C3X)/2-2*MM;
+  s.addShape(pptx.ShapeType.roundRect,{x:C3X,y:iY,w:SWCW,h:sw_hdr_h,fill:{color:GRN},line:{color:GRN},rectRadius:0.02});
+  s.addText('Strengths',{x:C3X,y:iY,w:SWCW,h:sw_hdr_h,fontSize:sw_hdr_fs,bold:true,color:CARD,align:'center',valign:'middle',fontFace:'Helvetica Neue'});
+  const frc=(rep.forcas||'').split('\n').filter(Boolean);
+  s.addShape(pptx.ShapeType.roundRect,{x:C3X,y:iY+sw_hdr_h+0.5*MM,w:SWCW,h:iH-sw_hdr_h-1*MM,fill:{color:GRNBG},line:{color:GRNBG},rectRadius:0.01});
+  frc.forEach((f,i)=>s.addText(`- ${f}`,{x:C3X+3*MM,y:iY+sw_start+i*sw_gap,w:SWCW-4*MM,h:sw_gap*0.9,fontSize:sw_item_fs,color:'1a3d22',fontFace:'Helvetica Neue'}));
+
+  const C4X=C3X+SWCW+3*MM,C4W=CX+CW-IP-C4X;
+  s.addShape(pptx.ShapeType.roundRect,{x:C4X,y:iY,w:C4W,h:sw_hdr_h,fill:{color:RED},line:{color:RED},rectRadius:0.02});
+  s.addText('Weaknesses',{x:C4X,y:iY,w:C4W,h:sw_hdr_h,fontSize:sw_hdr_fs,bold:true,color:CARD,align:'center',valign:'middle',fontFace:'Helvetica Neue'});
+  const frq=(rep.fraquezas||'').split('\n').filter(Boolean);
+  s.addShape(pptx.ShapeType.roundRect,{x:C4X,y:iY+sw_hdr_h+0.5*MM,w:C4W,h:iH-sw_hdr_h-1*MM,fill:{color:REDBG},line:{color:REDBG},rectRadius:0.01});
+  frq.forEach((f,i)=>s.addText(`- ${f}`,{x:C4X+3*MM,y:iY+sw_start+i*sw_gap,w:C4W-4*MM,h:sw_gap*0.9,fontSize:sw_item_fs,color:'3d1818',fontFace:'Helvetica Neue'}));
+}
 function prSaveDraft(){
   if(!PR.nome){alert('Informe o nome do jogador primeiro.');return;}
   const id=PR._id||('pr_'+Date.now());
