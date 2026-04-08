@@ -1164,6 +1164,28 @@ function setIndTab(tab){
 /* ══════════════════════════════════════════
    JOGADORES TABLE
 ══════════════════════════════════════════ */
+// Formata data dos indicados: aceita DD/MM/YYYY, MM/DD/YYYY ou YYYY-MM-DD
+// Detecta inversão: se o "dia" (1ª parte) é um mês válido e o "mês" (2ª parte) parece dia
+function fmtIndData(s){
+  if(!s||s==='—')return s||'—';
+  s=String(s).trim();
+  // YYYY-MM-DD → DD/MM/YYYY
+  let m=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(m) return `${m[3]}/${m[2]}/${m[1]}`;
+  // DD/MM/YYYY ou MM/DD/YYYY
+  m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if(m){
+    const a=parseInt(m[1]),b=parseInt(m[2]),yr=parseInt(m[3]);
+    // Se primeira parte > 12, certamente é dia → já está correto DD/MM
+    if(a>12) return s;
+    // Se segunda parte > 12, certamente é dia → está invertido MM/DD → corrigir
+    if(b>12) return `${String(b).padStart(2,'0')}/${String(a).padStart(2,'0')}/${yr}`;
+    // Ambíguo (ambos ≤12): assumir que está correto (DD/MM)
+    return s;
+  }
+  return s;
+}
+
 function renderIndJogTable(){
   let rows=Object.values(IND_JOG);
 
@@ -1220,7 +1242,7 @@ function renderIndJogTable(){
       <td style="text-align:center;color:#5f5e5a">${r.geracao||'—'}</td>
       <td style="color:#5f5e5a;white-space:nowrap">${r.pais||'—'}</td>
       <td style="min-width:120px;color:#5f5e5a">${r.clube||'—'}</td>
-      <td style="white-space:nowrap;color:#5f5e5a">${r.data||'—'}</td>
+      <td style="white-space:nowrap;color:#5f5e5a">${fmtIndData(r.data)}</td>
       <td style="white-space:nowrap">${r.responsavel||'—'}</td>
       <td style="color:#5f5e5a;min-width:100px">${r.recepcao||'—'}</td>
       <td style="color:#5f5e5a;min-width:100px">${r.indicacao||'—'}</td>
@@ -1271,7 +1293,8 @@ function renderIndJogTable(){
       <input class="ind-search" type="text" placeholder="Buscar atleta, clube, agente…" value="${indFilters.search}" oninput="indSetFilter('search',this.value)">
       <span class="ind-count">${total} atleta${total!==1?'s':''}</span>
       <button class="ind-add-btn" onclick="openIndForm('jog',null)">＋ Novo Atleta</button>
-      <label class="ind-add-btn" style="background:#1a4a6e;cursor:pointer" title="Importar histórico JSON">⬆ Histórico<input type="file" accept=".json" style="display:none" onchange="importIndicadosHistorico(this)"></label>
+      <label class="ind-add-btn" style="background:#1a4a6e;cursor:pointer" title="Importar histórico JSON (sobrescreve IDs existentes)">⬆ Histórico<input type="file" accept=".json" style="display:none" onchange="importIndicadosHistorico(this)"></label>
+      <label class="ind-add-btn" style="background:#1a5e2e;cursor:pointer" title="Importar apenas registros com IDs novos (não sobrescreve)">⬆ Novos<input type="file" accept=".json" style="display:none" onchange="importIndicadosSomenteNovos(this)"></label>
     </div>`;
 
   // Populate table
@@ -1355,7 +1378,7 @@ function renderIndTreTable(){
       <td style="text-align:center;color:#c00">${stat(r.golsSofridos)}</td>
       <td style="text-align:center">${stat(r.golSaldo)}</td>
       <td style="min-width:110px;color:#5f5e5a">${stat(r.clubeAtual)}</td>
-      <td style="white-space:nowrap;color:#5f5e5a">${stat(r.data)}</td>
+      <td style="white-space:nowrap;color:#5f5e5a">${fmtIndData(r.data)}</td>
       <td style="color:#5f5e5a;min-width:90px">${stat(r.recepcao)}</td>
       <td style="color:#5f5e5a;min-width:90px">${stat(r.agente1)}</td>
       <td style="text-align:center;color:#888780">${stat(r.ano)}</td>
@@ -2323,6 +2346,42 @@ function importIndicadosHistorico(input){
         if(currentView==='indicados') document.getElementById('views').innerHTML=renderIndicados();
       }
     }catch(err){ alert('Erro ao ler arquivo: '+err.message); }
+    input.value='';
+  };
+  reader.readAsText(file);
+}
+
+
+function importIndicadosSomenteNovos(input){
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      const jog=data.ind_jog||data;
+      const tre=data.ind_tre||{};
+      // Filtrar apenas IDs que NÃO existem ainda
+      const novosJ=Object.fromEntries(Object.entries(jog).filter(([k])=>!IND_JOG[k]));
+      const novosT=Object.fromEntries(Object.entries(tre).filter(([k])=>!IND_TRE[k]));
+      const nJ=Object.keys(novosJ).length, nT=Object.keys(novosT).length;
+      const skipJ=Object.keys(jog).length-nJ, skipT=Object.keys(tre).length-nT;
+      if(nJ+nT===0){alert(`Nenhum registro novo encontrado.\n${skipJ+skipT} já existiam e foram ignorados.`);input.value='';return;}
+      if(!confirm(`Importar ${nJ} jogador(es) e ${nT} treinador(es) novos?\n${skipJ+skipT} já existiam → serão IGNORADOS.`)){input.value='';return;}
+      if(db&&firebaseReady){
+        setSyncBadge('syncing','⟳ Importando…');
+        const updates={};
+        Object.entries(novosJ).forEach(([k,v])=>{updates['ind_jog/'+k]=v;});
+        Object.entries(novosT).forEach(([k,v])=>{updates['ind_tre/'+k]=v;});
+        db.ref('/').update(updates)
+          .then(()=>{ setSyncBadge('synced','● Live'); alert(`✓ Adicionados: ${nJ} jogadores e ${nT} treinadores\nIgnorados (já existiam): ${skipJ+skipT}`); })
+          .catch(err=>{ setSyncBadge('error','✕ Erro'); alert('Erro: '+err.message); });
+      } else {
+        Object.assign(IND_JOG,novosJ); Object.assign(IND_TRE,novosT);
+        try{localStorage.setItem('ind_jog',JSON.stringify(IND_JOG));localStorage.setItem('ind_tre',JSON.stringify(IND_TRE));}catch(e){}
+        alert(`✓ Adicionados localmente: ${nJ} jogadores\nIgnorados: ${skipJ+skipT}`);
+        if(currentView==='indicados') document.getElementById('views').innerHTML=renderIndicados();
+      }
+    }catch(err){alert('Erro ao ler arquivo: '+err.message);}
     input.value='';
   };
   reader.readAsText(file);
