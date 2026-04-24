@@ -6,6 +6,7 @@
 <title>Scout System 2026</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>window._fbLoadErrors=0;</script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js" onerror="window._fbLoadErrors++"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js" onerror="window._fbLoadErrors++"></script>
@@ -1307,7 +1308,7 @@ function renderIndJogTable(){
       <span class="ind-count">${total} atleta${total!==1?'s':''}</span>
       <button class="ind-add-btn" onclick="openIndForm('jog',null)">＋ Novo Atleta</button>
       <label class="ind-add-btn" style="background:#1a4a6e;cursor:pointer" title="Importar histórico JSON (sobrescreve IDs existentes)">⬆ Histórico<input type="file" accept=".json" style="display:none" onchange="importIndicadosHistorico(this)"></label>
-      <label class="ind-add-btn" style="background:#1a5e2e;cursor:pointer" title="Importar apenas registros com IDs novos (não sobrescreve)">⬆ Novos<input type="file" accept=".json" style="display:none" onchange="importIndicadosSomenteNovos(this)"></label>
+      <label class="ind-add-btn" style="background:#1a5e2e;cursor:pointer" title="Importar JSON ou Excel — apenas registros novos (nome+ano+data+indicação)">⬆ Novos<input type="file" accept=".json,.xlsx,.xls" style="display:none" onchange="importIndicadosSomenteNovos(this)"></label>
     </div>`;
 
   // Populate table
@@ -2323,6 +2324,83 @@ window.addEventListener('resize',()=>{ fixStickyTops(); if(currentView==='indica
 
 
 /* ══ INDICADOS HISTORICAL IMPORT ══ */
+function slugInd(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');}
+
+function parseIndicadosExcel(arrayBuffer){
+  const wb=XLSX.read(arrayBuffer,{type:'array',cellDates:true});
+  const result={ind_jog:{},ind_tre:{}};
+  const fmtData=v=>{
+    if(!v) return '';
+    if(v instanceof Date) return String(v.getDate()).padStart(2,'0')+'/'+String(v.getMonth()+1).padStart(2,'0')+'/'+v.getFullYear();
+    return String(v).trim();
+  };
+  const cleanStr=v=>{
+    if(v===null||v===undefined) return '';
+    let s=String(v).trim();
+    if(/^\d+\.0+$/.test(s)) s=s.split('.')[0];
+    return s;
+  };
+  const rand4=()=>Math.floor(Math.random()*9000+1000).toString();
+  wb.SheetNames.forEach(name=>{
+    const mJog=name.match(/Atletas Oferecidos\s+(\d{4})/i);
+    const mTre=name.match(/Treinadores Oferecidos\s+(\d{4})/i);
+    if(!mJog&&!mTre) return;
+    const ano=(mJog||mTre)[1];
+    const isJog=!!mJog;
+    const ws=wb.Sheets[name];
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
+    if(rows.length<3) return;
+    const header=rows[1]||[];
+    const idxOf=nm=>header.findIndex(h=>String(h||'').trim().toLowerCase()===nm.toLowerCase());
+    const cols=isJog?{
+      nome: idxOf('Atleta')>=0?idxOf('Atleta'):1,
+      avalMkt: idxOf('Avaliação Dep. de Mercado'),
+      avalAgrup: idxOf('Avaliação - AGRUPADO'),
+      eagle: idxOf('EAGLE'),
+      instat: idxOf('INSTAT'),
+      posicaoText: idxOf('Posição'),
+      posicao: idxOf('POSITION'),
+      geracao: idxOf('Geração'),
+      pais: idxOf('País'),
+      clube: idxOf('Clube'),
+      data: idxOf('Data'),
+      responsavel: idxOf('Responsável'),
+      recepcao: idxOf('Recepção'),
+      indicacao: idxOf('Indicação'),
+      agencia: idxOf('Agente'),
+      monitorado: idxOf('Monitorado'),
+      comments: idxOf('Comments')
+    }:{
+      nome: idxOf('NAME')>=0?idxOf('NAME'):idxOf('Nome'),
+      pais: idxOf('Country'),
+      idade: idxOf('Age'),
+      sistema: idxOf('Main System')>=0?idxOf('Main System'):idxOf('System'),
+      clube: idxOf('Current Club')>=0?idxOf('Current Club'):idxOf('Club'),
+      data: idxOf('Date')>=0?idxOf('Date'):idxOf('Data'),
+      recepcao: idxOf('Reception')>=0?idxOf('Reception'):idxOf('Recepção'),
+      indicacao: idxOf('Agent/Intermediary')>=0?idxOf('Agent/Intermediary'):idxOf('Indicação'),
+      indicacao2: idxOf('Agent/Intermediary 2'),
+      indicacao3: idxOf('Agent/Intermediary 3')
+    };
+    for(let i=2;i<rows.length;i++){
+      const r=rows[i]; if(!r) continue;
+      const nome=cleanStr(cols.nome>=0?r[cols.nome]:null);
+      if(!nome) continue;
+      const obj={ano,nome};
+      for(const[k,idx] of Object.entries(cols)){
+        if(k==='nome'||idx<0||idx===undefined) continue;
+        const v=r[idx];
+        if(v===null||v===undefined||v==='') continue;
+        obj[k]=(k==='data')?fmtData(v):cleanStr(v);
+      }
+      const id='i'+(isJog?'j':'t')+'__'+slugInd(nome).slice(0,40)+'_'+ano+'_'+rand4();
+      obj.id=id;
+      if(isJog) result.ind_jog[id]=obj; else result.ind_tre[id]=obj;
+    }
+  });
+  return result;
+}
+
 function importIndicadosHistorico(input){
   const file=input.files[0]; if(!file) return;
   const reader=new FileReader();
@@ -2367,19 +2445,33 @@ function importIndicadosHistorico(input){
 
 function importIndicadosSomenteNovos(input){
   const file=input.files[0]; if(!file) return;
+  const isExcel=/\.(xlsx|xls)$/i.test(file.name);
   const reader=new FileReader();
   reader.onload=e=>{
     try{
-      const data=JSON.parse(e.target.result);
-      const jog=data.ind_jog||data;
-      const tre=data.ind_tre||{};
-      // Filtrar apenas IDs que NÃO existem ainda
-      const novosJ=Object.fromEntries(Object.entries(jog).filter(([k])=>!IND_JOG[k]));
-      const novosT=Object.fromEntries(Object.entries(tre).filter(([k])=>!IND_TRE[k]));
-      const nJ=Object.keys(novosJ).length, nT=Object.keys(novosT).length;
-      const skipJ=Object.keys(jog).length-nJ, skipT=Object.keys(tre).length-nT;
+      let jog={}, tre={}, nJ, nT, skipJ, skipT, novosJ, novosT;
+      if(isExcel){
+        if(typeof XLSX==='undefined'){alert('Biblioteca Excel não carregou. Verifique conexão e recarregue a página.');input.value='';return;}
+        const parsed=parseIndicadosExcel(e.target.result);
+        jog=parsed.ind_jog; tre=parsed.ind_tre;
+        // Dedup por conteúdo: nome+ano+data+indicação
+        const keyOf=o=>slugInd(o.nome)+'|'+(o.ano||'')+'|'+(o.data||'')+'|'+slugInd(o.indicacao||'');
+        const existingJ=new Set(Object.values(IND_JOG||{}).map(keyOf));
+        const existingT=new Set(Object.values(IND_TRE||{}).map(keyOf));
+        novosJ=Object.fromEntries(Object.entries(jog).filter(([,v])=>!existingJ.has(keyOf(v))));
+        novosT=Object.fromEntries(Object.entries(tre).filter(([,v])=>!existingT.has(keyOf(v))));
+      } else {
+        const data=JSON.parse(e.target.result);
+        jog=data.ind_jog||data;
+        tre=data.ind_tre||{};
+        novosJ=Object.fromEntries(Object.entries(jog).filter(([k])=>!IND_JOG[k]));
+        novosT=Object.fromEntries(Object.entries(tre).filter(([k])=>!IND_TRE[k]));
+      }
+      nJ=Object.keys(novosJ).length; nT=Object.keys(novosT).length;
+      skipJ=Object.keys(jog).length-nJ; skipT=Object.keys(tre).length-nT;
       if(nJ+nT===0){alert(`Nenhum registro novo encontrado.\n${skipJ+skipT} já existiam e foram ignorados.`);input.value='';return;}
-      if(!confirm(`Importar ${nJ} jogador(es) e ${nT} treinador(es) novos?\n${skipJ+skipT} já existiam → serão IGNORADOS.`)){input.value='';return;}
+      const tipoFonte=isExcel?'Excel':'JSON';
+      if(!confirm(`Fonte: ${tipoFonte}\nImportar ${nJ} jogador(es) e ${nT} treinador(es) novos?\n${skipJ+skipT} já existiam → serão IGNORADOS.`)){input.value='';return;}
       if(db&&firebaseReady){
         setSyncBadge('syncing','⟳ Importando…');
         const updates={};
@@ -2394,10 +2486,11 @@ function importIndicadosSomenteNovos(input){
         alert(`✓ Adicionados localmente: ${nJ} jogadores\nIgnorados: ${skipJ+skipT}`);
         if(currentView==='indicados') document.getElementById('views').innerHTML=renderIndicados();
       }
-    }catch(err){alert('Erro ao ler arquivo: '+err.message);}
+    }catch(err){alert('Erro ao ler arquivo: '+err.message); console.error(err);}
     input.value='';
   };
-  reader.readAsText(file);
+  if(isExcel) reader.readAsArrayBuffer(file);
+  else reader.readAsText(file);
 }
 
 
