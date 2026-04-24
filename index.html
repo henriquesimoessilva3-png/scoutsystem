@@ -10,6 +10,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js" onerror="window._fbLoadErrors++"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js" onerror="window._fbLoadErrors++"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js" onerror="window._fbLoadErrors++"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js" onerror="window._fbLoadErrors++"></script>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@300;400;600;700;800&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 /* ═══════════════════ CALENDAR (original) ═══════════════════ */
@@ -740,6 +741,8 @@ function initFirebase(){
   }
   try{
     firebase.initializeApp(FIREBASE_CONFIG);
+    setSyncBadge('syncing','⟳ Autenticando…');
+    firebase.auth().signInAnonymously().then(()=>{
     db=firebase.database();
     window.fbStorage=firebase.storage();
     setSyncBadge('syncing','⟳ Connecting…');
@@ -782,8 +785,8 @@ function initFirebase(){
             });
             if(currentView==='indicados') document.getElementById('views').innerHTML=renderIndicados();
           });
-          db.ref('ind_jog').on('value',snap=>{ IND_JOG=snap.val()||{}; if(currentView==='indicados') document.getElementById('views').innerHTML=renderIndicados(); });
-          db.ref('ind_tre').on('value',snap=>{ IND_TRE=snap.val()||{}; if(currentView==='indicados') document.getElementById('views').innerHTML=renderIndicados(); });
+          db.ref('ind_jog').on('value',snap=>{ IND_JOG=snap.val()||{}; try{localStorage.setItem('ind_jog',JSON.stringify(IND_JOG));}catch(e){} if(currentView==='indicados') document.getElementById('views').innerHTML=renderIndicados(); });
+          db.ref('ind_tre').on('value',snap=>{ IND_TRE=snap.val()||{}; try{localStorage.setItem('ind_tre',JSON.stringify(IND_TRE));}catch(e){} if(currentView==='indicados') document.getElementById('views').innerHTML=renderIndicados(); });
           renderNav();renderViews();setTimeout(fixStickyTops,50);
         } else {
           // Subsequent update (e.g. another scout made a change)
@@ -804,6 +807,11 @@ function initFirebase(){
       setSyncBadge('error','✕ DB error');console.error(err);
       loadDataLocal();renderNav();renderViews();setTimeout(fixStickyTops,50);
     });
+    }).catch(e=>{
+      console.error('Auth failed',e);
+      setSyncBadge('error','✕ Auth failed');
+      loadDataLocal();renderNav();renderViews();setTimeout(fixStickyTops,50);
+    });
   }catch(e){
     console.error(e);setSyncBadge('error','✕ Offline');
     loadDataLocal();renderNav();renderViews();setTimeout(fixStickyTops,50);
@@ -817,6 +825,8 @@ function setSyncBadge(state,text){
 
 function loadDataLocal(){
   try{ const qs=localStorage.getItem('qts'); if(qs) QTS=JSON.parse(qs); }catch(e){}
+  try{ const j=localStorage.getItem('ind_jog'); if(j) IND_JOG=JSON.parse(j); }catch(e){}
+  try{ const t=localStorage.getItem('ind_tre'); if(t) IND_TRE=JSON.parse(t); }catch(e){}
   try{
     const s=localStorage.getItem('scout_cal_2026');
     if(s){const d=JSON.parse(s);d.forEach(c=>{const f=DATA.find(x=>x.id===c.id);if(f){f.scouts=c.scouts||[];f.start=c.start;f.end=c.end;}});}
@@ -843,8 +853,11 @@ function saveData(){
 }
 
 function exportData(){
-  const payload={version:1,exportedAt:new Date().toISOString(),
-    cal:DATA.map(c=>({id:c.id,scouts:c.scouts,start:c.start,end:c.end})),reports:REPORTS};
+  const payload={version:2,exportedAt:new Date().toISOString(),
+    cal:DATA.map(c=>({id:c.id,scouts:c.scouts,start:c.start,end:c.end})),
+    reports:REPORTS,
+    ind_jog:IND_JOG,
+    ind_tre:IND_TRE};
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
