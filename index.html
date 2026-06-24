@@ -747,66 +747,92 @@ function initFirebase(){
     db=firebase.database();
     window.fbStorage=firebase.storage();
     setSyncBadge('syncing','⟳ Connecting…');
+    // ── Listeners de sincronização (cal + reports registrados UMA vez) ──
+    let _calLoaded=false,_repLoaded=false;
+    // Aplica uma entrada do nó /cal ao DATA; cria a competição se ainda não existir
+    const applyCal=(id,c)=>{
+      if(!c) return;
+      let f=DATA.find(x=>x.id===id);
+      if(!f){
+        if(!c.name) return; // entrada antiga sem metadados → ignora
+        f={id:id,group:c.group||'AMERICAS MUNDO',subgroup:c.subgroup||'Outros',name:c.name,country:c.country||'',level:c.level||'Profissional',scouts:[]};
+        DATA.push(f);
+      }
+      f.scouts=c.scouts||[];
+      if(c.start) f.start=c.start;
+      if(c.end) f.end=c.end;
+      if(c.name) f.name=c.name;
+      if(c.group) f.group=c.group;
+      if(c.subgroup) f.subgroup=c.subgroup;
+      if(c.country!=null) f.country=c.country;
+      if(c.level) f.level=c.level;
+    };
+    // Primeira renderização só depois que cal E reports chegaram
+    const tryFirstRender=()=>{
+      if(firebaseReady||!_calLoaded||!_repLoaded) return;
+      firebaseReady=true;
+      initQts();
+      db.ref('player_reports').on('value',snap=>{
+        const data=snap.val()||{};
+        Object.keys(data).forEach(id=>{
+          try{
+            const full=localStorage.getItem('pr_'+id);
+            if(full){
+              PR_SAVED[id]=JSON.parse(full);
+            } else {
+              PR_SAVED[id]={...data[id],_id:id};
+              // Baixar imagens do Storage em background
+              if(data[id]&&data[id]._imgUrls&&window.fbStorage){
+                fbDownloadPRImages(data[id]._imgUrls).then(imgs=>{
+                  PR_SAVED[id]={...PR_SAVED[id],...imgs};
+                  try{localStorage.setItem('pr_'+id,JSON.stringify(PR_SAVED[id]));}catch(e){}
+                }).catch(()=>{});
+              }
+            }
+          }
+          catch(e){PR_SAVED[id]={...data[id],_id:id};}
+        });
+        if(currentView==='indicados') document.getElementById('views').innerHTML=renderIndicados();
+      });
+      db.ref('ind_jog').on('value',snap=>{ IND_JOG=snap.val()||{}; try{localStorage.setItem('ind_jog',JSON.stringify(IND_JOG));}catch(e){} if(currentView==='indicados') document.getElementById('views').innerHTML=renderIndicados(); });
+      db.ref('ind_tre').on('value',snap=>{ IND_TRE=snap.val()||{}; try{localStorage.setItem('ind_tre',JSON.stringify(IND_TRE));}catch(e){} if(currentView==='indicados') document.getElementById('views').innerHTML=renderIndicados(); });
+      setSyncBadge('synced','● Live');
+      renderNav();renderViews();setTimeout(fixStickyTops,50);
+    };
+    // Listener do CALENDÁRIO — re-renderiza ao vivo quando outro usuário edita
     db.ref('cal').on('value',snap=>{
       const val=snap.val();
-      if(val) Object.entries(val).forEach(([id,c])=>{
-        const f=DATA.find(x=>x.id===parseInt(id));
-        if(f){f.scouts=c.scouts||[];if(c.start)f.start=c.start;if(c.end)f.end=c.end;}
-      });
-      db.ref('reports').on('value',snapR=>{
-        REPORTS=snapR.val()||{};
-        const wasEmpty=!snapR.val();
-        seedIfEmpty();
-        if(wasEmpty) saveData();
+      if(Array.isArray(val)) val.forEach((c,i)=>applyCal(i,c));
+      else if(val) Object.entries(val).forEach(([id,c])=>applyCal(parseInt(id),c));
+      _calLoaded=true;
+      if(firebaseReady){
+        // Mudança remota: redesenha a grade preservando a posição de rolagem
+        if(currentView==='cal'||currentView==='resumo'||currentView.indexOf('scout_')===0) renderViews(true);
         setSyncBadge('synced','● Live');
-        if(!firebaseReady){
-          // First load — load indicados then full render
-          firebaseReady=true;
-          initQts();
-          // Load saved player reports
-          db.ref('player_reports').on('value',snap=>{
-            const data=snap.val()||{};
-            Object.keys(data).forEach(id=>{
-              try{
-                const full=localStorage.getItem('pr_'+id);
-                if(full){
-                  PR_SAVED[id]=JSON.parse(full);
-                } else {
-                  PR_SAVED[id]={...data[id],_id:id};
-                  // Baixar imagens do Storage em background
-                  if(data[id]&&data[id]._imgUrls&&window.fbStorage){
-                    fbDownloadPRImages(data[id]._imgUrls).then(imgs=>{
-                      PR_SAVED[id]={...PR_SAVED[id],...imgs};
-                      try{localStorage.setItem('pr_'+id,JSON.stringify(PR_SAVED[id]));}catch(e){}
-                    }).catch(()=>{});
-                  }
-                }
-              }
-              catch(e){PR_SAVED[id]={...data[id],_id:id};}
-            });
-            if(currentView==='indicados') document.getElementById('views').innerHTML=renderIndicados();
-          });
-          db.ref('ind_jog').on('value',snap=>{ IND_JOG=snap.val()||{}; try{localStorage.setItem('ind_jog',JSON.stringify(IND_JOG));}catch(e){} if(currentView==='indicados') document.getElementById('views').innerHTML=renderIndicados(); });
-          db.ref('ind_tre').on('value',snap=>{ IND_TRE=snap.val()||{}; try{localStorage.setItem('ind_tre',JSON.stringify(IND_TRE));}catch(e){} if(currentView==='indicados') document.getElementById('views').innerHTML=renderIndicados(); });
-          renderNav();renderViews();setTimeout(fixStickyTops,50);
-        } else {
-          // Subsequent update (e.g. another scout made a change)
-          // Only refresh report badges surgically — no full re-render
-          Object.keys(REPORTS).forEach(cid=>updateReportBadge(parseInt(cid)));
-          if(currentCompId!==null){
-            const el=document.getElementById('mRepCount');
-            if(el) el.textContent=(REPORTS[currentCompId]||[]).length;
-            if(currentMTab==='list') renderModalList();
-          }
-          // If shortlist is open, refresh it in place
-          if(currentView==='shortlist'){
-            document.getElementById('views').innerHTML=renderShortlist();
-          }
-        }
-      },err=>{setSyncBadge('error','✕ DB error');console.error(err);});
+      } else tryFirstRender();
     },err=>{
       setSyncBadge('error','✕ DB error');console.error(err);
-      loadDataLocal();renderNav();renderViews();setTimeout(fixStickyTops,50);
+      if(!firebaseReady){ loadDataLocal();renderNav();renderViews();setTimeout(fixStickyTops,50); }
+    });
+    // Listener dos RELATÓRIOS — atualiza badges/cores e redesenha o calendário
+    db.ref('reports').on('value',snap=>{
+      REPORTS=snap.val()||{};
+      seedIfEmpty();
+      _repLoaded=true;
+      if(firebaseReady){
+        Object.keys(REPORTS).forEach(cid=>updateReportBadge(parseInt(cid)));
+        if(currentCompId!==null){
+          const el=document.getElementById('mRepCount');
+          if(el) el.textContent=(REPORTS[currentCompId]||[]).length;
+          if(currentMTab==='list') renderModalList();
+        }
+        if(currentView==='shortlist') document.getElementById('views').innerHTML=renderShortlist();
+        else if(currentView==='cal') renderViews(true);
+        setSyncBadge('synced','● Live');
+      } else tryFirstRender();
+    },err=>{
+      setSyncBadge('error','✕ DB error');console.error(err);
+      if(!firebaseReady){ loadDataLocal();renderNav();renderViews();setTimeout(fixStickyTops,50); }
     });
     }).catch(e=>{
       console.error('Auth failed',e);
@@ -830,7 +856,7 @@ function loadDataLocal(){
   try{ const t=localStorage.getItem('ind_tre'); if(t) IND_TRE=JSON.parse(t); }catch(e){}
   try{
     const s=localStorage.getItem('scout_cal_2026');
-    if(s){const d=JSON.parse(s);d.forEach(c=>{const f=DATA.find(x=>x.id===c.id);if(f){f.scouts=c.scouts||[];f.start=c.start;f.end=c.end;}});}
+    if(s){const d=JSON.parse(s);d.forEach(c=>{let f=DATA.find(x=>x.id===c.id);if(!f&&c.name){f={id:c.id,group:c.group||'AMERICAS MUNDO',subgroup:c.subgroup||'Outros',name:c.name,country:c.country||'',level:c.level||'Profissional',scouts:[]};DATA.push(f);}if(f){f.scouts=c.scouts||[];if(c.start)f.start=c.start;if(c.end)f.end=c.end;if(c.name)f.name=c.name;}});}
     const r=localStorage.getItem('scout_reports_2026');
     if(r) REPORTS=JSON.parse(r);
   }catch(e){}
@@ -840,13 +866,13 @@ function loadDataLocal(){
 function saveData(){
   if(db&&firebaseReady){
     setSyncBadge('syncing','⟳ Saving…');
-    const cal={};DATA.forEach(c=>{cal[c.id]={scouts:c.scouts,start:c.start,end:c.end};});
+    const cal={};DATA.forEach(c=>{cal[c.id]={name:c.name,group:c.group,subgroup:c.subgroup,country:c.country||'',level:c.level||'',scouts:c.scouts,start:c.start,end:c.end};});
     db.ref('/').update({cal,reports:REPORTS})
       .then(()=>setSyncBadge('synced','● Live'))
       .catch(e=>{setSyncBadge('error','✕ Save failed');console.error(e);});
   }else{
     try{
-      localStorage.setItem('scout_cal_2026',JSON.stringify(DATA.map(c=>({id:c.id,scouts:c.scouts,start:c.start,end:c.end}))));
+      localStorage.setItem('scout_cal_2026',JSON.stringify(DATA.map(c=>({id:c.id,name:c.name,group:c.group,subgroup:c.subgroup,country:c.country||'',level:c.level||'',scouts:c.scouts,start:c.start,end:c.end}))));
       localStorage.setItem('scout_reports_2026',JSON.stringify(REPORTS));
     }catch(e){}
     setSyncBadge('local','⚠ Saved locally');
