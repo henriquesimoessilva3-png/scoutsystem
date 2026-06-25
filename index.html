@@ -609,6 +609,7 @@ let DATA=[{"id": 0, "group": "BRASIL", "subgroup": "Profissional", "name": "Bras
 
 let currentView='cal';
 let DELETED={};         // { compId:true } — competições apagadas NÃO voltam (sincronizado)
+let showLoad=false; try{ showLoad=localStorage.getItem('scout_showLoad')==='1'; }catch(e){}
 let REPORTS={};         // { compId: [ {id, ...fields} ] }
 let currentCompId=null;
 let currentMTab='form';
@@ -997,6 +998,32 @@ function renderViews(preserveScroll){
   else{const s=currentView.replace('scout_','');views.innerHTML=renderScoutView(s);setTimeout(()=>{fixStickyTops();if(preserveScroll){const w=document.querySelector('.scroll-wrap');if(w){w.scrollLeft=sx;w.scrollTop=sy;}}},10);}
 }
 
+function toggleLoadPanel(){
+  showLoad=!showLoad;
+  try{localStorage.setItem('scout_showLoad',showLoad?'1':'0');}catch(e){}
+  const p=document.getElementById('loadPanel');
+  if(p) p.style.display=showLoad?'block':'none';
+  fixStickyTops();
+}
+// Contador mensal de competições por scout (heatmap compacto) — ajuda a equilibrar a carga
+function renderLoadCounter(){
+  const grid=SCOUTS.map(s=>MONTHS.map((_,mi)=>DATA.filter(c=>c.scouts.includes(s)&&isActiveInMonth(c,mi)).length));
+  const maxV=Math.max(1,...grid.flat());
+  const heat=v=>v?`rgba(208,80,48,${(0.12+(v/maxV)*0.78).toFixed(2)})`:'transparent';
+  const head=`<th style="position:sticky;left:0;z-index:1;background:#2c2c2a;color:#f1efe8;padding:4px 8px;text-align:left;font-size:11px">Scout</th>`
+    +MONTHS.map(m=>`<th style="padding:4px 0;background:#3a3835;color:#cfc9bf;font-size:10px;min-width:30px">${m}</th>`).join('')
+    +`<th style="padding:4px 8px;background:#444441;color:#f1efe8;font-size:10px">Σ Ano</th>`;
+  const body=SCOUTS.map((s,si)=>{
+    const c=SCOUT_COLORS[s];
+    const tot=grid[si].reduce((a,b)=>a+b,0);
+    const cells=grid[si].map(v=>`<td style="text-align:center;font-size:11px;font-weight:600;color:#2a2a28;background:${heat(v)};border:1px solid #ece9e2">${v||''}</td>`).join('');
+    return `<tr><td style="position:sticky;left:0;z-index:1;background:${c.btn};color:#fff;padding:3px 8px;font-size:11px;font-weight:700;white-space:nowrap">${s}</td>${cells}<td style="text-align:center;font-weight:700;font-size:11px;background:#efece6">${tot}</td></tr>`;
+  }).join('');
+  const totRow=`<tr><td style="position:sticky;left:0;z-index:1;background:#5a564f;color:#f1efe8;padding:3px 8px;font-size:10px;font-weight:600;white-space:nowrap">Total/mês</td>`
+    +MONTHS.map((_,mi)=>{const t=DATA.filter(c=>c.scouts.some(x=>x)&&isActiveInMonth(c,mi)).length;return `<td style="text-align:center;font-size:10px;color:#6a665f;background:#f4f2ec">${t||''}</td>`;}).join('')
+    +`<td style="background:#efece6"></td></tr>`;
+  return `<table style="border-collapse:collapse;font-family:inherit"><thead><tr>${head}</tr></thead><tbody>${body}${totRow}</tbody></table>`;
+}
 function renderCal(){
   const groups=[...new Set(DATA.map(c=>c.group))];
   let rows='';
@@ -1053,6 +1080,7 @@ function renderCal(){
         <div><h1>Calendário de Cobertura 2026</h1>
         <p>Clique em 📋 ao lado de qualquer campeonato para adicionar relatórios de jogadores</p></div>
         <button onclick="openAddCompModal()" style="background:#e8c84a;color:#1a1a18;border:none;border-radius:6px;padding:6px 14px;font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap">+ Competição</button>
+        <button onclick="toggleLoadPanel()" title="Mostrar/ocultar carga mensal por scout" style="background:#2c2c2a;color:#e8c84a;border:none;border-radius:6px;padding:6px 12px;font-weight:600;font-size:12px;cursor:pointer;white-space:nowrap">📊 Carga mensal</button>
       </div>
       <div class="legend">
         ${SCOUTS.map(s=>`<span class="leg"><span class="leg-dot" style="background:${SCOUT_COLORS[s].soft}"></span>${s}</span>`).join('')}
@@ -1060,6 +1088,10 @@ function renderCal(){
         <span class="leg"><span class="leg-dot" style="background:#e8c84a;border-radius:50%"></span>Com relatório</span>
       </div>
       <span class="save-badge" id="save-badge">Auto-salvo</span>
+    </div>
+    <div id="loadPanel" style="display:${showLoad?'block':'none'};margin:0 0 10px;padding:8px 10px;background:#faf9f5;border:1px solid #e0ddd5;border-radius:8px;overflow-x:auto">
+      <div style="font-size:11px;color:#6a665f;margin-bottom:6px">📊 <b>Competições ativas por scout em cada mês</b> — cor mais forte = mais carga. <b>Σ Ano</b> = soma dos meses (índice de carga). Ajuda a equilibrar a distribuição.</div>
+      ${renderLoadCounter()}
     </div>
     <div class="scroll-wrap">
     <table class="cal">
@@ -2357,7 +2389,9 @@ function fixStickyTops(){
   if(!nav||!toolbar||!wrap)return;
   const navH=nav.getBoundingClientRect().height;
   const toolH=toolbar.getBoundingClientRect().height;
-  wrap.style.height=(window.innerHeight-navH-toolH)+'px';
+  const panel=document.getElementById('loadPanel');
+  const panelH=(panel&&panel.style.display!=='none')?panel.getBoundingClientRect().height+10:0;
+  wrap.style.height=(window.innerHeight-navH-toolH-panelH)+'px';
   const firstRow=wrap.querySelector('thead tr:first-child');
   const rowH=firstRow?firstRow.getBoundingClientRect().height:27;
   wrap.querySelectorAll('thead tr:first-child th').forEach(el=>el.style.top='0px');
