@@ -562,14 +562,26 @@ table.ind-table tr:hover td{background:#f0eeea;cursor:pointer}
 ══════════════════════════════════════════ */
 const MONTHS=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 const MONTHS_FULL=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-const SCOUTS=['Brunno','Cristian','Gabriel','Humberto','Base'];
-const SCOUT_COLORS={
+let SCOUTS=['Brunno','Cristian','Gabriel','Humberto','Base'];
+let SCOUT_COLORS={
   Brunno:{soft:'#F5C86A',strong:'#D07000',text:'#7A3D00',btn:'#E8940A'},
   Cristian:{soft:'#90C4F0',strong:'#1562B8',text:'#042C53',btn:'#1562B8'},
   Gabriel:{soft:'#8ED4A4',strong:'#1A8038',text:'#04342C',btn:'#1A8038'},
   Humberto:{soft:'#D4909A',strong:'#7a1830',text:'#3d0010',btn:'#8B1A2E'},
   Base:{soft:'#B0D4E8',strong:'#2A6080',text:'#0D2E3D',btn:'#2A6080'}
 };
+// Paleta de cores para scouts NOVOS (escolhível no modal)
+const SCOUT_PALETTE=[
+  {soft:'#C4A8E0',strong:'#5B2A9E',text:'#2A0D52',btn:'#6B3FA0'},
+  {soft:'#E8A8C8',strong:'#A8327A',text:'#4D0D34',btn:'#B83F8A'},
+  {soft:'#8ED4CE',strong:'#1A8078',text:'#043430',btn:'#1A8078'},
+  {soft:'#D0B89A',strong:'#7A5230',text:'#3D2810',btn:'#8B6435'},
+  {soft:'#C8D49A',strong:'#6A7A1A',text:'#343D04',btn:'#7A8B1A'},
+  {soft:'#A8B0E8',strong:'#3A3F9E',text:'#0D1052',btn:'#3F45B8'},
+  {soft:'#F0B89A',strong:'#B8541A',text:'#4D1D04',btn:'#C8601A'},
+  {soft:'#B8B8B0',strong:'#555550',text:'#2A2A28',btn:'#5A564F'}
+];
+let scoutPick=0;
 const MULTI_COLOR='#2c2c2a';
 const ALT=['#eeece9','#f4f3ec'];
 const GROUP_CLASSES={'BRASIL':'','BRASIL BASE':'g-brasil-base','AMERICA DO SUL PRO':'g-sa-pro','AMERICA DO SUL BASE':'g-sa-base','AMERICAS MUNDO':'g-mundo'};
@@ -750,7 +762,7 @@ function initFirebase(){
     window.fbStorage=firebase.storage();
     setSyncBadge('syncing','⟳ Connecting…');
     // ── Listeners de sincronização (cal + reports registrados UMA vez) ──
-    let _calLoaded=false,_repLoaded=false,_delLoaded=false;
+    let _calLoaded=false,_repLoaded=false,_delLoaded=false,_rosLoaded=false;
     // Aplica uma entrada do nó /cal ao DATA; cria a competição se ainda não existir
     const applyCal=(id,c)=>{
       if(!c) return;
@@ -772,7 +784,7 @@ function initFirebase(){
     };
     // Primeira renderização só depois que cal E reports chegaram
     const tryFirstRender=()=>{
-      if(firebaseReady||!_calLoaded||!_repLoaded||!_delLoaded) return;
+      if(firebaseReady||!_calLoaded||!_repLoaded||!_delLoaded||!_rosLoaded) return;
       firebaseReady=true;
       initQts();
       db.ref('player_reports').on('value',snap=>{
@@ -847,6 +859,13 @@ function initFirebase(){
         if(currentView==='cal'||currentView==='resumo'||currentView.indexOf('scout_')===0) renderViews(true);
       } else tryFirstRender();
     },err=>{ _delLoaded=true; if(!firebaseReady) tryFirstRender(); });
+    // Listener do ROSTER — adicionar/remover scout sincroniza para todos
+    db.ref('roster').on('value',snap=>{
+      applyRoster(snap.val());
+      _rosLoaded=true;
+      if(firebaseReady){ renderNav(); renderViews(true); }
+      else tryFirstRender();
+    },err=>{ _rosLoaded=true; if(!firebaseReady) tryFirstRender(); });
     }).catch(e=>{
       console.error('Auth failed',e);
       setSyncBadge('error','✕ Auth failed');
@@ -871,6 +890,7 @@ function loadDataLocal(){
   try{ const j=localStorage.getItem('ind_jog'); if(j) IND_JOG=JSON.parse(j); }catch(e){}
   try{ const t=localStorage.getItem('ind_tre'); if(t) IND_TRE=JSON.parse(t); }catch(e){}
   try{ const dl=localStorage.getItem('scout_deleted_2026'); if(dl) DELETED=JSON.parse(dl); }catch(e){}
+  try{ const ro=localStorage.getItem('scout_roster'); if(ro) applyRoster(JSON.parse(ro)); }catch(e){}
   try{
     const s=localStorage.getItem('scout_cal_2026');
     if(s){const d=JSON.parse(s);d.forEach(c=>{let f=DATA.find(x=>x.id===c.id);if(!f&&c.name){f={id:c.id,group:c.group||'AMERICAS MUNDO',subgroup:c.subgroup||'Outros',name:c.name,country:c.country||'',level:c.level||'Profissional',scouts:[]};DATA.push(f);}if(f){f.scouts=c.scouts||[];if(c.start)f.start=c.start;if(c.end)f.end=c.end;if(c.name)f.name=c.name;}});}
@@ -975,10 +995,55 @@ function cellColor(comp){
   return SCOUT_COLORS[assigned[0]]?.soft||null;
 }
 
+/* ── Roster de scouts (sincronizado via Firebase) ── */
+function rosterFromCurrent(){
+  return SCOUTS.map(n=>{const c=SCOUT_COLORS[n]||SCOUT_PALETTE[0];return {name:n,soft:c.soft,strong:c.strong,text:c.text,btn:c.btn};});
+}
+function applyRoster(list){
+  const arr=Array.isArray(list)?list:(list&&typeof list==='object'?Object.values(list):null);
+  if(!arr||!arr.length) return false;
+  SCOUTS=arr.map(r=>r&&r.name).filter(Boolean);
+  SCOUT_COLORS={};
+  arr.forEach(r=>{ if(r&&r.name) SCOUT_COLORS[r.name]={soft:r.soft,strong:r.strong,text:r.text,btn:r.btn}; });
+  if(currentView.indexOf('scout_')===0 && !SCOUTS.includes(currentView.slice(6))) currentView='cal';
+  return true;
+}
+function nextFreePaletteIndex(){
+  const used=new Set(SCOUTS.map(s=>SCOUT_COLORS[s]&&SCOUT_COLORS[s].btn));
+  const i=SCOUT_PALETTE.findIndex(p=>!used.has(p.btn));
+  return i<0?0:i;
+}
+function persistRoster(){
+  try{localStorage.setItem('scout_roster',JSON.stringify(rosterFromCurrent()));}catch(e){}
+  if(db&&firebaseReady) db.ref('roster').set(rosterFromCurrent()).then(()=>setSyncBadge('synced','● Live')).catch(e=>{setSyncBadge('error','✕ Save failed');console.error(e);});
+}
+function addScout(name,colorSet){
+  name=(name||'').trim();
+  if(!name||SCOUTS.includes(name)) return;
+  SCOUTS=[...SCOUTS,name];
+  SCOUT_COLORS={...SCOUT_COLORS,[name]:{soft:colorSet.soft,strong:colorSet.strong,text:colorSet.text,btn:colorSet.btn}};
+  persistRoster();
+  renderNav();renderViews(true);
+}
+function removeScout(name){
+  if(SCOUTS.length<=1){alert('É preciso manter pelo menos um scout.');return;}
+  const n=DATA.filter(c=>c.scouts.includes(name)).length;
+  if(!confirm(`Remover o scout "${name}"?`+(n?`\nEle será desatribuído de ${n} competição(ões).`:'')))return;
+  let changed=false;
+  DATA.forEach(c=>{ if(c.scouts.includes(name)){ c.scouts=c.scouts.filter(s=>s!==name); changed=true; } });
+  SCOUTS=SCOUTS.filter(s=>s!==name);
+  const col={...SCOUT_COLORS}; delete col[name]; SCOUT_COLORS=col;
+  if(currentView==='scout_'+name) currentView='cal';
+  persistRoster();
+  if(changed) saveData();
+  renderNav();renderViews(true);
+  const b=document.getElementById('scoutModalBody'); if(b) b.innerHTML=renderScoutModalContent();
+}
 function renderNav(){
   const nav=document.getElementById('nav');
   const views=[{id:'cal',label:'Calendar'},{id:'shortlist',label:'⭐ Shortlist',color:'#6b3fa0'},{id:'indicados',label:'📋 Indicados',color:'#1a6e3a'},...SCOUTS.map(s=>({id:'scout_'+s,label:s,color:SCOUT_COLORS[s].btn}))];
   nav.innerHTML=views.map((v,i)=>(i===1?'<span style="width:8px;display:inline-block"></span>':'')+`<button class="nav-btn${currentView===v.id?' active':''}" style="background:${v.color||'#3a3835'};color:#fff" onclick="switchView('${v.id}')">${v.label}</button>`).join('')
+    +`<button class="nav-btn" style="background:#26241f;color:#9fe3b4;font-size:11px;border:1px dashed #5a7a60" onclick="openScoutModal()" title="Adicionar ou remover scouts">+ Scout</button>`
     +`<div style="margin-left:auto;display:flex;gap:6px;align-items:center">
         <button class="nav-btn" style="background:#8B1A2E;color:#e8c84a;font-size:11px;font-weight:600" onclick="openPrModal()">📄 Player Report</button>
         <button class="nav-btn" style="background:#3a3835;color:#e8c84a;font-size:11px" onclick="exportData()">⬇ Export</button>
@@ -4861,6 +4926,49 @@ function openAddCompModal(){
 function closeAddCompModal(){
   document.getElementById("addCompModal").style.display="none";
 }
+/* ── Modal Gerenciar Scouts ── */
+function openScoutModal(){
+  scoutPick=nextFreePaletteIndex();
+  document.getElementById('scoutModalBody').innerHTML=renderScoutModalContent();
+  document.getElementById('scoutModal').style.display='flex';
+}
+function closeScoutModal(){ document.getElementById('scoutModal').style.display='none'; }
+function selectScoutColor(i){
+  scoutPick=i;
+  document.querySelectorAll('#scoutModal [data-sw]').forEach(el=>{el.style.borderColor=(+el.dataset.sw===i)?'#e8c84a':'transparent';});
+}
+function addScoutFromModal(){
+  const inp=document.getElementById('scNewName');
+  const name=(inp.value||'').trim();
+  if(!name){alert('Digite o nome do scout.');return;}
+  if(SCOUTS.includes(name)){alert('Já existe um scout com esse nome.');return;}
+  addScout(name,SCOUT_PALETTE[scoutPick]);
+  inp.value='';
+  scoutPick=nextFreePaletteIndex();
+  document.getElementById('scoutModalBody').innerHTML=renderScoutModalContent();
+  const f=document.getElementById('scNewName'); if(f) f.focus();
+}
+function renderScoutModalContent(){
+  const list=SCOUTS.map(s=>{
+    const c=SCOUT_COLORS[s]||{btn:'#888'};
+    const n=DATA.filter(x=>x.scouts.includes(s)).length;
+    return `<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:#1a1a18;border-radius:5px;margin-bottom:4px">
+      <span style="width:14px;height:14px;border-radius:3px;background:${c.btn};flex:none"></span>
+      <span style="flex:1;font-size:12px;color:#f1efe8">${s}</span>
+      <span style="font-size:10px;color:#777">${n} comp.</span>
+      <button onclick="removeScout('${(''+s).replace(/'/g,"\\'")}')" title="Remover scout" style="background:transparent;border:none;color:#d9788c;cursor:pointer;font-size:14px;line-height:1">✕</button>
+    </div>`;
+  }).join('');
+  const swatches=SCOUT_PALETTE.map((p,i)=>`<span onclick="selectScoutColor(${i})" data-sw="${i}" title="Cor" style="width:24px;height:24px;border-radius:5px;background:${p.btn};cursor:pointer;border:2px solid ${i===scoutPick?'#e8c84a':'transparent'};display:inline-block"></span>`).join('');
+  return `<div style="margin-bottom:14px">${list}</div>
+    <div style="border-top:1px solid #3a3835;padding-top:12px">
+      <label style="font-size:10px;color:#888;display:block;margin-bottom:3px">NOVO SCOUT</label>
+      <input id="scNewName" placeholder="Nome do scout" onkeydown="if(event.key==='Enter')addScoutFromModal()" style="width:100%;background:#1a1a18;border:1px solid #3a3835;border-radius:5px;color:#f1efe8;padding:7px 8px;font-size:12px;margin-bottom:8px">
+      <label style="font-size:10px;color:#888;display:block;margin-bottom:5px">COR</label>
+      <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px">${swatches}</div>
+      <button onclick="addScoutFromModal()" style="width:100%;background:#e8c84a;color:#1a1a18;border:none;border-radius:5px;padding:8px;font-weight:700;cursor:pointer;font-size:12px">+ Adicionar scout</button>
+    </div>`;
+}
 function saveNewComp(){
   const name=document.getElementById("acName").value.trim();
   const start=document.getElementById("acStart").value;
@@ -5271,6 +5379,16 @@ setTimeout(function(){
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px">
       <button onclick="closeAddCompModal()" style="background:transparent;border:1px solid #3a3835;color:#888;border-radius:5px;padding:6px 16px;cursor:pointer;font-size:12px">Cancelar</button>
       <button onclick="saveNewComp()" style="background:#e8c84a;color:#1a1a18;border:none;border-radius:5px;padding:6px 16px;font-weight:700;cursor:pointer;font-size:12px">+ Adicionar</button>
+    </div>
+  </div>
+</div>
+<div id="scoutModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9000;align-items:center;justify-content:center">
+  <div style="background:#2c2c2a;border-radius:10px;padding:22px;width:380px;max-width:95vw;color:#f1efe8">
+    <h3 style="margin-bottom:4px;font-size:14px;letter-spacing:.06em">GERENCIAR SCOUTS</h3>
+    <p style="font-size:11px;color:#888;margin-bottom:14px">Adicione ou remova scouts — sincroniza para todos.</p>
+    <div id="scoutModalBody"></div>
+    <div style="display:flex;justify-content:flex-end;margin-top:16px">
+      <button onclick="closeScoutModal()" style="background:transparent;border:1px solid #3a3835;color:#aaa;border-radius:5px;padding:6px 16px;cursor:pointer;font-size:12px">Fechar</button>
     </div>
   </div>
 </div>
