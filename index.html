@@ -829,7 +829,7 @@ function initFirebase(){
       });
       db.ref('ind_jog').on('value',snap=>{ IND_JOG=snap.val()||{}; try{localStorage.setItem('ind_jog',JSON.stringify(IND_JOG));}catch(e){} if(currentView==='indicados') document.getElementById('views').innerHTML=renderIndicados(); });
       db.ref('ind_tre').on('value',snap=>{ IND_TRE=snap.val()||{}; try{localStorage.setItem('ind_tre',JSON.stringify(IND_TRE));}catch(e){} if(currentView==='indicados') document.getElementById('views').innerHTML=renderIndicados(); });
-      db.ref('deb_jog').on('value',snap=>{ DEB_JOG=snap.val()||{}; try{localStorage.setItem('deb_jog',JSON.stringify(DEB_JOG));}catch(e){} if(currentView==='debatidos') renderViews(); });
+      db.ref('deb_jog').on('value',snap=>{ DEB_JOG=snap.val()||{}; try{localStorage.setItem('deb_jog',JSON.stringify(DEB_JOG));}catch(e){} if(currentView==='debatidos'){ if(debEditandoInline()) window._debPendRender=true; else renderViews(); } });
       setSyncBadge('synced','● Live');
       renderNav();renderViews();setTimeout(fixStickyTops,50);
     };
@@ -1948,7 +1948,7 @@ function renderDebTable(){
         </select>
       </td>
       <td style="min-width:220px;max-width:340px" onclick="event.stopPropagation()">
-        <textarea class="deb-obs-in" rows="1" placeholder="—" onblur="debSetObs('${r.id}',this.value)">${String(r.obs||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')}</textarea>
+        <textarea class="deb-obs-in" rows="1" placeholder="—" onblur="debSetObs('${r.id}',this.value);debFlushRender()">${String(r.obs||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')}</textarea>
       </td>
       <td style="text-align:center">${r.tmLink?`<a href="${r.tmLink}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:#1a4a6e;font-weight:700;text-decoration:none">TM ↗</a>`:'—'}</td>
     </tr>`;
@@ -1974,7 +1974,9 @@ function renderDebTable(){
       </div>`;
 
   const ctrlEl=document.getElementById('indControls');
-  if(ctrlEl) ctrlEl.innerHTML=`
+  // digitando na busca: nao reconstruir os controles (destruiria o input a cada tecla)
+  const buscaFocada=document.activeElement&&document.activeElement.classList&&document.activeElement.classList.contains('ind-search')&&ctrlEl&&ctrlEl.contains(document.activeElement);
+  if(ctrlEl&&!buscaFocada) ctrlEl.innerHTML=`
     <div class="ind-controls">
       ${sel('Janela','janela',janelasPresentes,'Todas')}
       ${sel('Posição','pos',DEB_POSICOES,'Todas',p=>DEB_POS_LABEL[p]||p)}
@@ -1985,7 +1987,7 @@ function renderDebTable(){
       ${sel('Trazido em','trazido',trazidosPresentes)}
       ${sel('Status','status',DEB_STATUS)}
       ${sel('Lista','lista',listasPresentes,'Todas')}
-      <input class="ind-search" type="text" placeholder="Buscar atleta, clube, observação…" value="${debFilters.search}" oninput="debSetFilter('search',this.value)">
+      <input class="ind-search" type="text" placeholder="Buscar atleta, clube, observação…" value="${debFilters.search}" oninput="debSetFilter('search',this.value)" onblur="debFlushRender()">
       <span class="ind-count">${total} atleta${total!==1?'s':''}</span>
       <button class="ind-add-btn" onclick="openDebForm(null)">＋ Novo Atleta</button>
     </div>`;
@@ -2135,6 +2137,15 @@ function debSetStatus(id,val){
   r.status=val;
   saveDebJog(r);
   renderDebTable(); // re-renderiza pra atualizar a cor do select
+}
+// enquanto o usuario digita num campo inline, o sync do Firebase NAO pode re-renderizar
+// a tabela (destruiria o campo no meio da digitacao) — adia e aplica no blur
+function debEditandoInline(){
+  const ae=document.activeElement;
+  return !!(ae&&ae.classList&&(ae.classList.contains('deb-obs-in')||ae.classList.contains('ind-search')));
+}
+function debFlushRender(){
+  if(window._debPendRender){ window._debPendRender=false; if(currentView==='debatidos') renderDebTable(); }
 }
 function debSetObs(id,val){
   const r=DEB_JOG[id]; if(!r) return;
