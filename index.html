@@ -1797,6 +1797,7 @@ const DEB_STATUS=['Em debate','Aprovado — negociar','Monitorar','Momentaneamen
 const DEB_POSICOES=['GOLEIRO','LATERAL_DIREITO','LATERAL_ESQUERDO','ZAGUEIRO','VOLANTE','MEDIO','MEIA','EXTREMO','ATACANTE'];
 const DEB_POS_LABEL={GOLEIRO:'GOL',LATERAL_DIREITO:'LAT-D',LATERAL_ESQUERDO:'LAT-E',ZAGUEIRO:'ZAG',VOLANTE:'VOL',MEDIO:'MÉDIO',MEIA:'MEIA',EXTREMO:'EXT',ATACANTE:'ATA'};
 const DEB_JANELAS=['jan/26','jul/26','jan/27','jul/27'];
+const DEB_LISTAS=['Main','Squad','Youth'];
 
 function debStatusClass(v){
   const vl=(v||'').toLowerCase();
@@ -1873,6 +1874,7 @@ function renderDebTable(){
     {id:'janela',  label:'Janela'},
     {id:'data',    label:'Trazido em'},
     {id:'status',  label:'Status'},
+    {id:'lista',   label:'Lista'},
     {id:'obs',     label:'Observação'},
     {id:'fonte',   label:'Fonte'},
     {id:'tm',      label:'TM'},
@@ -1900,6 +1902,12 @@ function renderDebTable(){
       <td style="text-align:center;white-space:nowrap">${r.janela||'—'}</td>
       <td style="white-space:nowrap;color:#5f5e5a">${fmtIndData(r.data)}</td>
       <td>${r.status?`<span class="ind-aval ${debStatusClass(r.status)}">${r.status}</span>`:''}</td>
+      <td style="text-align:center" onclick="event.stopPropagation()">
+        <select class="ind-select" style="min-width:82px" onchange="debSetLista('${r.id}',this.value)">
+          <option value=""${!r.lista?' selected':''}>—</option>
+          ${DEB_LISTAS.map(l=>`<option value="${l}"${r.lista===l?' selected':''}>${l}</option>`).join('')}
+        </select>
+      </td>
       <td style="min-width:180px;max-width:340px;color:#5f5e5a">${r.obs||'—'}</td>
       <td style="white-space:nowrap;color:#888780;font-size:.72rem">${r.fonte||'—'}</td>
       <td style="text-align:center">${r.tmLink?`<a href="${r.tmLink}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:#1a4a6e;font-weight:700;text-decoration:none">TM ↗</a>`:'—'}</td>
@@ -1948,6 +1956,11 @@ function renderDebTable(){
     </table>`;
 }
 
+function debSetLista(id,val){
+  const r=DEB_JOG[id]; if(!r) return;
+  r.lista=val;
+  saveDebJog(r);
+}
 function debSetFilter(key,val){ debFilters[key]=val; renderDebTable(); }
 function debSetSort(col){
   if(debSort.col===col) debSort.dir=debSort.dir==='asc'?'desc':'asc';
@@ -1979,6 +1992,7 @@ function buildDebForm(p){
     ${ffls('Janela','dJanela',['',...new Set([...DEB_JANELAS,p.janela||''])].filter((v,i,a)=>a.indexOf(v)===i),p.janela||'jul/26')}
     ${ffl('Trazido em','dData','text',p.data||'','ex: 2026-07-08')}
     ${ffls('Status','dStatus',DEB_STATUS,p.status||'Em debate')}
+    ${ffls('Lista','dLista',['',...DEB_LISTAS],p.lista||'')}
     ${ffl('Transfermarkt Link','dTmLink','url',p.tmLink||'','https://www.transfermarkt.com.br/…')}
     ${ffl('Fonte','dFonte','text',p.fonte||'','ex: Rel. Físico / Comparativo')}
     <div style="grid-column:span 2;display:flex;flex-direction:column;gap:.3rem">
@@ -2005,7 +2019,7 @@ function submitDebForm(){
     nome,posicao:gvi('dPosicao'),geracao:gvi('dGeracao'),
     pais:gvi('dPais'),clube:gvi('dClube'),liga:gvi('dLiga'),
     contrato:gvi('dContrato'),janela:gvi('dJanela'),data:gvi('dData'),
-    status:gvi('dStatus'),obs:document.getElementById('dObs').value.trim(),
+    status:gvi('dStatus'),lista:gvi('dLista'),obs:document.getElementById('dObs').value.trim(),
     tmLink:gvi('dTmLink'),fonte:gvi('dFonte'),
   };
   saveDebJog(data);
