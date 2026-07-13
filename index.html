@@ -2007,17 +2007,24 @@ async function debBuscarTM(){
   const out=document.getElementById('dTmResultados');
   btn.textContent='⟳ Buscando…';btn.disabled=true;out.innerHTML='';
   const alvo='https://www.transfermarkt.com.br/schnellsuche/ergebnis/schnellsuche?query='+encodeURIComponent(q);
+  // proxies disparados EM PARALELO com timeout — usa o primeiro que responder
+  const fetchProxy=async(url,ms)=>{
+    const ctl=new AbortController();
+    const t=setTimeout(()=>ctl.abort(),ms||7000);
+    try{
+      const r=await fetch(url,{signal:ctl.signal});
+      if(!r.ok) throw new Error('http '+r.status);
+      const txt=await r.text();
+      if(!txt||!txt.includes('<table')) throw new Error('sem tabela');
+      return txt;
+    }finally{clearTimeout(t);}
+  };
   const proxies=[
-    u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u),
     u=>'https://corsproxy.io/?url='+encodeURIComponent(u),
+    u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u),
   ];
   let html=null;
-  for(const px of proxies){
-    try{
-      const r=await fetch(px(alvo));
-      if(r.ok){ const t=await r.text(); if(t&&t.includes('table')){ html=t; break; } }
-    }catch(e){}
-  }
+  try{ html=await Promise.any(proxies.map(px=>fetchProxy(px(alvo)))); }catch(e){}
   _debTmCands=[];
   if(html){
     try{
