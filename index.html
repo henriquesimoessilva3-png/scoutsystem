@@ -478,6 +478,7 @@ table.ind-table tr:hover td{background:#f0eeea;cursor:pointer}
 .ind-aval.deb-descartado{background:rgba(232,74,74,.15);color:#c00;border:1px solid rgba(232,74,74,.3)}
 .ind-aval.deb-monitorar{background:rgba(150,150,150,.12);color:#555;border:1px solid rgba(150,150,150,.3)}
 .deb-group-row td{background:#26241f;color:#e8c84a;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;padding:6px 10px;position:sticky}
+.deb-status-sel{-webkit-appearance:none;appearance:none;padding-right:20px !important;background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23555' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 6px center}
 .deb-del{background:transparent;border:none;color:rgba(232,74,74,.45);font-size:.78rem;font-weight:700;cursor:pointer;padding:0 4px;line-height:1}
 .deb-del:hover{color:#c00}
 .ind-pos{display:inline-block;background:#2c2c2a;color:#e8ecf3;border-radius:3px;padding:1px 5px;font-size:9px;font-weight:700;white-space:nowrap}
@@ -1933,7 +1934,7 @@ function renderDebTable(){
       <td style="text-align:center;white-space:nowrap">${r.janela||'—'}</td>
       <td style="white-space:nowrap;color:#5f5e5a">${fmtIndData(r.data)}</td>
       <td onclick="event.stopPropagation()">
-        <select class="ind-select ind-aval ${debStatusClass(r.status)}" style="min-width:150px;cursor:pointer" onchange="debSetStatus('${r.id}',this.value)">
+        <select class="ind-select ind-aval deb-status-sel ${debStatusClass(r.status)}" style="min-width:150px;cursor:pointer" onchange="debSetStatus('${r.id}',this.value)">
           ${DEB_STATUS.map(s=>`<option value="${s}"${(r.status||'Em debate')===s?' selected':''}>${s}</option>`).join('')}
         </select>
       </td>
