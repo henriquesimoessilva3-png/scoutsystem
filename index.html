@@ -478,6 +478,8 @@ table.ind-table tr:hover td{background:#f0eeea;cursor:pointer}
 .ind-aval.deb-descartado{background:rgba(232,74,74,.15);color:#c00;border:1px solid rgba(232,74,74,.3)}
 .ind-aval.deb-monitorar{background:rgba(150,150,150,.12);color:#555;border:1px solid rgba(150,150,150,.3)}
 .deb-group-row td{background:#26241f;color:#e8c84a;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;padding:6px 10px;position:sticky}
+.deb-del{background:transparent;border:none;color:rgba(232,74,74,.45);font-size:.78rem;font-weight:700;cursor:pointer;padding:0 4px;line-height:1}
+.deb-del:hover{color:#c00}
 .ind-pos{display:inline-block;background:#2c2c2a;color:#e8ecf3;border-radius:3px;padding:1px 5px;font-size:9px;font-weight:700;white-space:nowrap}
 /* Indicados Form Modal */
 #indModal{position:fixed;inset:0;z-index:2000;display:none;align-items:flex-start;justify-content:center;background:rgba(0,0,0,.45);backdrop-filter:blur(3px);overflow-y:auto;padding:20px}
@@ -1876,7 +1878,6 @@ function renderDebTable(){
     {id:'status',  label:'Status'},
     {id:'lista',   label:'Lista'},
     {id:'obs',     label:'Observação'},
-    {id:'fonte',   label:'Fonte'},
     {id:'tm',      label:'TM'},
   ];
 
@@ -1893,7 +1894,7 @@ function renderDebTable(){
     }
     tableRows+=`
     <tr onclick="openDebForm('${r.id}')">
-      <td style="font-weight:500;min-width:140px">${r.nome||'—'}</td>
+      <td style="font-weight:500;min-width:140px"><span style="display:flex;align-items:center;justify-content:space-between;gap:4px">${r.nome||'—'}<button class="deb-del" title="Excluir ${r.nome||''}" onclick="event.stopPropagation();debDeleteRow('${r.id}')">✕</button></span></td>
       <td style="text-align:center"><span class="ind-pos">${DEB_POS_LABEL[r.posicao]||r.posicao||'—'}</span></td>
       <td style="text-align:center;color:#5f5e5a">${r.geracao||'—'}</td>
       <td style="color:#5f5e5a;white-space:nowrap">${r.pais||'—'}</td>
@@ -1909,7 +1910,6 @@ function renderDebTable(){
         </select>
       </td>
       <td style="min-width:180px;max-width:340px;color:#5f5e5a">${r.obs||'—'}</td>
-      <td style="white-space:nowrap;color:#888780;font-size:.72rem">${r.fonte||'—'}</td>
       <td style="text-align:center">${r.tmLink?`<a href="${r.tmLink}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:#1a4a6e;font-weight:700;text-decoration:none">TM ↗</a>`:'—'}</td>
     </tr>`;
   });
@@ -1956,6 +1956,15 @@ function renderDebTable(){
     </table>`;
 }
 
+function debDeleteRow(id){
+  const r=DEB_JOG[id];
+  if(!r) return;
+  if(!confirm(`Excluir ${r.nome||'este registro'}?`)) return;
+  deleteDebJog(id);
+  renderDebTable();
+  const tab=document.querySelector('.ind-tab');
+  if(tab&&currentView==='debatidos') tab.textContent=`⚽ Jogadores (${Object.keys(DEB_JOG).length})`;
+}
 function debSetLista(id,val){
   const r=DEB_JOG[id]; if(!r) return;
   r.lista=val;
