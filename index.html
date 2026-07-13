@@ -1978,6 +1978,115 @@ function debDeleteRow(id){
   const tab=document.querySelector('.ind-tab');
   if(tab&&currentView==='debatidos') tab.textContent=`⚽ Jogadores (${Object.keys(DEB_JOG).length})`;
 }
+/* ── busca Transfermarkt no form (via proxy CORS; fallback TheSportsDB) ── */
+let _debTmCands=[];
+const DEB_TM_POSMAP=[
+  ['goleiro','GOLEIRO'],['goalkeeper','GOLEIRO'],
+  ['lateral direito','LATERAL_DIREITO'],['right-back','LATERAL_DIREITO'],
+  ['lateral esquerdo','LATERAL_ESQUERDO'],['left-back','LATERAL_ESQUERDO'],
+  ['zagueiro','ZAGUEIRO'],['centre-back','ZAGUEIRO'],
+  ['volante','VOLANTE'],['defensive midfield','VOLANTE'],
+  ['meia-atacante','MEIA'],['meia ofensivo','MEIA'],['attacking midfield','MEIA'],
+  ['meio-campo','MEDIO'],['meia central','MEDIO'],['central midfield','MEDIO'],['meio campo','MEDIO'],
+  ['ponta','EXTREMO'],['extremo','EXTREMO'],['winger','EXTREMO'],
+  ['centroavante','ATACANTE'],['segundo atacante','ATACANTE'],['atacante','ATACANTE'],['forward','ATACANTE'],['striker','ATACANTE'],
+];
+// codigos curtos da tabela de busca do transfermarkt.com.br (ex: "ZAG", "VOL", "PD")
+const DEB_TM_POSCODE={GOL:'GOLEIRO',ZAG:'ZAGUEIRO',LIB:'ZAGUEIRO',LD:'LATERAL_DIREITO',LE:'LATERAL_ESQUERDO',
+  VOL:'VOLANTE',MC:'MEDIO',MEI:'MEIA',MD:'MEIA',ME:'MEIA',PD:'EXTREMO',PE:'EXTREMO',
+  SA:'ATACANTE',CA:'ATACANTE',ATA:'ATACANTE'};
+function debTmPos(texto){
+  const t=(texto||'').toLowerCase();
+  for(const [k,v] of DEB_TM_POSMAP){ if(t.includes(k)) return v; }
+  return '';
+}
+async function debBuscarTM(){
+  const q=(document.getElementById('dTmBusca')?.value||'').trim();
+  if(!q){alert('Digite o nome do jogador.');return;}
+  const btn=document.getElementById('btnDebTm');
+  const out=document.getElementById('dTmResultados');
+  btn.textContent='⟳ Buscando…';btn.disabled=true;out.innerHTML='';
+  const alvo='https://www.transfermarkt.com.br/schnellsuche/ergebnis/schnellsuche?query='+encodeURIComponent(q);
+  const proxies=[
+    u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u),
+    u=>'https://corsproxy.io/?url='+encodeURIComponent(u),
+  ];
+  let html=null;
+  for(const px of proxies){
+    try{
+      const r=await fetch(px(alvo));
+      if(r.ok){ const t=await r.text(); if(t&&t.includes('table')){ html=t; break; } }
+    }catch(e){}
+  }
+  _debTmCands=[];
+  if(html){
+    try{
+      const doc=new DOMParser().parseFromString(html,'text/html');
+      const tbl=doc.querySelector('table.items');
+      if(tbl) tbl.querySelectorAll(':scope > tbody > tr').forEach(tr=>{
+        const a=tr.querySelector('a[href*="/profil/spieler/"]');
+        if(!a) return;
+        const href=a.getAttribute('href')||'';
+        const m=href.match(/\/spieler\/(\d+)/);
+        if(!m) return;
+        const nome=(a.getAttribute('title')||a.textContent||'').trim();
+        const cv=tr.querySelector('a[href*="/verein/"]');
+        let clube=cv?(cv.getAttribute('title')||cv.textContent||'').trim():'';
+        if(!clube){ const w=tr.querySelector('img[class*="wappen"]'); if(w) clube=(w.getAttribute('alt')||'').trim(); }
+        const flag=tr.querySelector('img.flaggenrahmen');
+        const pais=flag?(flag.getAttribute('title')||''):'';
+        const txt=tr.textContent||'';
+        const nasc=(txt.match(/(\d{2})\/(\d{2})\/(\d{4})/)||[])[3]||'';
+        // celulas: pos vem como codigo curto ("ZAG"), idade como numero solto
+        const cels=[...tr.querySelectorAll(':scope > td')].map(td=>(td.textContent||'').replace(/\s+/g,' ').trim());
+        let pos='',idade=(txt.match(/\((\d{1,2})\)/)||[])[1]||'';
+        for(const c of cels){
+          if(!pos&&DEB_TM_POSCODE[c.toUpperCase()]) pos=DEB_TM_POSCODE[c.toUpperCase()];
+          if(!idade&&/^\d{1,2}$/.test(c)&&+c>=14&&+c<=50) idade=c;
+        }
+        if(!pos) pos=debTmPos(txt);
+        _debTmCands.push({id:m[1],nome,clube,pais,nasc,idade,pos,
+          link:'https://www.transfermarkt.com.br'+href.split('?')[0]});
+      });
+    }catch(e){console.error('parse TM:',e);}
+  }
+  if(!_debTmCands.length){
+    // fallback: TheSportsDB (CORS liberado, sem chave)
+    try{
+      const r=await fetch('https://www.thesportsdb.com/api/v1/json/3/searchplayers.php?p='+encodeURIComponent(q));
+      const d=await r.json();
+      (d?.player||[]).slice(0,8).forEach(p=>{
+        if((p.strSport||'')!=='Soccer') return;
+        _debTmCands.push({id:'',nome:p.strPlayer||'',clube:p.strTeam||'',pais:p.strNationality||'',
+          nasc:(p.dateBorn||'').slice(0,4),idade:'',pos:debTmPos(p.strPosition||''),link:''});
+      });
+    }catch(e){}
+  }
+  btn.textContent='🔍 Buscar TM';btn.disabled=false;
+  if(!_debTmCands.length){
+    out.innerHTML='<div style="font-size:.78rem;color:#b8860b;padding:.3rem 0">Nenhum resultado (ou proxy bloqueado) — preencha manualmente.</div>';
+    return;
+  }
+  out.innerHTML=_debTmCands.slice(0,8).map((c,i)=>`
+    <button onclick="debAplicarTM(${i})" style="display:flex;gap:8px;align-items:center;text-align:left;background:#f9f8f4;border:1px solid #e0ded4;border-radius:6px;padding:.45rem .7rem;cursor:pointer;font-family:'Barlow',sans-serif;font-size:.82rem;color:#1a1a18">
+      <span style="font-weight:600">${c.nome}</span>
+      <span style="color:#888780">${[c.pos?DEB_POS_LABEL[c.pos]||c.pos:'',c.nasc||(c.idade?c.idade+' anos':''),c.clube,c.pais].filter(Boolean).join(' · ')}</span>
+    </button>`).join('');
+}
+function debAplicarTM(i){
+  const c=_debTmCands[i];
+  if(!c) return;
+  const set=(id,v)=>{const el=document.getElementById(id);if(el&&v)el.value=v;};
+  set('dNome',c.nome);
+  set('dClube',c.clube);
+  set('dPais',c.pais);
+  set('dGeracao',c.nasc||(c.idade?String(new Date().getFullYear()-parseInt(c.idade)):''));
+  set('dTmLink',c.link);
+  if(c.pos){const el=document.getElementById('dPosicao');if(el)el.value=c.pos;}
+  const out=document.getElementById('dTmResultados');
+  if(out) out.innerHTML=`<div style="font-size:.78rem;color:#1a8040;padding:.3rem 0">✓ Preenchido com ${c.nome}${c.link?' (link TM direto)':''} — confira e salve.</div>`;
+}
+
 function debSetLista(id,val){
   const r=DEB_JOG[id]; if(!r) return;
   r.lista=val;
@@ -2003,6 +2112,14 @@ function openDebForm(id){
 
 function buildDebForm(p){
   return `
+  <div style="margin-bottom:.8rem;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:.8rem">
+    <label style="font-size:.65rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#888780;display:block;margin-bottom:.3rem">Pesquisar no Transfermarkt (auto-preenche os campos)</label>
+    <div style="display:flex;gap:.5rem">
+      <input id="dTmBusca" type="text" value="${p.nome||''}" placeholder="Nome do jogador…" onkeydown="if(event.key==='Enter'){event.preventDefault();debBuscarTM();}" style="flex:1;background:#f9f8f4;border:1px solid #e0ded4;border-radius:6px;color:#1a1a18;font-family:'Barlow',sans-serif;font-size:.85rem;padding:.5rem .75rem;outline:none">
+      <button id="btnDebTm" onclick="debBuscarTM()" style="background:#1a4a6e;color:#fff;border:none;border-radius:6px;padding:.55rem 1.1rem;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;white-space:nowrap">🔍 Buscar TM</button>
+    </div>
+    <div id="dTmResultados" style="display:flex;flex-direction:column;gap:4px;margin-top:.5rem"></div>
+  </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem">
     ${ffl('Atleta *','dNome','text',p.nome||'','',true,'grid-column:span 2')}
     ${ffls('Posição','dPosicao',['',...DEB_POSICOES],p.posicao||'')}
