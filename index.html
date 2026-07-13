@@ -1798,8 +1798,20 @@ function confirmDeleteInd(type,id){
 const DEB_STATUS=['Em debate','Aprovado — negociar','Monitorar','Momentaneamente descartado','Descartado — perfil','Descartado — valor','Descartado — outro'];
 const DEB_POSICOES=['GOLEIRO','LATERAL_DIREITO','LATERAL_ESQUERDO','ZAGUEIRO','VOLANTE','MEDIO','MEIA','EXTREMO','ATACANTE'];
 const DEB_POS_LABEL={GOLEIRO:'GOL',LATERAL_DIREITO:'LAT-D',LATERAL_ESQUERDO:'LAT-E',ZAGUEIRO:'ZAG',VOLANTE:'VOL',MEDIO:'MÉDIO',MEIA:'MEIA',EXTREMO:'EXT',ATACANTE:'ATA'};
-const DEB_JANELAS=['jan/26','jul/26','jan/27','jul/27'];
 const DEB_LISTAS=['Main','Squad','Youth'];
+const DEB_MESES=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+// "mai/26" -> numero ordenavel (2026*12+4); desconhecido vai pro fim
+function debJanelaOrd(j){
+  const m=String(j||'').match(/^([a-z]{3})\/(\d{2})$/i);
+  if(!m) return 999999;
+  const mi=DEB_MESES.indexOf(m[1].toLowerCase());
+  return mi<0?999999:(2000+parseInt(m[2]))*12+mi;
+}
+// mes/ano corrente ("jul/26") pro default de cadastro novo
+function debJanelaAtual(){
+  const d=new Date();
+  return DEB_MESES[d.getMonth()]+'/'+String(d.getFullYear()).slice(2);
+}
 
 function debStatusClass(v){
   const vl=(v||'').toLowerCase();
@@ -1860,6 +1872,7 @@ function renderDebTable(){
     }
     if(!isNaN(parseFloat(av))&&!isNaN(parseFloat(bv))&&col==='geracao')
       return ((parseFloat(av)||0)-(parseFloat(bv)||0))*dir;
+    if(col==='janela') return (debJanelaOrd(av)-debJanelaOrd(bv))*dir;
     return String(av).localeCompare(String(bv),'pt-BR',{sensitivity:'base'})*dir;
   });
 
@@ -1915,7 +1928,7 @@ function renderDebTable(){
   });
 
   const emptyRow=`<tr><td colspan="${cols.length}" style="padding:40px;text-align:center;color:#888780">Nenhum registro encontrado</td></tr>`;
-  const janelasPresentes=[...new Set([...DEB_JANELAS,...Object.values(DEB_JOG).map(r=>r.janela||'')])].filter(Boolean);
+  const janelasPresentes=[...new Set(Object.values(DEB_JOG).map(r=>r.janela||''))].filter(Boolean).sort((a,b)=>debJanelaOrd(a)-debJanelaOrd(b));
 
   const ctrlEl=document.getElementById('indControls');
   if(ctrlEl) ctrlEl.innerHTML=`
@@ -1998,7 +2011,7 @@ function buildDebForm(p){
     ${ffl('Clube','dClube','text',p.clube||'','ex: Cruzeiro')}
     ${ffl('Liga','dLiga','text',p.liga||'','ex: Brasil A')}
     ${ffl('Contrato até','dContrato','text',p.contrato||'','ex: 2027-12-31')}
-    ${ffls('Janela','dJanela',['',...new Set([...DEB_JANELAS,p.janela||''])].filter((v,i,a)=>a.indexOf(v)===i),p.janela||'jul/26')}
+    ${ffl('Janela discutida (mês/ano)','dJanela','text',p.janela||(editingDebId?'':debJanelaAtual()),'ex: jul/26')}
     ${ffl('Trazido em','dData','text',p.data||'','ex: 2026-07-08')}
     ${ffls('Status','dStatus',DEB_STATUS,p.status||'Em debate')}
     ${ffls('Lista','dLista',['',...DEB_LISTAS],p.lista||'')}
