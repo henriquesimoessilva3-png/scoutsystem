@@ -1848,10 +1848,11 @@ function deleteDebJog(id){
   else try{localStorage.setItem('deb_jog',JSON.stringify(DEB_JOG));}catch(e){}
 }
 
+const DEB_VERSAO='v13.07-8'; // bump a cada publish — aparece no cabecalho pra conferir cache
 function renderDebatidos(){
   return `<div class="view active">
     <div class="toolbar" style="padding:8px 12px">
-      <div><h1>🗣 Debatidos</h1><p>Todos os jogadores trazidos pro debate — por janela, com status e observação do porquê andou ou não</p></div>
+      <div><h1>🗣 Debatidos <span style="font-size:.6rem;color:#b8b6ac;font-weight:400">${DEB_VERSAO}</span></h1><p>Todos os jogadores trazidos pro debate — por janela, com status e observação do porquê andou ou não</p></div>
     </div>
     <div class="ind-wrap">
       <div class="ind-tabs">
