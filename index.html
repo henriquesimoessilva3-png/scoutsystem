@@ -479,6 +479,9 @@ table.ind-table tr:hover td{background:#f0eeea;cursor:pointer}
 .ind-aval.deb-monitorar{background:rgba(150,150,150,.12);color:#555;border:1px solid rgba(150,150,150,.3)}
 .deb-group-row td{background:#26241f;color:#e8c84a;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;padding:6px 10px;position:sticky}
 .deb-status-sel{-webkit-appearance:none;appearance:none;padding-right:20px !important;background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23555' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 6px center}
+.deb-obs-in{width:100%;min-width:220px;min-height:30px;background:transparent;border:1px solid transparent;border-radius:5px;font-family:'Barlow',sans-serif;font-size:11px;color:#5f5e5a;resize:vertical;padding:4px 6px;line-height:1.35}
+.deb-obs-in:hover{border-color:#e0ded4}
+.deb-obs-in:focus{outline:none;background:#fff;border-color:#b8b6ac;color:#1a1a18}
 .deb-del{background:transparent;border:none;color:rgba(232,74,74,.45);font-size:.78rem;font-weight:700;cursor:pointer;padding:0 4px;line-height:1}
 .deb-del:hover{color:#c00}
 .ind-pos{display:inline-block;background:#2c2c2a;color:#e8ecf3;border-radius:3px;padding:1px 5px;font-size:9px;font-weight:700;white-space:nowrap}
@@ -1944,7 +1947,9 @@ function renderDebTable(){
           ${DEB_LISTAS.map(l=>`<option value="${l}"${r.lista===l?' selected':''}>${l}</option>`).join('')}
         </select>
       </td>
-      <td style="min-width:180px;max-width:340px;color:#5f5e5a">${r.obs||'—'}</td>
+      <td style="min-width:220px;max-width:340px" onclick="event.stopPropagation()">
+        <textarea class="deb-obs-in" rows="1" placeholder="—" onblur="debSetObs('${r.id}',this.value)">${String(r.obs||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')}</textarea>
+      </td>
       <td style="text-align:center">${r.tmLink?`<a href="${r.tmLink}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:#1a4a6e;font-weight:700;text-decoration:none">TM ↗</a>`:'—'}</td>
     </tr>`;
   });
@@ -2130,6 +2135,13 @@ function debSetStatus(id,val){
   r.status=val;
   saveDebJog(r);
   renderDebTable(); // re-renderiza pra atualizar a cor do select
+}
+function debSetObs(id,val){
+  const r=DEB_JOG[id]; if(!r) return;
+  val=String(val).trim();
+  if(val===(r.obs||'')) return; // nada mudou — nao grava
+  r.obs=val;
+  saveDebJog(r);
 }
 function debSetFilter(key,val){ debFilters[key]=val; renderDebTable(); }
 function debSetSort(col){
