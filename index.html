@@ -472,6 +472,12 @@ table.ind-table tr:hover td{background:#f0eeea;cursor:pointer}
 .ind-aval.youth{background:rgba(232,200,74,.15);color:#b8860b;border:1px solid rgba(232,200,74,.3)}
 .ind-aval.descartado{background:rgba(232,74,74,.15);color:#c00;border:1px solid rgba(232,74,74,.3)}
 .ind-aval.monitorando{background:rgba(150,150,150,.12);color:#555;border:1px solid rgba(150,150,150,.3)}
+.ind-aval.deb-debate{background:rgba(58,123,213,.15);color:#1562B8;border:1px solid rgba(58,123,213,.3)}
+.ind-aval.deb-aprovado{background:rgba(74,232,144,.15);color:#1a8040;border:1px solid rgba(74,232,144,.3)}
+.ind-aval.deb-momentaneo{background:rgba(232,160,42,.15);color:#a5680a;border:1px solid rgba(232,160,42,.35)}
+.ind-aval.deb-descartado{background:rgba(232,74,74,.15);color:#c00;border:1px solid rgba(232,74,74,.3)}
+.ind-aval.deb-monitorar{background:rgba(150,150,150,.12);color:#555;border:1px solid rgba(150,150,150,.3)}
+.deb-group-row td{background:#26241f;color:#e8c84a;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;padding:6px 10px;position:sticky}
 .ind-pos{display:inline-block;background:#2c2c2a;color:#e8ecf3;border-radius:3px;padding:1px 5px;font-size:9px;font-weight:700;white-space:nowrap}
 /* Indicados Form Modal */
 #indModal{position:fixed;inset:0;z-index:2000;display:none;align-items:flex-start;justify-content:center;background:rgba(0,0,0,.45);backdrop-filter:blur(3px);overflow-y:auto;padding:20px}
@@ -637,6 +643,12 @@ let indSortTre={col:'data',dir:'desc'};
 let indFilters={ano:'',pos:'',aval:'',resp:'',search:''};
 let indFiltersTre={ano:'',search:''};
 let editingIndId=null;
+
+/* ══ DEBATIDOS STATE ══ */
+let DEB_JOG={};     // { id: {...} } — jogadores trazidos pro debate (rel. físicos + comparativos)
+let debFilters={janela:'',pos:'',status:'',search:''};
+let debSort={col:'posicao',dir:'asc'};
+let editingDebId=null;
 
 /* ══════════════════════════════════════════
    STORAGE
@@ -811,6 +823,7 @@ function initFirebase(){
       });
       db.ref('ind_jog').on('value',snap=>{ IND_JOG=snap.val()||{}; try{localStorage.setItem('ind_jog',JSON.stringify(IND_JOG));}catch(e){} if(currentView==='indicados') document.getElementById('views').innerHTML=renderIndicados(); });
       db.ref('ind_tre').on('value',snap=>{ IND_TRE=snap.val()||{}; try{localStorage.setItem('ind_tre',JSON.stringify(IND_TRE));}catch(e){} if(currentView==='indicados') document.getElementById('views').innerHTML=renderIndicados(); });
+      db.ref('deb_jog').on('value',snap=>{ DEB_JOG=snap.val()||{}; try{localStorage.setItem('deb_jog',JSON.stringify(DEB_JOG));}catch(e){} if(currentView==='debatidos') renderViews(); });
       setSyncBadge('synced','● Live');
       renderNav();renderViews();setTimeout(fixStickyTops,50);
     };
@@ -889,6 +902,7 @@ function loadDataLocal(){
   try{ const qs=localStorage.getItem('qts'); if(qs) QTS=JSON.parse(qs); }catch(e){}
   try{ const j=localStorage.getItem('ind_jog'); if(j) IND_JOG=JSON.parse(j); }catch(e){}
   try{ const t=localStorage.getItem('ind_tre'); if(t) IND_TRE=JSON.parse(t); }catch(e){}
+  try{ const d=localStorage.getItem('deb_jog'); if(d) DEB_JOG=JSON.parse(d); }catch(e){}
   try{ const dl=localStorage.getItem('scout_deleted_2026'); if(dl) DELETED=JSON.parse(dl); }catch(e){}
   try{ const ro=localStorage.getItem('scout_roster'); if(ro) applyRoster(JSON.parse(ro)); }catch(e){}
   try{
@@ -923,7 +937,8 @@ function exportData(){
     cal:DATA.map(c=>({id:c.id,scouts:c.scouts,start:c.start,end:c.end})),
     reports:REPORTS,
     ind_jog:IND_JOG,
-    ind_tre:IND_TRE};
+    ind_tre:IND_TRE,
+    deb_jog:DEB_JOG};
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
@@ -1041,7 +1056,7 @@ function removeScout(name){
 }
 function renderNav(){
   const nav=document.getElementById('nav');
-  const views=[{id:'cal',label:'Calendar'},{id:'shortlist',label:'⭐ Shortlist',color:'#6b3fa0'},{id:'indicados',label:'📋 Indicados',color:'#1a6e3a'},...SCOUTS.map(s=>({id:'scout_'+s,label:s,color:SCOUT_COLORS[s].btn}))];
+  const views=[{id:'cal',label:'Calendar'},{id:'shortlist',label:'⭐ Shortlist',color:'#6b3fa0'},{id:'indicados',label:'📋 Indicados',color:'#1a6e3a'},{id:'debatidos',label:'🗣 Debatidos',color:'#1a4a6e'},...SCOUTS.map(s=>({id:'scout_'+s,label:s,color:SCOUT_COLORS[s].btn}))];
   nav.innerHTML=views.map((v,i)=>(i===1?'<span style="width:8px;display:inline-block"></span>':'')+`<button class="nav-btn${currentView===v.id?' active':''}" style="background:${v.color||'#3a3835'};color:#fff" onclick="switchView('${v.id}')">${v.label}</button>`).join('')
     +`<button class="nav-btn" style="background:#26241f;color:#9fe3b4;font-size:11px;border:1px dashed #5a7a60" onclick="openScoutModal()" title="Adicionar ou remover scouts">+ Scout</button>`
     +`<div style="margin-left:auto;display:flex;gap:6px;align-items:center">
@@ -1060,6 +1075,7 @@ function renderViews(preserveScroll){
   else if(currentView==='resumo'){views.innerHTML=renderResumo();setTimeout(fixStickyTops,10);}
   else if(currentView==='shortlist'){views.innerHTML=renderShortlist();setTimeout(fixStickyTops,10);}
   else if(currentView==='indicados'){views.innerHTML=renderIndicados();setTimeout(()=>{fixStickyTops();if(indTab==='jog')renderIndJogTable();else renderIndTreTable();fixIndHeight();},10);}
+  else if(currentView==='debatidos'){views.innerHTML=renderDebatidos();setTimeout(()=>{fixStickyTops();renderDebTable();fixIndHeight();},10);}
   else{const s=currentView.replace('scout_','');views.innerHTML=renderScoutView(s);setTimeout(()=>{fixStickyTops();if(preserveScroll){const w=document.querySelector('.scroll-wrap');if(w){w.scrollLeft=sx;w.scrollTop=sy;}}},10);}
 }
 
@@ -1773,6 +1789,244 @@ function confirmDeleteInd(type,id){
 }
 
 /* ══════════════════════════════════════════
+   DEBATIDOS — jogadores trazidos pro debate
+   (fonte inicial: rel. físicos + comparativos do
+   Portal Comparativo; semeado por semear_debatidos.py)
+══════════════════════════════════════════ */
+const DEB_STATUS=['Em debate','Aprovado — negociar','Monitorar','Momentaneamente descartado','Descartado — perfil','Descartado — valor','Descartado — outro'];
+const DEB_POSICOES=['GOLEIRO','LATERAL_DIREITO','LATERAL_ESQUERDO','ZAGUEIRO','VOLANTE','MEDIO','MEIA','EXTREMO','ATACANTE'];
+const DEB_POS_LABEL={GOLEIRO:'GOL',LATERAL_DIREITO:'LAT-D',LATERAL_ESQUERDO:'LAT-E',ZAGUEIRO:'ZAG',VOLANTE:'VOL',MEDIO:'MÉDIO',MEIA:'MEIA',EXTREMO:'EXT',ATACANTE:'ATA'};
+const DEB_JANELAS=['jan/26','jul/26','jan/27','jul/27'];
+
+function debStatusClass(v){
+  const vl=(v||'').toLowerCase();
+  if(vl.includes('aprovado')) return 'deb-aprovado';
+  if(vl.includes('momentaneamente')) return 'deb-momentaneo';
+  if(vl.includes('descartado')) return 'deb-descartado';
+  if(vl.includes('monitorar')) return 'deb-monitorar';
+  return 'deb-debate';
+}
+
+function saveDebJog(data){
+  DEB_JOG[data.id]=data;
+  if(db&&firebaseReady) db.ref('deb_jog/'+data.id).set(data).then(()=>setSyncBadge('synced','● Live')).catch(e=>setSyncBadge('error','✕ Save failed'));
+  else try{localStorage.setItem('deb_jog',JSON.stringify(DEB_JOG));}catch(e){}
+}
+function deleteDebJog(id){
+  delete DEB_JOG[id];
+  if(db&&firebaseReady) db.ref('deb_jog/'+id).remove();
+  else try{localStorage.setItem('deb_jog',JSON.stringify(DEB_JOG));}catch(e){}
+}
+
+function renderDebatidos(){
+  return `<div class="view active">
+    <div class="toolbar" style="padding:8px 12px">
+      <div><h1>🗣 Debatidos</h1><p>Todos os jogadores trazidos pro debate — por janela, com status e observação do porquê andou ou não</p></div>
+    </div>
+    <div class="ind-wrap">
+      <div class="ind-tabs">
+        <button class="ind-tab active">⚽ Jogadores (${Object.keys(DEB_JOG).length})</button>
+      </div>
+      <div id="indControls" class="ind-controls-wrap"></div>
+      <div id="indTableWrap" class="ind-table-wrap">
+        <div id="indTableContent"></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderDebTable(){
+  let rows=Object.values(DEB_JOG);
+
+  if(debFilters.janela) rows=rows.filter(r=>(r.janela||'')===debFilters.janela);
+  if(debFilters.pos) rows=rows.filter(r=>(r.posicao||'')===debFilters.pos);
+  if(debFilters.status) rows=rows.filter(r=>(r.status||'')===debFilters.status);
+  if(debFilters.search){
+    const q=debFilters.search.toLowerCase();
+    rows=rows.filter(r=>(r.nome||'').toLowerCase().includes(q)||(r.clube||'').toLowerCase().includes(q)||(r.pais||'').toLowerCase().includes(q)||(r.obs||'').toLowerCase().includes(q));
+  }
+
+  rows=[...rows].sort((a,b)=>{
+    const col=debSort.col, dir=debSort.dir==='asc'?1:-1;
+    let av=a[col]??'', bv=b[col]??'';
+    const aEmpty=(av===''||av==null), bEmpty=(bv===''||bv==null);
+    if(aEmpty&&bEmpty) return 0; if(aEmpty) return 1; if(bEmpty) return -1;
+    if(col==='posicao'){
+      const r=(DEB_POSICOES.indexOf(av)-DEB_POSICOES.indexOf(bv))*dir;
+      return r!==0?r:String(a.nome||'').localeCompare(String(b.nome||''),'pt-BR',{sensitivity:'base'});
+    }
+    if(!isNaN(parseFloat(av))&&!isNaN(parseFloat(bv))&&col==='geracao')
+      return ((parseFloat(av)||0)-(parseFloat(bv)||0))*dir;
+    return String(av).localeCompare(String(bv),'pt-BR',{sensitivity:'base'})*dir;
+  });
+
+  const total=rows.length;
+  const thCls=col=>debSort.col===col?(debSort.dir==='asc'?'sort-asc':'sort-desc'):'';
+
+  const cols=[
+    {id:'nome',    label:'Atleta'},
+    {id:'posicao', label:'Pos.'},
+    {id:'geracao', label:'Ger.'},
+    {id:'pais',    label:'País'},
+    {id:'clube',   label:'Clube'},
+    {id:'contrato',label:'Contrato'},
+    {id:'janela',  label:'Janela'},
+    {id:'data',    label:'Trazido em'},
+    {id:'status',  label:'Status'},
+    {id:'obs',     label:'Observação'},
+    {id:'fonte',   label:'Fonte'},
+    {id:'tm',      label:'TM'},
+  ];
+
+  let tableRows='';
+  let lastGroup=null;
+  rows.forEach(r=>{
+    if(debSort.col==='posicao'){
+      const g=r.posicao||'—';
+      if(g!==lastGroup){
+        lastGroup=g;
+        const n=rows.filter(x=>(x.posicao||'—')===g).length;
+        tableRows+=`<tr class="deb-group-row"><td colspan="${cols.length}">${g.replace(/_/g,' ')} · ${n}</td></tr>`;
+      }
+    }
+    tableRows+=`
+    <tr onclick="openDebForm('${r.id}')">
+      <td style="font-weight:500;min-width:140px">${r.nome||'—'}</td>
+      <td style="text-align:center"><span class="ind-pos">${DEB_POS_LABEL[r.posicao]||r.posicao||'—'}</span></td>
+      <td style="text-align:center;color:#5f5e5a">${r.geracao||'—'}</td>
+      <td style="color:#5f5e5a;white-space:nowrap">${r.pais||'—'}</td>
+      <td style="min-width:110px;color:#5f5e5a">${r.clube||'—'}</td>
+      <td style="white-space:nowrap;color:#5f5e5a">${fmtIndData(r.contrato)||'—'}</td>
+      <td style="text-align:center;white-space:nowrap">${r.janela||'—'}</td>
+      <td style="white-space:nowrap;color:#5f5e5a">${fmtIndData(r.data)}</td>
+      <td>${r.status?`<span class="ind-aval ${debStatusClass(r.status)}">${r.status}</span>`:''}</td>
+      <td style="min-width:180px;max-width:340px;color:#5f5e5a">${r.obs||'—'}</td>
+      <td style="white-space:nowrap;color:#888780;font-size:.72rem">${r.fonte||'—'}</td>
+      <td style="text-align:center">${r.tmLink?`<a href="${r.tmLink}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:#1a4a6e;font-weight:700;text-decoration:none">TM ↗</a>`:'—'}</td>
+    </tr>`;
+  });
+
+  const emptyRow=`<tr><td colspan="${cols.length}" style="padding:40px;text-align:center;color:#888780">Nenhum registro encontrado</td></tr>`;
+  const janelasPresentes=[...new Set([...DEB_JANELAS,...Object.values(DEB_JOG).map(r=>r.janela||'')])].filter(Boolean);
+
+  const ctrlEl=document.getElementById('indControls');
+  if(ctrlEl) ctrlEl.innerHTML=`
+    <div class="ind-controls">
+      <div class="ind-filter-group">
+        <span class="ind-filter-label">Janela:</span>
+        <select class="ind-select" onchange="debSetFilter('janela',this.value)">
+          <option value="">Todas</option>
+          ${janelasPresentes.map(j=>`<option value="${j}"${debFilters.janela===j?' selected':''}>${j}</option>`).join('')}
+        </select>
+      </div>
+      <div class="ind-filter-group">
+        <span class="ind-filter-label">Posição:</span>
+        <select class="ind-select" onchange="debSetFilter('pos',this.value)">
+          <option value="">Todas</option>
+          ${DEB_POSICOES.map(p=>`<option value="${p}"${debFilters.pos===p?' selected':''}>${DEB_POS_LABEL[p]||p}</option>`).join('')}
+        </select>
+      </div>
+      <div class="ind-filter-group">
+        <span class="ind-filter-label">Status:</span>
+        <select class="ind-select" onchange="debSetFilter('status',this.value)">
+          <option value="">Todos</option>
+          ${DEB_STATUS.map(s=>`<option value="${s}"${debFilters.status===s?' selected':''}>${s}</option>`).join('')}
+        </select>
+      </div>
+      <input class="ind-search" type="text" placeholder="Buscar atleta, clube, observação…" value="${debFilters.search}" oninput="debSetFilter('search',this.value)">
+      <span class="ind-count">${total} atleta${total!==1?'s':''}</span>
+      <button class="ind-add-btn" onclick="openDebForm(null)">＋ Novo Atleta</button>
+    </div>`;
+
+  const tblEl=document.getElementById('indTableContent');
+  if(tblEl) tblEl.innerHTML=`
+    <table class="ind-table" style="width:100%">
+      <thead><tr>
+        ${cols.map(c=>c.id==='tm'?`<th>${c.label}</th>`:`<th class="${thCls(c.id)}" onclick="debSetSort('${c.id}')">${c.label}</th>`).join('')}
+      </tr></thead>
+      <tbody>${tableRows||emptyRow}</tbody>
+    </table>`;
+}
+
+function debSetFilter(key,val){ debFilters[key]=val; renderDebTable(); }
+function debSetSort(col){
+  if(debSort.col===col) debSort.dir=debSort.dir==='asc'?'desc':'asc';
+  else{debSort.col=col;debSort.dir='asc';}
+  renderDebTable();
+}
+
+function openDebForm(id){
+  editingDebId=id;
+  const isEdit=!!id;
+  const p=isEdit?(DEB_JOG[id]||{}):{};
+  document.getElementById('indModalTitle').textContent=(isEdit?'Editar ':'Novo ')+'Atleta Debatido';
+  document.getElementById('indModalBody').innerHTML=buildDebForm(p);
+  document.getElementById('indModalBody').dataset.type='deb';
+  document.getElementById('indModal').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+
+function buildDebForm(p){
+  return `
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem">
+    ${ffl('Atleta *','dNome','text',p.nome||'','',true,'grid-column:span 2')}
+    ${ffls('Posição','dPosicao',['',...DEB_POSICOES],p.posicao||'')}
+    ${ffl('Geração (ano nasc.)','dGeracao','number',p.geracao||'','ex: 2002')}
+    ${ffl('País','dPais','text',p.pais||'','ex: Brasil')}
+    ${ffl('Clube','dClube','text',p.clube||'','ex: Cruzeiro')}
+    ${ffl('Liga','dLiga','text',p.liga||'','ex: Brasil A')}
+    ${ffl('Contrato até','dContrato','text',p.contrato||'','ex: 2027-12-31')}
+    ${ffls('Janela','dJanela',['',...new Set([...DEB_JANELAS,p.janela||''])].filter((v,i,a)=>a.indexOf(v)===i),p.janela||'jul/26')}
+    ${ffl('Trazido em','dData','text',p.data||'','ex: 2026-07-08')}
+    ${ffls('Status','dStatus',DEB_STATUS,p.status||'Em debate')}
+    ${ffl('Transfermarkt Link','dTmLink','url',p.tmLink||'','https://www.transfermarkt.com.br/…')}
+    ${ffl('Fonte','dFonte','text',p.fonte||'','ex: Rel. Físico / Comparativo')}
+    <div style="grid-column:span 2;display:flex;flex-direction:column;gap:.3rem">
+      <label style="font-size:.65rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#888780">Observação (por que andou / não andou)</label>
+      <textarea id="dObs" rows="3" style="background:#f9f8f4;border:1px solid #e0ded4;border-radius:6px;color:#1a1a18;font-family:'Barlow',sans-serif;font-size:.85rem;padding:.5rem .75rem;outline:none;width:100%;resize:vertical" placeholder="ex: descartado pelo perfil — não encaixa como start player; retomar se baixar o valor…">${p.obs||''}</textarea>
+    </div>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;padding-top:1rem;border-top:1px solid #e0ded4;margin-top:.5rem">
+    <div>
+      ${editingDebId?`<button onclick="confirmDeleteDeb('${editingDebId}')" style="background:transparent;border:1px solid rgba(232,74,74,.3);color:var(--red);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;padding:.5rem 1rem;border-radius:5px;cursor:pointer">✕ Excluir</button>`:''}
+    </div>
+    <div style="display:flex;gap:.6rem">
+      <button onclick="closeIndModal()" style="background:transparent;border:1px solid #e0ded4;color:#888780;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.82rem;letter-spacing:.08em;text-transform:uppercase;padding:.55rem 1.2rem;border-radius:5px;cursor:pointer">← Cancelar</button>
+      <button onclick="submitDebForm()" style="background:var(--gold);color:#0b0d12;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.82rem;letter-spacing:.08em;text-transform:uppercase;padding:.55rem 1.4rem;border-radius:5px;border:none;cursor:pointer">Salvar ✓</button>
+    </div>
+  </div>`;
+}
+
+function submitDebForm(){
+  const nome=gvi('dNome');
+  if(!nome){alert('Informe o nome do atleta.');return;}
+  const data={
+    id:editingDebId||('dj'+Date.now()),
+    nome,posicao:gvi('dPosicao'),geracao:gvi('dGeracao'),
+    pais:gvi('dPais'),clube:gvi('dClube'),liga:gvi('dLiga'),
+    contrato:gvi('dContrato'),janela:gvi('dJanela'),data:gvi('dData'),
+    status:gvi('dStatus'),obs:document.getElementById('dObs').value.trim(),
+    tmLink:gvi('dTmLink'),fonte:gvi('dFonte'),
+  };
+  saveDebJog(data);
+  editingDebId=null;
+  closeIndModal();
+  renderDebTable();
+  const tab=document.querySelector('.ind-tab');
+  if(tab&&currentView==='debatidos') tab.textContent=`⚽ Jogadores (${Object.keys(DEB_JOG).length})`;
+}
+
+function confirmDeleteDeb(id){
+  if(!confirm('Excluir este registro?')) return;
+  deleteDebJog(id);
+  editingDebId=null;
+  closeIndModal();
+  renderDebTable();
+  const tab=document.querySelector('.ind-tab');
+  if(tab&&currentView==='debatidos') tab.textContent=`⚽ Jogadores (${Object.keys(DEB_JOG).length})`;
+}
+
+/* ══════════════════════════════════════════
    SHORTLIST — aggregated view of all players
 ══════════════════════════════════════════ */
 let slSort={col:'nota',dir:'desc'};
@@ -2463,7 +2717,7 @@ function fixStickyTops(){
   wrap.querySelectorAll('thead tr:nth-child(2) th').forEach(el=>el.style.top=rowH+'px');
   wrap.querySelectorAll('thead tr:first-child .hdr-name').forEach(el=>{el.style.top='0px';el.style.left='0px';});
 }
-window.addEventListener('resize',()=>{ fixStickyTops(); if(currentView==='indicados') fixIndHeight(); });
+window.addEventListener('resize',()=>{ fixStickyTops(); if(currentView==='indicados'||currentView==='debatidos') fixIndHeight(); });
 
 
 /* ══ INDICADOS HISTORICAL IMPORT ══ */
