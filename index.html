@@ -1932,7 +1932,11 @@ function renderDebTable(){
       <td style="white-space:nowrap;color:#5f5e5a">${fmtIndData(r.contrato)||'—'}</td>
       <td style="text-align:center;white-space:nowrap">${r.janela||'—'}</td>
       <td style="white-space:nowrap;color:#5f5e5a">${fmtIndData(r.data)}</td>
-      <td>${r.status?`<span class="ind-aval ${debStatusClass(r.status)}">${r.status}</span>`:''}</td>
+      <td onclick="event.stopPropagation()">
+        <select class="ind-select ind-aval ${debStatusClass(r.status)}" style="min-width:150px;cursor:pointer" onchange="debSetStatus('${r.id}',this.value)">
+          ${DEB_STATUS.map(s=>`<option value="${s}"${(r.status||'Em debate')===s?' selected':''}>${s}</option>`).join('')}
+        </select>
+      </td>
       <td style="text-align:center" onclick="event.stopPropagation()">
         <select class="ind-select" style="min-width:82px" onchange="debSetLista('${r.id}',this.value)">
           <option value=""${!r.lista?' selected':''}>—</option>
@@ -2119,6 +2123,12 @@ function debSetLista(id,val){
   const r=DEB_JOG[id]; if(!r) return;
   r.lista=val;
   saveDebJog(r);
+}
+function debSetStatus(id,val){
+  const r=DEB_JOG[id]; if(!r) return;
+  r.status=val;
+  saveDebJog(r);
+  renderDebTable(); // re-renderiza pra atualizar a cor do select
 }
 function debSetFilter(key,val){ debFilters[key]=val; renderDebTable(); }
 function debSetSort(col){
