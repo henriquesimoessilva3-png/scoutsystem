@@ -648,7 +648,7 @@ let editingIndId=null;
 
 /* ══ DEBATIDOS STATE ══ */
 let DEB_JOG={};     // { id: {...} } — jogadores trazidos pro debate (rel. físicos + comparativos)
-let debFilters={janela:'',pos:'',status:'',search:''};
+let debFilters={janela:'',pos:'',status:'',lista:'',pais:'',clube:'',ger:'',contrato:'',trazido:'',search:''};
 let debSort={col:'posicao',dir:'asc'};
 let editingDebId=null;
 
@@ -1812,6 +1812,17 @@ function debJanelaAtual(){
   const d=new Date();
   return DEB_MESES[d.getMonth()]+'/'+String(d.getFullYear()).slice(2);
 }
+// "2026-05-05" -> "mai/26" (pro filtro Trazido em)
+function debMesDe(dataIso){
+  const d=String(dataIso||'').slice(0,10);
+  if(/^\d{4}-\d{2}/.test(d)) return DEB_MESES[parseInt(d.slice(5,7))-1]+'/'+d.slice(2,4);
+  return '';
+}
+// "2027-06-30" -> "2027" (pro filtro Contrato)
+function debAnoContrato(c){
+  const m=String(c||'').match(/(20\d{2})/);
+  return m?m[1]:'';
+}
 
 function debStatusClass(v){
   const vl=(v||'').toLowerCase();
@@ -1856,6 +1867,12 @@ function renderDebTable(){
   if(debFilters.janela) rows=rows.filter(r=>(r.janela||'')===debFilters.janela);
   if(debFilters.pos) rows=rows.filter(r=>(r.posicao||'')===debFilters.pos);
   if(debFilters.status) rows=rows.filter(r=>(r.status||'')===debFilters.status);
+  if(debFilters.lista) rows=rows.filter(r=>debFilters.lista==='(sem)'?!(r.lista||''):(r.lista||'')===debFilters.lista);
+  if(debFilters.pais) rows=rows.filter(r=>(r.pais||'')===debFilters.pais);
+  if(debFilters.clube) rows=rows.filter(r=>(r.clube||'')===debFilters.clube);
+  if(debFilters.ger) rows=rows.filter(r=>String(r.geracao||'')===debFilters.ger);
+  if(debFilters.contrato) rows=rows.filter(r=>debAnoContrato(r.contrato)===debFilters.contrato);
+  if(debFilters.trazido) rows=rows.filter(r=>debMesDe(r.data)===debFilters.trazido);
   if(debFilters.search){
     const q=debFilters.search.toLowerCase();
     rows=rows.filter(r=>(r.nome||'').toLowerCase().includes(q)||(r.clube||'').toLowerCase().includes(q)||(r.pais||'').toLowerCase().includes(q)||(r.obs||'').toLowerCase().includes(q));
@@ -1928,32 +1945,36 @@ function renderDebTable(){
   });
 
   const emptyRow=`<tr><td colspan="${cols.length}" style="padding:40px;text-align:center;color:#888780">Nenhum registro encontrado</td></tr>`;
-  const janelasPresentes=[...new Set(Object.values(DEB_JOG).map(r=>r.janela||''))].filter(Boolean).sort((a,b)=>debJanelaOrd(a)-debJanelaOrd(b));
+  const all=Object.values(DEB_JOG);
+  const uniq=(fn,sortFn)=>[...new Set(all.map(fn))].filter(Boolean).sort(sortFn||((a,b)=>String(a).localeCompare(String(b),'pt-BR',{sensitivity:'base'})));
+  const janelasPresentes=uniq(r=>r.janela||'',(a,b)=>debJanelaOrd(a)-debJanelaOrd(b));
+  const paisesPresentes=uniq(r=>r.pais||'');
+  const clubesPresentes=uniq(r=>r.clube||'');
+  const gersPresentes=uniq(r=>String(r.geracao||''),(a,b)=>b.localeCompare(a));
+  const contratosPresentes=uniq(r=>debAnoContrato(r.contrato));
+  const trazidosPresentes=uniq(r=>debMesDe(r.data),(a,b)=>debJanelaOrd(a)-debJanelaOrd(b));
+  const listasPresentes=[...DEB_LISTAS.filter(l=>all.some(r=>r.lista===l)),...(all.some(r=>!(r.lista||''))?['(sem)']:[])];
+  const sel=(label,key,opts,todosLabel,fmt)=>`
+      <div class="ind-filter-group">
+        <span class="ind-filter-label">${label}:</span>
+        <select class="ind-select" onchange="debSetFilter('${key}',this.value)">
+          <option value="">${todosLabel||'Todos'}</option>
+          ${opts.map(o=>`<option value="${o}"${debFilters[key]===o?' selected':''}>${fmt?fmt(o):o}</option>`).join('')}
+        </select>
+      </div>`;
 
   const ctrlEl=document.getElementById('indControls');
   if(ctrlEl) ctrlEl.innerHTML=`
     <div class="ind-controls">
-      <div class="ind-filter-group">
-        <span class="ind-filter-label">Janela:</span>
-        <select class="ind-select" onchange="debSetFilter('janela',this.value)">
-          <option value="">Todas</option>
-          ${janelasPresentes.map(j=>`<option value="${j}"${debFilters.janela===j?' selected':''}>${j}</option>`).join('')}
-        </select>
-      </div>
-      <div class="ind-filter-group">
-        <span class="ind-filter-label">Posição:</span>
-        <select class="ind-select" onchange="debSetFilter('pos',this.value)">
-          <option value="">Todas</option>
-          ${DEB_POSICOES.map(p=>`<option value="${p}"${debFilters.pos===p?' selected':''}>${DEB_POS_LABEL[p]||p}</option>`).join('')}
-        </select>
-      </div>
-      <div class="ind-filter-group">
-        <span class="ind-filter-label">Status:</span>
-        <select class="ind-select" onchange="debSetFilter('status',this.value)">
-          <option value="">Todos</option>
-          ${DEB_STATUS.map(s=>`<option value="${s}"${debFilters.status===s?' selected':''}>${s}</option>`).join('')}
-        </select>
-      </div>
+      ${sel('Janela','janela',janelasPresentes,'Todas')}
+      ${sel('Posição','pos',DEB_POSICOES,'Todas',p=>DEB_POS_LABEL[p]||p)}
+      ${sel('Geração','ger',gersPresentes,'Todas')}
+      ${sel('País','pais',paisesPresentes)}
+      ${sel('Clube','clube',clubesPresentes)}
+      ${sel('Contrato','contrato',contratosPresentes)}
+      ${sel('Trazido em','trazido',trazidosPresentes)}
+      ${sel('Status','status',DEB_STATUS)}
+      ${sel('Lista','lista',listasPresentes,'Todas')}
       <input class="ind-search" type="text" placeholder="Buscar atleta, clube, observação…" value="${debFilters.search}" oninput="debSetFilter('search',this.value)">
       <span class="ind-count">${total} atleta${total!==1?'s':''}</span>
       <button class="ind-add-btn" onclick="openDebForm(null)">＋ Novo Atleta</button>
