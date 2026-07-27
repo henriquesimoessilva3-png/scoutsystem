@@ -1067,6 +1067,7 @@ function renderNav(){
     +`<button class="nav-btn" style="background:#26241f;color:#9fe3b4;font-size:11px;border:1px dashed #5a7a60" onclick="openScoutModal()" title="Adicionar ou remover scouts">+ Scout</button>`
     +`<div style="margin-left:auto;display:flex;gap:6px;align-items:center">
         <button class="nav-btn" style="background:#8B1A2E;color:#e8c84a;font-size:11px;font-weight:600" onclick="openPrModal()">📄 Player Report</button>
+        <button class="nav-btn" style="background:#1a3d2e;color:#8ed4a4;font-size:11px;font-weight:600;border:1px solid #2c6b4f" onclick="openSalaryGuide()" title="Salary Guide 2026 — mapa salarial da Série A por posição × nível">💰 Salary Guide</button>
         <button class="nav-btn" style="background:#3a3835;color:#e8c84a;font-size:11px" onclick="exportData()">⬇ Export</button>
         <label class="nav-btn" style="background:#3a3835;color:#8ed4a4;font-size:11px;cursor:pointer">⬆ Import<input type="file" accept=".json" style="display:none" onchange="importData(this)"></label>
       </div>`;
@@ -3466,6 +3467,13 @@ const PR_ATTR_SUGGESTIONS = [
   'Off-the-ball movement','Work rate','Set pieces','Decision making',
   'Technical refinement','Communication','Composure','Vision'
 ];
+
+/* ── Salary Guide 2026 (salary_guide.html no mesmo diretório) ── */
+function openSalaryGuide(){
+  const base=location.href.replace(/[?#].*$/,'').replace(/[^/]*$/,'');
+  const w=window.open(base+'salary_guide.html','salaryGuide');
+  if(!w)alert('Permita pop-ups para abrir o Salary Guide.');
+}
 
 function openPrModal(){
   PR.step=1;
