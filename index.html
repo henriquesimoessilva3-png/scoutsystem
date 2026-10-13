@@ -485,6 +485,62 @@ table.ind-table tr:hover td{background:#f0eeea;cursor:pointer}
 .deb-del{background:transparent;border:none;color:rgba(232,74,74,.45);font-size:.78rem;font-weight:700;cursor:pointer;padding:0 4px;line-height:1}
 .deb-del:hover{color:#c00}
 .ind-pos{display:inline-block;background:#2c2c2a;color:#e8ecf3;border-radius:3px;padding:1px 5px;font-size:9px;font-weight:700;white-space:nowrap}
+
+/* ── Indicados: negocial, histórico do atleta, relatórios (13/10/2026) ── */
+.ind-neg{grid-column:span 2;background:#f5f8fb;border:1px solid #d6e2ee;border-radius:8px;padding:.8rem}
+.ind-neg-title{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.85rem;letter-spacing:.08em;text-transform:uppercase;color:#1a4a6e;margin-bottom:.6rem}
+.ind-hist{background:#fff8e6;border:1px solid #f0d58a;border-radius:8px;padding:.6rem .8rem;margin-bottom:.8rem;max-height:260px;overflow:auto}
+.ind-hist-hdr{font-size:.8rem;color:#7a5a00;margin-bottom:.4rem}
+.ind-hist-n{font-size:1.05rem;color:#7a5a00}
+.ind-hist-none{font-size:.75rem;color:#888780;margin:-.3rem 0 .6rem}
+.ind-hist-note{font-size:.75rem;color:#1a8040;margin:-.4rem 0 .6rem}
+.ind-hist-grp{margin-top:.4rem}
+.ind-hist-grp-hdr{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:.75rem;color:#1a1a18;margin-bottom:.3rem}
+.ind-hist-load{background:#1a4a6e;color:#fff;border:none;border-radius:5px;padding:.3rem .7rem;font-size:.7rem;font-weight:700;cursor:pointer;white-space:nowrap}
+.ind-hist-tbl{width:100%;border-collapse:collapse;font-size:.7rem;background:#fff}
+.ind-hist-tbl th{background:#2c2c2a;color:#f1efe8;font-weight:500;padding:3px 6px;text-align:left}
+.ind-hist-tbl td{border-bottom:1px solid #eee;padding:3px 6px;vertical-align:top}
+.ind-vezes{display:inline-block;background:#fff1c9;color:#7a5a00;border:1px solid #f0d58a;border-radius:9px;padding:0 6px;font-size:10px;font-weight:700}
+.rel-wrap{padding:14px 16px 40px;background:#f9f8f4;min-height:100%}
+.rel-head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:10px}
+.rel-title{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1.3rem;letter-spacing:.04em;text-transform:uppercase;color:#1a1a18}
+.rel-sub{font-size:11px;color:#888780}
+.rel-kpis{display:grid;grid-template-columns:repeat(7,minmax(110px,1fr));gap:8px;margin-bottom:12px}
+.rel-kpi{background:#fff;border:1px solid #e0ded4;border-top:3px solid #2c2c2a;border-radius:8px;padding:8px 10px}
+.rel-kpi-lbl{font-size:10px;color:#888780;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.rel-kpi-n{font-family:'Barlow Condensed',sans-serif;font-size:2rem;font-weight:700;line-height:1.05;color:#1a1a18}
+.rel-kpi-p{font-family:'Barlow Condensed',sans-serif;font-size:1.15rem;font-weight:700}
+.rel-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.rel-grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.rel-span2{grid-column:span 2}.rel-span3{grid-column:span 3}
+.rel-card{background:#fff;border:1px solid #e0ded4;border-radius:8px;padding:10px 12px}
+.rel-card-t{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.95rem;letter-spacing:.05em;text-transform:uppercase;color:#1a1a18;margin-bottom:8px}
+.rel-card-s{font-family:'Barlow',sans-serif;font-weight:400;font-size:10px;text-transform:none;letter-spacing:0;color:#888780;margin-left:6px}
+.rel-bars{display:flex;flex-direction:column;gap:5px}
+.rel-bar-row{display:grid;grid-template-columns:minmax(90px,30%) 1fr 118px;gap:8px;align-items:center;font-size:11px}
+.rel-bar-lbl{color:#1a1a18;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rel-bar-track{height:14px;background:#f0eeea;border-radius:3px;display:flex;overflow:hidden}
+.rel-bar-fill{height:100%}
+.rel-bar-val{white-space:nowrap;text-align:right}
+.rel-bar-extra{display:block;font-size:10px;color:#5f5e5a}
+.rel-n{font-family:'Barlow Condensed',sans-serif;font-size:1.05rem;font-weight:700;color:#1a1a18}
+.rel-p{font-family:'Barlow Condensed',sans-serif;font-size:.95rem;font-weight:700;color:#5f5e5a;margin-left:2px}
+.rel-cols{display:flex;align-items:flex-end;gap:6px;height:200px;padding-top:6px;overflow-x:auto}
+.rel-col{flex:1;min-width:34px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end}
+.rel-col-n{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1.05rem;color:#1a1a18}
+.rel-col-bar{width:70%;background:#2c2c2a;border-radius:3px 3px 0 0}
+.rel-col-lbl{font-size:10px;color:#5f5e5a;margin-top:3px;font-weight:600}
+.rel-col-sub{font-size:9px;color:#1a8040;white-space:nowrap}
+.rel-leg{display:flex;gap:12px;flex-wrap:wrap;font-size:10px;color:#5f5e5a;margin:-2px 0 8px}
+.rel-leg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.rel-tbl{width:100%;border-collapse:collapse;font-size:11px}
+.rel-tbl th{background:#2c2c2a;color:#f1efe8;font-weight:500;font-size:10px;padding:5px 8px;text-align:left}
+.rel-tbl td{border-bottom:1px solid #eee;padding:4px 8px}
+.rel-tbl tr:hover td{background:#f0eeea;cursor:pointer}
+.rel-td-n{text-align:center}
+.rel-empty{font-size:11px;color:#888780;padding:8px 0}
+@media(max-width:1100px){.rel-kpis{grid-template-columns:repeat(4,1fr)}.rel-grid{grid-template-columns:1fr 1fr}.rel-span3{grid-column:span 2}}
+@media(max-width:700px){.rel-kpis{grid-template-columns:repeat(2,1fr)}.rel-grid,.rel-grid2{grid-template-columns:1fr}.rel-span2,.rel-span3{grid-column:span 1}}
 /* Indicados Form Modal */
 #indModal{position:fixed;inset:0;z-index:2000;display:none;align-items:flex-start;justify-content:center;background:rgba(0,0,0,.45);backdrop-filter:blur(3px);overflow-y:auto;padding:20px}
 #indModal.open{display:flex}
@@ -646,7 +702,7 @@ let IND_TRE={};     // { id: {...} }
 let indTab='jog';   // 'jog' | 'tre'
 let indSortJog={col:'data',dir:'desc'};
 let indSortTre={col:'data',dir:'desc'};
-let indFilters={ano:'',pos:'',aval:'',resp:'',search:''};
+let indFilters={ano:'',pos:'',aval:'',resp:'',neg:'',search:''};
 let indFiltersTre={ano:'',search:''};
 let editingIndId=null;
 
@@ -825,10 +881,10 @@ function initFirebase(){
           }
           catch(e){PR_SAVED[id]={...data[id],_id:id};}
         });
-        if(currentView==='indicados') document.getElementById('views').innerHTML=renderIndicados();
+        refreshIndView();
       });
-      db.ref('ind_jog').on('value',snap=>{ IND_JOG=snap.val()||{}; try{localStorage.setItem('ind_jog',JSON.stringify(IND_JOG));}catch(e){} if(currentView==='indicados') document.getElementById('views').innerHTML=renderIndicados(); });
-      db.ref('ind_tre').on('value',snap=>{ IND_TRE=snap.val()||{}; try{localStorage.setItem('ind_tre',JSON.stringify(IND_TRE));}catch(e){} if(currentView==='indicados') document.getElementById('views').innerHTML=renderIndicados(); });
+      db.ref('ind_jog').on('value',snap=>{ IND_JOG=snap.val()||{}; try{localStorage.setItem('ind_jog',JSON.stringify(IND_JOG));}catch(e){} refreshIndView(); });
+      db.ref('ind_tre').on('value',snap=>{ IND_TRE=snap.val()||{}; try{localStorage.setItem('ind_tre',JSON.stringify(IND_TRE));}catch(e){} refreshIndView(); });
       db.ref('deb_jog').on('value',snap=>{ DEB_JOG=snap.val()||{}; try{localStorage.setItem('deb_jog',JSON.stringify(DEB_JOG));}catch(e){} if(currentView==='debatidos'){ if(debEditandoInline()) window._debPendRender=true; else renderViews(); } });
       setSyncBadge('synced','● Live');
       renderNav();renderViews();setTimeout(fixStickyTops,50);
@@ -1081,7 +1137,7 @@ function renderViews(preserveScroll){
   if(currentView==='cal'){views.innerHTML=renderCal();setTimeout(()=>{fixStickyTops();if(preserveScroll){const w=document.querySelector('.scroll-wrap');if(w){w.scrollLeft=sx;w.scrollTop=sy;}}},10);}
   else if(currentView==='resumo'){views.innerHTML=renderResumo();setTimeout(fixStickyTops,10);}
   else if(currentView==='shortlist'){views.innerHTML=renderShortlist();setTimeout(fixStickyTops,10);}
-  else if(currentView==='indicados'){views.innerHTML=renderIndicados();setTimeout(()=>{fixStickyTops();if(indTab==='jog')renderIndJogTable();else renderIndTreTable();fixIndHeight();},10);}
+  else if(currentView==='indicados'){views.innerHTML=renderIndicados();setTimeout(()=>{fixStickyTops();renderIndTabAtual();fixIndHeight();},10);}
   else if(currentView==='debatidos'){views.innerHTML=renderDebatidos();setTimeout(()=>{fixStickyTops();renderDebTable();fixIndHeight();},10);}
   else{const s=currentView.replace('scout_','');views.innerHTML=renderScoutView(s);setTimeout(()=>{fixStickyTops();if(preserveScroll){const w=document.querySelector('.scroll-wrap');if(w){w.scrollLeft=sx;w.scrollTop=sy;}}},10);}
 }
@@ -1271,7 +1327,7 @@ function renderScoutView(scout){
 const IND_POSITIONS=['1 - GK','2 - RB','3 - LB','4 - RCB/LCB','5 - DM','6 - CM','7 - AM','8 - RW/LW','9 - CF'];
 const IND_AVAL_AGRUP=['APROVADO - A Team','APROVADO - Squad Player','APROVADO - Time B/RWD','APROVADO - Youth Player','APROVADO U20','Em Avaliação','Monitorando/Monitorar','Descartado'];
 const IND_RESPONSAVEIS=['Brunno','Cristian','Gabriel','Humberto','Base'];
-const IND_ANOS=['2022','2023','2024','2025','2026'];
+const IND_ANOS=Array.from({length:new Date().getFullYear()-2020},(_,i)=>String(2022+i));
 
 function avalClass(v){
   if(!v) return '';
@@ -1318,8 +1374,9 @@ function renderIndicados(){
     </div>
     <div class="ind-wrap">
       <div class="ind-tabs">
-        <button class="ind-tab${indTab==='jog'?' active':''}" onclick="setIndTab('jog')">⚽ Jogadores (${Object.keys(IND_JOG).length})</button>
-        <button class="ind-tab${indTab==='tre'?' active':''}" onclick="setIndTab('tre')">🏅 Treinadores (${Object.keys(IND_TRE).length})</button>
+        <button class="ind-tab${indTab==='jog'?' active':''}" data-tab="jog" onclick="setIndTab('jog')">⚽ Jogadores (${Object.keys(IND_JOG).length})</button>
+        <button class="ind-tab${indTab==='rel'?' active':''}" data-tab="rel" onclick="setIndTab('rel')">📊 Relatórios</button>
+        <button class="ind-tab${indTab==='tre'?' active':''}" data-tab="tre" onclick="setIndTab('tre')">🏅 Treinadores (${Object.keys(IND_TRE).length})</button>
       </div>
       <div id="indControls" class="ind-controls-wrap"></div>
       <div id="indTableWrap" class="ind-table-wrap">
@@ -1332,11 +1389,8 @@ function renderIndicados(){
 
 function setIndTab(tab){
   indTab=tab;
-  if(tab==='jog') renderIndJogTable(); else renderIndTreTable();
-  // Update tab buttons
-  document.querySelectorAll('.ind-tab').forEach((el,i)=>{
-    el.classList.toggle('active',(i===0&&tab==='jog')||(i===1&&tab==='tre'));
-  });
+  renderIndTabAtual();
+  document.querySelectorAll('.ind-tab').forEach(el=>el.classList.toggle('active',el.dataset.tab===tab));
 }
 
 /* ══════════════════════════════════════════
@@ -1369,7 +1423,8 @@ function renderIndJogTable(){
 
   // Filters
   if(indFilters.ano) rows=rows.filter(r=>String(r.ano||'')===indFilters.ano);
-  if(indFilters.pos) rows=rows.filter(r=>(r.posicao||'')=== indFilters.pos);
+  if(indFilters.pos) rows=rows.filter(r=>indPosCode(r)===indFilters.pos);
+  if(indFilters.neg) rows=rows.filter(r=>indFilters.neg==='__com'?!!(r.negStatus||r.negTipo):(r.negStatus||'')===indFilters.neg);
   if(indFilters.aval) rows=rows.filter(r=>(r.avalAgrup||'')===indFilters.aval);
   if(indFilters.resp) rows=rows.filter(r=>(r.responsavel||'')===indFilters.resp);
   if(indFilters.search){
@@ -1381,6 +1436,9 @@ function renderIndJogTable(){
   rows=[...rows].sort((a,b)=>{
     const col=indSortJog.col, dir=indSortJog.dir==='asc'?1:-1;
     let av=a[col]??'', bv=b[col]??'';
+    if(col==='_vezes'){av=indVezes(a);bv=indVezes(b);}
+    if(col==='posicao'){av=indPosLabel(a);bv=indPosLabel(b);}
+    if(col==='avalAgrup'){av=indAvalTexto(a);bv=indAvalTexto(b);}
     const aEmpty=(av===''||av==null), bEmpty=(bv===''||bv==null);
     if(aEmpty&&bEmpty) return 0; if(aEmpty) return 1; if(bEmpty) return -1;
     if(col==='data'){
@@ -1398,6 +1456,7 @@ function renderIndJogTable(){
 
   const cols=[
     {id:'nome',    label:'Atleta'},
+    {id:'_vezes',  label:'Indic.'},
     {id:'posicao', label:'Pos.'},
     {id:'geracao', label:'Ger.'},
     {id:'pais',    label:'País'},
@@ -1407,6 +1466,7 @@ function renderIndJogTable(){
     {id:'recepcao',label:'Recepção'},
     {id:'indicacao',label:'Indicação'},
     {id:'avalAgrup',label:'Avaliação'},
+    {id:'negStatus',label:'Negocial'},
     {id:'eagle',   label:'Eagle'},
     {id:'instat',  label:'Instat'},
     {id:'monitorado',label:'Mon.'},
@@ -1416,7 +1476,8 @@ function renderIndJogTable(){
   const tableRows=rows.map(r=>`
     <tr onclick="openIndForm('jog','${r.id}')">
       <td style="font-weight:500;min-width:140px">${r.nome||'—'}</td>
-      <td style="text-align:center"><span class="ind-pos">${r.posicao||'—'}</span></td>
+      <td style="text-align:center">${(()=>{const v=indVezes(r);return v>1?`<span class="ind-vezes" title="Indicado ${v} vezes no total">${v}×</span>`:'<span style="color:#c8c6bc">1</span>';})()}</td>
+      <td style="text-align:center"><span class="ind-pos">${indPosLabel(r)||'—'}</span></td>
       <td style="text-align:center;color:#5f5e5a">${r.geracao||'—'}</td>
       <td style="color:#5f5e5a;white-space:nowrap">${r.pais||'—'}</td>
       <td style="min-width:120px;color:#5f5e5a">${r.clube||'—'}</td>
@@ -1424,7 +1485,8 @@ function renderIndJogTable(){
       <td style="white-space:nowrap">${r.responsavel||'—'}</td>
       <td style="color:#5f5e5a;min-width:100px">${r.recepcao||'—'}</td>
       <td style="color:#5f5e5a;min-width:100px">${r.indicacao||'—'}</td>
-      <td>${r.avalAgrup?`<span class="ind-aval ${avalClass(r.avalAgrup)}">${r.avalAgrup}</span>`:''}</td>
+      <td>${indAvalTexto(r)?`<span class="ind-aval ${avalClass(indAvalTexto(r))}">${indAvalTexto(r)}</span>`:''}</td>
+      <td>${negResumo(r)}</td>
       <td style="text-align:center;color:#5f5e5a">${r.eagle||'—'}</td>
       <td style="text-align:center;color:#5f5e5a">${r.instat||'—'}</td>
       <td style="text-align:center;color:#5f5e5a">${r.monitorado||'—'}</td>
@@ -1466,6 +1528,14 @@ function renderIndJogTable(){
         <select class="ind-select" onchange="indSetFilter('resp',this.value)">
           <option value="">Todos</option>
           ${IND_RESPONSAVEIS.map(r=>`<option value="${r}"${indFilters.resp===r?' selected':''}>${r}</option>`).join('')}
+        </select>
+      </div>
+      <div class="ind-filter-group">
+        <span class="ind-filter-label">Negocial:</span>
+        <select class="ind-select" onchange="indSetFilter('neg',this.value)">
+          <option value="">Todos</option>
+          <option value="__com"${indFilters.neg==='__com'?' selected':''}>Com info negocial</option>
+          ${NEG_STATUS.map(a=>`<option value="${a}"${indFilters.neg===a?' selected':''}>${a}</option>`).join('')}
         </select>
       </div>
       <input class="ind-search" type="text" placeholder="Buscar atleta, clube, agente…" value="${indFilters.search}" oninput="indSetFilter('search',this.value)">
@@ -1620,6 +1690,7 @@ function openIndForm(type,id){
 
   if(type==='jog'){
     document.getElementById('indModalBody').innerHTML=buildJogForm(data);
+    setTimeout(indAttachNomeWatch,0);
   } else {
     document.getElementById('indModalBody').innerHTML=buildTreForm(data);
   }
@@ -1649,10 +1720,13 @@ function buildJogForm(p){
     </div>
     <button id="btnOgolBuscar" onclick="buscarOgol()" style="background:#1a4a6e;color:#fff;border:none;border-radius:6px;padding:.55rem 1.1rem;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;white-space:nowrap">🔍 Buscar Ogol</button>
   </div>
+  ${indNomesDatalist()}
+  <div id="indHistBox"></div>
+  <div id="indHistNote" class="ind-hist-note"></div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem">
     ${ffl('Atleta *','iNome','text',p.nome||'','',true,'grid-column:span 2')}
     ${ffls('Ano','iAno',IND_ANOS,p.ano||String(yr))}
-    ${ffls('Posição','iPosicao',['',...IND_POSITIONS],p.posicao||'')}
+    ${ffls('Posição','iPosicao',['',...IND_POSITIONS],indPosCode(p)||'')}
     ${ffl('Geração (ano nasc.)','iGeracao','number',p.geracao||'','ex: 2004')}
     ${ffl('País','iPais','text',p.pais||'','ex: Brasil')}
     ${ffl('Clube','iClube','text',p.clube||'','ex: Flamengo')}
@@ -1667,6 +1741,7 @@ function buildJogForm(p){
     ${ffl('Transfermarkt Link','iTmLink','url',p.tmLink||'','https://www.transfermarkt.com/…')}
     ${ffl('Agência','iAgencia','text',p.agencia||'','Nome da agência/representação')}
     ${ffl('Contato Agência','iAgenciaContato','text',p.agenciaContato||'','Nome, telefone ou e-mail')}
+    ${buildNegocialBlock(p)}
     <div style="grid-column:span 2;display:flex;flex-direction:column;gap:.3rem">
       <label style="font-size:.65rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#888780">Avaliação Dep. de Mercado</label>
       <textarea id="iAvalMkt" rows="3" style="background:#f9f8f4;border:1px solid #e0ded4;border-radius:6px;color:#1a1a18;font-family:'Barlow',sans-serif;font-size:.85rem;padding:.5rem .75rem;outline:none;width:100%;resize:vertical" placeholder="Avaliação detalhada…">${p.avalMkt||''}</textarea>
@@ -1742,9 +1817,11 @@ function submitIndForm(type){
   if(type==='jog'){
     const nome=gvi('iNome');
     if(!nome){alert('Informe o nome do atleta.');return;}
+    const prevRec=editingIndId?(IND_JOG[editingIndId]||{}):{};
     const data={
+      ...prevRec,
       id:editingIndId||('ij'+Date.now()),
-      ano:gvi('iAno'),nome,posicao:gvi('iPosicao'),geracao:gvi('iGeracao'),
+      ano:gvi('iAno'),nome,posicao:gvi('iPosicao')||prevRec.posicao||'',geracao:gvi('iGeracao'),
       pais:gvi('iPais'),clube:gvi('iClube'),data:gvi('iData'),
       responsavel:gvi('iResponsavel'),recepcao:gvi('iRecepcao'),
       indicacao:gvi('iIndicacao'),avalAgrup:gvi('iAvalAgrup'),
@@ -1755,12 +1832,17 @@ function submitIndForm(type){
       tmLink:gvi('iTmLink')||'',
       agencia:gvi('iAgencia')||'',
       agenciaContato:gvi('iAgenciaContato')||'',
+      negStatus:gvi('iNegStatus'),negTipo:gvi('iNegTipo'),negValor:gvi('iNegValor'),
+      negSalario:gvi('iNegSalario'),negContrato:gvi('iNegContrato'),
+      negObs:(document.getElementById('iNegObs')||{value:''}).value.trim(),
     };
+    Object.keys(data).forEach(k=>{ if(data[k]===''&&prevRec[k]===undefined) delete data[k]; });
     saveIndJog(data);
   } else {
     const nome=gvi('tNome');
     if(!nome){alert('Informe o nome do treinador.');return;}
     const data={
+      ...(editingIndId?(IND_TRE[editingIndId]||{}):{}),
       id:editingIndId||('it'+Date.now()),
       ano:gvi('tAno'),nome,pais:gvi('tPais'),idade:gvi('tIdade'),
       sistema:gvi('tSistema'),partidas:gvi('tPartidas'),ppj:gvi('tPpj'),
@@ -1772,14 +1854,7 @@ function submitIndForm(type){
     saveIndTre(data);
   }
   closeIndModal();
-  // Refresh table
-  const body=document.getElementById('indBody');
-  if(body){ body.innerHTML=type==='jog'?renderIndJogTable():renderIndTreTable(); setTimeout(fixIndHeight,10); }
-  // Update tab counts
-  document.querySelectorAll('.ind-tab').forEach((el,i)=>{
-    if(i===0) el.textContent=`⚽ Jogadores (${Object.keys(IND_JOG).length})`;
-    if(i===1) el.textContent=`🏅 Treinadores (${Object.keys(IND_TRE).length})`;
-  });
+  refreshIndView();
 }
 
 function confirmDeleteInd(type,id){
@@ -1787,12 +1862,7 @@ function confirmDeleteInd(type,id){
   if(type==='jog') deleteIndJog(id);
   else deleteIndTre(id);
   closeIndModal();
-  const body=document.getElementById('indBody');
-  if(body){ body.innerHTML=type==='jog'?renderIndJogTable():renderIndTreTable(); setTimeout(fixIndHeight,10); }
-  document.querySelectorAll('.ind-tab').forEach((el,i)=>{
-    if(i===0) el.textContent=`⚽ Jogadores (${Object.keys(IND_JOG).length})`;
-    if(i===1) el.textContent=`🏅 Treinadores (${Object.keys(IND_TRE).length})`;
-  });
+  refreshIndView();
 }
 
 /* ══════════════════════════════════════════
@@ -2937,19 +3007,386 @@ function fixStickyTops(){
 window.addEventListener('resize',()=>{ fixStickyTops(); if(currentView==='indicados'||currentView==='debatidos') fixIndHeight(); });
 
 
+/* ══════════════════════════════════════════
+   INDICADOS — NEGOCIAL / HISTÓRICO DO ATLETA / RELATÓRIOS  (13/10/2026)
+══════════════════════════════════════════ */
+const NEG_STATUS=['Não iniciada','Em conversa','Proposta enviada','Contraproposta','Fechado','Não avançou'];
+const NEG_TIPO=['Compra definitiva','Empréstimo','Empréstimo c/ opção de compra','Empréstimo c/ obrigação de compra','Livre (fim de contrato)','Troca'];
+// campos do atleta (não da oferta) que podem ser trazidos de uma indicação anterior
+const IND_CARRY=['posicao','geracao','pais','clube','responsavel','avalAgrup','eagle','instat','monitorado','tmLink','ogolLink','agencia','agenciaContato','negStatus','negTipo','negValor','negSalario','negContrato','negObs'];
+
+function negClass(s){
+  const v=(s||'').toLowerCase();
+  if(v.startsWith('fechado')) return 'a-team';
+  if(v.startsWith('proposta')||v.startsWith('contra')) return 'squad';
+  if(v.startsWith('em conversa')) return 'youth';
+  if(v.startsWith('não avan')) return 'descartado';
+  return 'monitorando';
+}
+function negResumo(r){
+  if(!r.negStatus&&!r.negTipo&&!r.negValor&&!r.negSalario) return '';
+  const det=[r.negTipo,r.negValor,r.negSalario?('sal. '+r.negSalario):''].filter(Boolean).join(' · ');
+  return `${r.negStatus?`<span class="ind-aval ${negClass(r.negStatus)}">${r.negStatus}</span>`:''}${det?`<div style="font-size:9px;color:#5f5e5a;margin-top:2px;white-space:nowrap">${det}</div>`:''}`;
+}
+
+// posição: código novo (POSITION) ou texto antigo (2022–2024) → código
+const IND_POS_TXT={goleiro:'1 - GK',lateral_direito:'2 - RB',lateral_esquerdo:'3 - LB',zagueiro:'4 - RCB/LCB',volante:'5 - DM',medio:'6 - CM',meio_campo:'6 - CM',meia:'7 - AM',meia_ofensivo:'7 - AM',extrema:'8 - RW/LW',extremo:'8 - RW/LW',ponta:'8 - RW/LW',atacante:'9 - CF',centroavante:'9 - CF',centro_avante:'9 - CF'};
+function indPosCode(r){
+  if(r.posicao&&IND_POSITIONS.includes(r.posicao)) return r.posicao;
+  const t=slugInd(r.posicao||r.posicaoText||'');
+  if(!t) return '';
+  if(IND_POS_TXT[t]) return IND_POS_TXT[t];
+  if(t.includes('lateral')&&t.includes('dir')) return '2 - RB';
+  if(t.includes('lateral')&&t.includes('esq')) return '3 - LB';
+  if(t.includes('zag')) return '4 - RCB/LCB';
+  if(t.includes('volan')) return '5 - DM';
+  if(t.includes('extrem')||t.includes('ponta')) return '8 - RW/LW';
+  if(t.includes('ataca')||t.includes('centroav')) return '9 - CF';
+  if(t.includes('meia')) return '7 - AM';
+  if(t.includes('goleir')) return '1 - GK';
+  return '';
+}
+function indPosLabel(r){ return r.posicao||r.posicaoText||''; }
+function indAvalTexto(r){ return r.avalAgrup||r.avalMkt||''; }
+// avaliação em 4 grandes grupos
+function indAvalMacro(r){
+  const v=indAvalTexto(r).toLowerCase();
+  if(!v) return 'Sem avaliação';
+  if(v.includes('aprovad')) return 'Aprovado';
+  if(v.includes('descart')) return 'Descartado';
+  if(v.includes('monitor')||v.includes('avalia')||v.includes('acompanh')) return 'Em avaliação / Monitorando';
+  return 'Outros';
+}
+// data da indicação → Date (aceita DD/MM/AAAA, DD/MM com o ano do registro, AAAA-MM-DD, DD.MM)
+function indDataObj(r){
+  const s=String(r.data||'').trim();
+  let m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m) return new Date(+m[1],+m[2]-1,+m[3]);
+  m=s.match(/^(\d{1,2})[\/.](\d{1,2})(?:[\/.](\d{2,4}))?/);
+  if(!m) return null;
+  let y=m[3]?+m[3]:(+r.ano||0); if(y&&y<100) y+=2000;
+  const d=+m[1],mo=+m[2];
+  if(!y||mo<1||mo>12||d<1||d>31) return null;
+  return new Date(y,mo-1,d);
+}
+
+/* ── chave do atleta (para achar indicações anteriores) ── */
+function indPlayerKey(r){ return slugInd(r.nome); }
+let IND_IDX=null, IND_IDX_N=-1;
+function indIndex(){
+  const n=Object.keys(IND_JOG).length;
+  if(IND_IDX&&IND_IDX_N===n) return IND_IDX;
+  IND_IDX={}; IND_IDX_N=n;
+  Object.values(IND_JOG).forEach(r=>{ const k=indPlayerKey(r); if(!k) return; (IND_IDX[k]=IND_IDX[k]||[]).push(r); });
+  Object.values(IND_IDX).forEach(a=>a.sort((x,y)=>(indDataObj(y)||0)-(indDataObj(x)||0)));
+  return IND_IDX;
+}
+function indInvalidateIdx(){ IND_IDX=null; }
+// quantas vezes o mesmo atleta (mesmo nome e mesma geração, quando informada) foi indicado
+function indVezes(r){
+  const all=indIndex()[indPlayerKey(r)]||[];
+  if(!r.geracao) return all.length;
+  return all.filter(x=>!x.geracao||String(x.geracao)===String(r.geracao)).length;
+}
+
+function indRenderHistorico(){
+  const box=document.getElementById('indHistBox'); if(!box) return;
+  const nome=gvi('iNome');
+  const k=slugInd(nome);
+  if(!k||k.length<3){ box.innerHTML=''; return; }
+  const prev=(indIndex()[k]||[]).filter(r=>r.id!==editingIndId);
+  if(!prev.length){ box.innerHTML=editingIndId?'':`<div class="ind-hist-none">Primeira indicação deste atleta no sistema.</div>`; return; }
+  // agrupa por geração (homônimos)
+  const grupos={};
+  prev.forEach(r=>{ const g=r.geracao||'?'; (grupos[g]=grupos[g]||[]).push(r); });
+  const gKeys=Object.keys(grupos);
+  box.innerHTML=`<div class="ind-hist">
+    <div class="ind-hist-hdr">⚠ Já indicado <b class="ind-hist-n">${prev.length}</b> vez${prev.length>1?'es':''} antes${gKeys.length>1?` — atenção: ${gKeys.length} atletas com esse nome (gerações ${gKeys.join(', ')})`:''}</div>
+    ${gKeys.map(g=>{
+      const rs=grupos[g]; const u=rs[0];
+      return `<div class="ind-hist-grp">
+        <div class="ind-hist-grp-hdr"><span><b>${u.nome}</b> · ${g!=='?'?g:'geração não informada'} · ${indPosLabel(u)||'—'} · ${u.clube||'—'}</span>
+          <button type="button" class="ind-hist-load" onclick="indCarregarDe('${u.id}',true)">↓ Carregar dados</button></div>
+        <table class="ind-hist-tbl"><thead><tr><th>Data</th><th>Agente</th><th>Recepção</th><th>Resp.</th><th>Clube</th><th>Avaliação</th><th>Negocial</th></tr></thead><tbody>
+        ${rs.map(r=>`<tr><td>${fmtIndData(r.data)}</td><td>${r.indicacao||'—'}</td><td>${r.recepcao||'—'}</td><td>${r.responsavel||'—'}</td><td>${r.clube||'—'}</td><td>${indAvalTexto(r)?`<span class="ind-aval ${avalClass(indAvalTexto(r))}">${indAvalTexto(r)}</span>`:'—'}</td><td>${negResumo(r)||'—'}</td></tr>`).join('')}
+        </tbody></table></div>`;
+    }).join('')}
+  </div>`;
+  // novo cadastro + um único atleta com esse nome → já carrega os dados nos campos vazios
+  if(!editingIndId&&gKeys.length===1&&!box.dataset.auto){
+    box.dataset.auto='1';
+    indCarregarDe(grupos[gKeys[0]][0].id,false);
+  }
+}
+const IND_FIELD_IDS={posicao:'iPosicao',geracao:'iGeracao',pais:'iPais',clube:'iClube',responsavel:'iResponsavel',avalAgrup:'iAvalAgrup',eagle:'iEagle',instat:'iInstat',monitorado:'iMonitorado',tmLink:'iTmLink',ogolLink:'iOgolLink',agencia:'iAgencia',agenciaContato:'iAgenciaContato',negStatus:'iNegStatus',negTipo:'iNegTipo',negValor:'iNegValor',negSalario:'iNegSalario',negContrato:'iNegContrato',negObs:'iNegObs'};
+// sobrescrever=false → só preenche campos vazios
+function indCarregarDe(id,sobrescrever){
+  const src=IND_JOG[id]; if(!src) return;
+  let n=0;
+  IND_CARRY.forEach(f=>{
+    const el=document.getElementById(IND_FIELD_IDS[f]); if(!el) return;
+    let v=src[f]; if(f==='posicao') v=indPosCode(src)||src.posicao;
+    if(f==='avalAgrup'&&!v&&src.avalMkt){ const mac=indAvalMacro(src); v=mac==='Descartado'?'Descartado':mac==='Em avaliação / Monitorando'?'Monitorando/Monitorar':''; }
+    if(v===undefined||v===null||v==='') return;
+    if(!sobrescrever&&el.value) return;
+    if(el.tagName==='SELECT'&&![...el.options].some(o=>o.value===String(v))) return;
+    el.value=v; n++;
+  });
+  const note=document.getElementById('indHistNote');
+  if(note) note.innerHTML=n?`✓ ${n} campo${n>1?'s':''} carregado${n>1?'s':''} da indicação de <b>${fmtIndData(src.data)}</b> (agente ${src.indicacao||'—'}). Confira e ajuste antes de salvar.`:'';
+}
+function indAttachNomeWatch(){
+  const el=document.getElementById('iNome'); if(!el) return;
+  el.setAttribute('list','indNomesList'); el.setAttribute('autocomplete','off');
+  let t=null;
+  el.addEventListener('input',()=>{ clearTimeout(t); t=setTimeout(()=>{ const b=document.getElementById('indHistBox'); if(b) delete b.dataset.auto; indRenderHistorico(); },250); });
+  indRenderHistorico();
+}
+function indNomesDatalist(){
+  const seen=new Set(); const out=[];
+  Object.values(IND_JOG).forEach(r=>{ const n=(r.nome||'').trim(); if(n&&!seen.has(n)){seen.add(n);out.push(n);} });
+  out.sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  return `<datalist id="indNomesList">${out.map(n=>`<option value="${n.replace(/"/g,'&quot;')}">`).join('')}</datalist>`;
+}
+
+function buildNegocialBlock(p){
+  return `<div class="ind-neg">
+    <div class="ind-neg-title">💼 Negocial</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.8rem">
+      ${ffls('Status da negociação','iNegStatus',['',...NEG_STATUS],p.negStatus||'')}
+      ${ffls('Tipo de operação','iNegTipo',['',...NEG_TIPO],p.negTipo||'')}
+      ${ffl('Fim de contrato','iNegContrato','text',p.negContrato||'','ex: 30/06/2027')}
+      ${ffl('Valor pedido (transferência)','iNegValor','text',p.negValor||'','ex: € 2,5 mi / 50% dos direitos')}
+      ${ffl('Salário pedido','iNegSalario','text',p.negSalario||'','ex: € 40 mil/mês')}
+      <div></div>
+      <div style="grid-column:span 3;display:flex;flex-direction:column;gap:.3rem">
+        <label style="font-size:.65rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#888780">Observação negocial</label>
+        <textarea id="iNegObs" rows="2" style="background:#f9f8f4;border:1px solid #e0ded4;border-radius:6px;color:#1a1a18;font-family:'Barlow',sans-serif;font-size:.85rem;padding:.5rem .75rem;outline:none;width:100%;resize:vertical" placeholder="Condições, luvas, comissão do agente, prazo, cláusulas…">${p.negObs||''}</textarea>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ══════════════════════════════════════════
+   RELATÓRIOS (aba dentro de Indicados)
+══════════════════════════════════════════ */
+let indRelFilters={ano:'',pos:'',resp:'',de:'',ate:''};
+function indRelSetFilter(k,v){ indRelFilters[k]=v; renderIndRelatorios(); }
+
+function indRelRows(){
+  let rows=Object.values(IND_JOG);
+  const f=indRelFilters;
+  if(f.ano) rows=rows.filter(r=>String(r.ano||'')===f.ano);
+  if(f.pos) rows=rows.filter(r=>indPosCode(r)===f.pos);
+  if(f.resp) rows=rows.filter(r=>(r.responsavel||'')===f.resp);
+  if(f.de||f.ate){
+    const de=f.de?new Date(f.de+'T00:00:00'):null, ate=f.ate?new Date(f.ate+'T23:59:59'):null;
+    rows=rows.filter(r=>{ const d=indDataObj(r); if(!d) return false; return (!de||d>=de)&&(!ate||d<=ate); });
+  }
+  return rows;
+}
+const pctTxt=(n,t)=>t?Math.round(n*1000/t)/10:0;
+function relNum(n,t){ return `<b class="rel-n">${n.toLocaleString('pt-BR')}</b>${t!==undefined?` <b class="rel-p">${pctTxt(n,t).toLocaleString('pt-BR')}%</b>`:''}`; }
+// barra horizontal com valor absoluto e %
+function relBars(items,total,opts={}){
+  const max=Math.max(1,...items.map(i=>i.n));
+  return `<div class="rel-bars">${items.map(i=>`
+    <div class="rel-bar-row" ${i.title?`title="${String(i.title).replace(/"/g,'&quot;')}"`:''}>
+      <div class="rel-bar-lbl">${i.label}</div>
+      <div class="rel-bar-track">${i.parts?i.parts.map(p=>`<div class="rel-bar-fill" style="width:${p.n/max*100}%;background:${p.color}" title="${p.label}: ${p.n}"></div>`).join(''):`<div class="rel-bar-fill" style="width:${i.n/max*100}%;background:${i.color||opts.color||'#2c2c2a'}"></div>`}</div>
+      <div class="rel-bar-val">${relNum(i.n,opts.noPct?undefined:total)}${i.extra?`<span class="rel-bar-extra">${i.extra}</span>`:''}</div>
+    </div>`).join('')}</div>`;
+}
+function countBy(rows,fn){ const m={}; rows.forEach(r=>{ const k=fn(r); if(k===null||k===undefined||k==='') return; m[k]=(m[k]||0)+1; }); return m; }
+const REL_COR={'Aprovado':'#1a8040','Em avaliação / Monitorando':'#b8860b','Descartado':'#c0392b','Sem avaliação':'#b8b6ac','Outros':'#7a6fb0'};
+const REL_MACROS=['Aprovado','Em avaliação / Monitorando','Descartado','Sem avaliação','Outros'];
+
+function renderIndRelatorios(){
+  const ctrlEl=document.getElementById('indControls');
+  const tblEl=document.getElementById('indTableContent');
+  const rows=indRelRows(); const T=rows.length;
+  const f=indRelFilters;
+  const anos=[...new Set(Object.values(IND_JOG).map(r=>String(r.ano||'')).filter(Boolean))].sort().reverse();
+  if(ctrlEl) ctrlEl.innerHTML=`<div class="ind-controls">
+    <div class="ind-filter-group"><span class="ind-filter-label">Ano:</span><select class="ind-select" onchange="indRelSetFilter('ano',this.value)"><option value="">Todos</option>${anos.map(a=>`<option${f.ano===a?' selected':''}>${a}</option>`).join('')}</select></div>
+    <div class="ind-filter-group"><span class="ind-filter-label">Posição:</span><select class="ind-select" onchange="indRelSetFilter('pos',this.value)"><option value="">Todas</option>${IND_POSITIONS.map(p=>`<option${f.pos===p?' selected':''}>${p}</option>`).join('')}</select></div>
+    <div class="ind-filter-group"><span class="ind-filter-label">Responsável:</span><select class="ind-select" onchange="indRelSetFilter('resp',this.value)"><option value="">Todos</option>${IND_RESPONSAVEIS.map(p=>`<option${f.resp===p?' selected':''}>${p}</option>`).join('')}</select></div>
+    <div class="ind-filter-group"><span class="ind-filter-label">De:</span><input type="date" class="ind-select" value="${f.de}" onchange="indRelSetFilter('de',this.value)"></div>
+    <div class="ind-filter-group"><span class="ind-filter-label">Até:</span><input type="date" class="ind-select" value="${f.ate}" onchange="indRelSetFilter('ate',this.value)"></div>
+    ${(f.ano||f.pos||f.resp||f.de||f.ate)?`<button class="ind-select" onclick="indRelFilters={ano:'',pos:'',resp:'',de:'',ate:''};renderIndRelatorios()">✕ Limpar</button>`:''}
+    <span class="ind-count">${T.toLocaleString('pt-BR')} indicações</span>
+    <button class="ind-add-btn" onclick="imprimirRelIndicados()">🖨 Imprimir / PDF</button>
+  </div>`;
+  if(!tblEl) return;
+  if(!T){ tblEl.innerHTML=`<div style="padding:40px;text-align:center;color:#888780">Nenhuma indicação com esses filtros.</div>`; setTimeout(fixIndHeight,0); return; }
+
+  const macro=countBy(rows,indAvalMacro);
+  const atletas=new Set(rows.map(r=>indPlayerKey(r)+'|'+(r.geracao||''))).size;
+  const agentes=new Set(rows.map(r=>slugInd(r.indicacao)).filter(Boolean)).size;
+  const aprov=macro['Aprovado']||0, desc=macro['Descartado']||0, aval=macro['Em avaliação / Monitorando']||0, sem=macro['Sem avaliação']||0;
+
+  // KPIs
+  const kpi=(lbl,n,t,cor)=>`<div class="rel-kpi" style="border-top-color:${cor||'#2c2c2a'}"><div class="rel-kpi-lbl">${lbl}</div><div class="rel-kpi-n">${n.toLocaleString('pt-BR')}</div>${t!==undefined?`<div class="rel-kpi-p" style="color:${cor}">${pctTxt(n,t).toLocaleString('pt-BR')}%</div>`:'<div class="rel-kpi-p">&nbsp;</div>'}</div>`;
+  const kpis=`<div class="rel-kpis">
+    ${kpi('Indicações',T)}${kpi('Atletas diferentes',atletas)}${kpi('Agentes diferentes',agentes)}
+    ${kpi('Aprovados',aprov,T,REL_COR['Aprovado'])}${kpi('Em avaliação / monit.',aval,T,REL_COR['Em avaliação / Monitorando'])}${kpi('Descartados',desc,T,REL_COR['Descartado'])}${kpi('Sem avaliação',sem,T,'#888780')}
+  </div>`;
+
+  // Funil detalhado (avaliação agrupada; anos antigos caem no grupo macro)
+  const det=countBy(rows,r=>r.avalAgrup||(indAvalTexto(r)?indAvalMacro(r)+' (texto livre)':'Sem avaliação'));
+  const detItems=Object.entries(det).sort((a,b)=>b[1]-a[1]).map(([k,n])=>({label:k,n,color:REL_COR[indAvalMacro({avalAgrup:k.startsWith('Sem')?'':k})]||'#2c2c2a'}));
+
+  // Volume no tempo: por mês (um ano) ou por ano (todos)
+  let tempo='';
+  if(f.ano||f.de||f.ate){
+    const MES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    const byM={}; rows.forEach(r=>{ const d=indDataObj(r); if(!d) return; const k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); byM[k]=(byM[k]||0)+1; });
+    const ks=Object.keys(byM).sort(); const mx=Math.max(1,...Object.values(byM));
+    tempo=`<div class="rel-cols">${ks.map(k=>{const n=byM[k];const [y,m]=k.split('-');return `<div class="rel-col"><div class="rel-col-n">${n}</div><div class="rel-col-bar" style="height:${Math.max(3,n/mx*140)}px"></div><div class="rel-col-lbl">${MES[+m-1]}${(!f.ano||y!==f.ano)?'/'+y.slice(2):''}</div></div>`}).join('')}</div>`;
+  } else {
+    const byY=countBy(rows,r=>r.ano); const ks=Object.keys(byY).sort(); const mx=Math.max(1,...Object.values(byY));
+    tempo=`<div class="rel-cols">${ks.map(k=>{const n=byY[k];const a=rows.filter(r=>r.ano===k&&indAvalMacro(r)==='Aprovado').length;return `<div class="rel-col"><div class="rel-col-n">${n.toLocaleString('pt-BR')}</div><div class="rel-col-bar" style="height:${Math.max(3,n/mx*140)}px"></div><div class="rel-col-lbl">${k}</div><div class="rel-col-sub">${a} aprov. · <b>${pctTxt(a,n).toLocaleString('pt-BR')}%</b></div></div>`}).join('')}</div>`;
+  }
+
+  // Por posição: empilhado por avaliação
+  const posItems=IND_POSITIONS.concat(['']).map(p=>{
+    const rs=rows.filter(r=>indPosCode(r)===p); if(!rs.length) return null;
+    const m=countBy(rs,indAvalMacro); const ap=m['Aprovado']||0;
+    return {label:p||'Não informada',n:rs.length,parts:REL_MACROS.filter(k=>m[k]).map(k=>({label:k,n:m[k],color:REL_COR[k]})),extra:`${ap} aprov. · <b>${pctTxt(ap,rs.length).toLocaleString('pt-BR')}%</b>`};
+  }).filter(Boolean);
+
+  // Agentes
+  const agMap={}; rows.forEach(r=>{ const k=(r.indicacao||'').trim(); if(!k||k==='-') return; const s=slugInd(k); const a=agMap[s]=agMap[s]||{nome:k,n:0,ap:0,at:new Set()}; a.n++; a.at.add(indPlayerKey(r)); if(indAvalMacro(r)==='Aprovado') a.ap++; });
+  const ags=Object.values(agMap);
+  const agTop=ags.sort((a,b)=>b.n-a.n).slice(0,15).map(a=>({label:a.nome,n:a.n,color:'#1a4a6e',extra:`${a.at.size} atleta${a.at.size>1?'s':''} · ${a.ap} aprov. · <b>${pctTxt(a.ap,a.n).toLocaleString('pt-BR')}%</b>`}));
+  const agAp=Object.values(agMap).filter(a=>a.ap>0).sort((a,b)=>b.ap-a.ap||b.n-a.n).slice(0,15).map(a=>({label:a.nome,n:a.ap,color:'#1a8040',extra:`de ${a.n} indicações · <b>${pctTxt(a.ap,a.n).toLocaleString('pt-BR')}%</b>`}));
+
+  // Responsáveis (quem avaliou)
+  const respItems=Object.entries(countBy(rows,r=>r.responsavel||'Sem responsável')).sort((a,b)=>b[1]-a[1]).map(([k,n])=>{
+    const rs=rows.filter(r=>(r.responsavel||'Sem responsável')===k); const m=countBy(rs,indAvalMacro);
+    return {label:k,n,parts:REL_MACROS.filter(x=>m[x]).map(x=>({label:x,n:m[x],color:REL_COR[x]})),extra:`${m['Aprovado']||0} aprov. · ${m['Sem avaliação']||0} sem aval.`};
+  });
+  const recItems=Object.entries(countBy(rows,r=>r.recepcao)).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([k,n])=>({label:k,n,color:'#5f5e5a'}));
+
+  // Países e clubes
+  // agrupa grafias diferentes (Colombia/Colômbia) pelo texto normalizado; mostra a grafia mais usada
+  const top=(fn,k,cor)=>{ const g={}; rows.forEach(r=>{ const v=fn(r); if(!v) return; const s=slugInd(v); const o=g[s]=g[s]||{n:0,v:{}}; o.n++; o.v[v]=(o.v[v]||0)+1; });
+    return Object.values(g).sort((a,b)=>b.n-a.n).slice(0,k).map(o=>({label:Object.entries(o.v).sort((a,b)=>b[1]-a[1])[0][0],n:o.n,color:cor})); };
+  const paisItems=top(r=>(r.pais||'').trim(),12,'#6b3fa0');
+  const clubeItems=top(r=>(r.clube||'').trim(),12,'#1a6e3a');
+
+  // Idade na época da indicação
+  const faixa=r=>{ const g=parseInt(r.geracao), a=parseInt(r.ano); if(!g||!a) return null; const i=a-g; return i<=20?'Até 20':i<=23?'21 a 23':i<=26?'24 a 26':i<=29?'27 a 29':i<=32?'30 a 32':'33 ou mais'; };
+  const fx=countBy(rows,faixa); const idadeItems=['Até 20','21 a 23','24 a 26','27 a 29','30 a 32','33 ou mais'].filter(k=>fx[k]).map(k=>{ const rs=rows.filter(r=>faixa(r)===k); const ap=rs.filter(r=>indAvalMacro(r)==='Aprovado').length; return {label:k,n:fx[k],color:'#b8860b',extra:`${ap} aprov. · <b>${pctTxt(ap,fx[k]).toLocaleString('pt-BR')}%</b>`}; });
+
+  // Mais oferecidos
+  const pm={}; rows.forEach(r=>{ const k=indPlayerKey(r)+'|'+(r.geracao||''); const p=pm[k]=pm[k]||{rs:[]}; p.rs.push(r); });
+  const mais=Object.values(pm).filter(p=>p.rs.length>1).sort((a,b)=>b.rs.length-a.rs.length).slice(0,20).map(p=>{
+    p.rs.sort((x,y)=>(indDataObj(y)||0)-(indDataObj(x)||0)); const u=p.rs[0];
+    const ag=new Set(p.rs.map(r=>slugInd(r.indicacao)).filter(Boolean)).size;
+    return `<tr onclick="openIndForm('jog','${u.id}')"><td><b>${u.nome}</b></td><td>${indPosLabel(u)||'—'}</td><td>${u.geracao||'—'}</td><td>${u.clube||'—'}</td><td class="rel-td-n"><b class="rel-n">${p.rs.length}</b></td><td class="rel-td-n">${ag}</td><td>${fmtIndData(u.data)}</td><td>${indAvalTexto(u)?`<span class="ind-aval ${avalClass(indAvalTexto(u))}">${indAvalTexto(u)}</span>`:'—'}</td></tr>`;
+  }).join('');
+
+  // Negocial
+  const negRows=rows.filter(r=>r.negStatus||r.negTipo);
+  const negSt=NEG_STATUS.map(s=>({label:s,n:negRows.filter(r=>r.negStatus===s).length,color:({'Fechado':'#1a8040','Não avançou':'#c0392b','Proposta enviada':'#1562B8','Contraproposta':'#1562B8','Em conversa':'#b8860b'})[s]||'#888780'})).filter(i=>i.n);
+  const negTp=NEG_TIPO.map(s=>({label:s,n:negRows.filter(r=>r.negTipo===s).length,color:'#1a4a6e'})).filter(i=>i.n);
+  const negLista=negRows.sort((a,b)=>(indDataObj(b)||0)-(indDataObj(a)||0)).slice(0,30).map(r=>`<tr onclick="openIndForm('jog','${r.id}')"><td><b>${r.nome}</b></td><td>${indPosLabel(r)||'—'}</td><td>${r.clube||'—'}</td><td>${r.negStatus?`<span class="ind-aval ${negClass(r.negStatus)}">${r.negStatus}</span>`:'—'}</td><td>${r.negTipo||'—'}</td><td>${r.negValor||'—'}</td><td>${r.negSalario||'—'}</td><td>${r.negContrato||'—'}</td></tr>`).join('');
+
+  const legenda=`<div class="rel-leg">${REL_MACROS.slice(0,4).map(k=>`<span><i style="background:${REL_COR[k]}"></i>${k}</span>`).join('')}</div>`;
+  const filtroTxt=[f.ano&&('Ano '+f.ano),f.pos,f.resp&&('Resp. '+f.resp),f.de&&('de '+fmtIndData(f.de)),f.ate&&('até '+fmtIndData(f.ate))].filter(Boolean).join(' · ')||'Todos os anos';
+
+  tblEl.innerHTML=`<div class="rel-wrap" id="relIndicados">
+    <div class="rel-head"><div><div class="rel-title">Relatório de Indicados</div><div class="rel-sub">${filtroTxt} · atualizado em ${new Date().toLocaleDateString('pt-BR')}</div></div></div>
+    ${kpis}
+    <div class="rel-grid">
+      <div class="rel-card rel-span2"><div class="rel-card-t">Volume de indicações ${f.ano||f.de||f.ate?'por mês':'por ano'}</div>${tempo}</div>
+      <div class="rel-card"><div class="rel-card-t">Resultado da avaliação</div>${relBars(detItems,T)}</div>
+      <div class="rel-card rel-span2"><div class="rel-card-t">Por posição</div>${legenda}${relBars(posItems,T)}</div>
+      <div class="rel-card"><div class="rel-card-t">Idade na indicação</div>${relBars(idadeItems,T)}</div>
+      <div class="rel-card"><div class="rel-card-t">Agentes que mais indicam</div>${relBars(agTop,T)}</div>
+      <div class="rel-card"><div class="rel-card-t">Agentes com mais aprovados</div>${agAp.length?relBars(agAp,aprov):'<div class="rel-empty">Nenhum aprovado no filtro.</div>'}</div>
+      <div class="rel-card"><div class="rel-card-t">Por responsável</div>${legenda}${relBars(respItems,T)}</div>
+      <div class="rel-card"><div class="rel-card-t">Países</div>${relBars(paisItems,T)}</div>
+      <div class="rel-card"><div class="rel-card-t">Clubes de origem</div>${relBars(clubeItems,T)}</div>
+      <div class="rel-card"><div class="rel-card-t">Recepção (quem recebeu)</div>${relBars(recItems,T)}</div>
+      <div class="rel-card rel-span3"><div class="rel-card-t">Atletas mais oferecidos <span class="rel-card-s">clique para abrir o cadastro</span></div>
+        ${mais?`<table class="rel-tbl"><thead><tr><th>Atleta</th><th>Pos.</th><th>Ger.</th><th>Clube</th><th>Indicações</th><th>Agentes</th><th>Última</th><th>Última avaliação</th></tr></thead><tbody>${mais}</tbody></table>`:'<div class="rel-empty">Nenhum atleta indicado mais de uma vez no filtro.</div>'}</div>
+      <div class="rel-card rel-span3"><div class="rel-card-t">Negocial <span class="rel-card-s">${negRows.length} atleta${negRows.length!==1?'s':''} com informação negocial</span></div>
+        ${negRows.length?`<div class="rel-grid2"><div>${relBars(negSt,negRows.length)}</div><div>${relBars(negTp,negRows.length)}</div></div>
+        <table class="rel-tbl" style="margin-top:10px"><thead><tr><th>Atleta</th><th>Pos.</th><th>Clube</th><th>Status</th><th>Operação</th><th>Valor pedido</th><th>Salário</th><th>Contrato</th></tr></thead><tbody>${negLista}</tbody></table>`
+        :'<div class="rel-empty">Ainda não há informação negocial preenchida. Ela aparece aqui assim que for registrada no cadastro do atleta.</div>'}</div>
+    </div>
+  </div>`;
+  setTimeout(fixIndHeight,0);
+}
+
+function imprimirRelIndicados(){
+  const el=document.getElementById('relIndicados'); if(!el) return;
+  const css=[...document.querySelectorAll('style')].map(s=>s.textContent).filter(t=>t.includes('.rel-')||t.includes('.ind-aval')).join('\n');
+  const w=window.open('','_blank'); if(!w){ alert('Libere pop-ups para imprimir.'); return; }
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Relatório de Indicados</title>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+    <style>${css} body{margin:0;background:#fff;font-family:'Barlow',sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .rel-tbl tr{cursor:default} @page{size:A4 landscape;margin:10mm} .rel-card{break-inside:avoid}</style></head>
+    <body>${el.outerHTML}<script>setTimeout(()=>window.print(),600)<\/script></body></html>`);
+  w.document.close();
+}
+
+/* re-render seguro da tela de Indicados (shell + aba atual) */
+function refreshIndView(){
+  if(currentView!=='indicados') return;
+  indInvalidateIdx();
+  const v=document.getElementById('views'); if(!v) return;
+  v.innerHTML=renderIndicados();
+  setTimeout(()=>{ fixStickyTops(); renderIndTabAtual(); fixIndHeight(); },10);
+}
+function renderIndTabAtual(){
+  if(indTab==='jog') renderIndJogTable();
+  else if(indTab==='rel') renderIndRelatorios();
+  else renderIndTreTable();
+}
+
+
 /* ══ INDICADOS HISTORICAL IMPORT ══ */
 function slugInd(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');}
 
 function parseIndicadosExcel(arrayBuffer){
   const wb=XLSX.read(arrayBuffer,{type:'array',cellDates:true});
   const result={ind_jog:{},ind_tre:{}};
+  // O Excel da planilha (Mac em inglês) grava "05/01" digitado como 1º de maio = 5 de janeiro.
+  // Por aba: se as datas como estão caem no futuro e trocando dia↔mês não, a aba está trocada.
+  let swapDM=false;
   const fmtData=v=>{
     if(!v) return '';
-    if(v instanceof Date) return String(v.getDate()).padStart(2,'0')+'/'+String(v.getMonth()+1).padStart(2,'0')+'/'+v.getFullYear();
+    if(v instanceof Date){
+      const d=new Date(v.getTime()+12*3600e3); // evita virar o dia por fuso
+      const a=d.getDate(), b=d.getMonth()+1;
+      const dd=swapDM?b:a, mm=swapDM?a:b;
+      return String(dd).padStart(2,'0')+'/'+String(mm).padStart(2,'0')+'/'+d.getFullYear();
+    }
     return String(v).trim();
+  };
+  // As linhas estão em ordem cronológica e misturam datas-texto ("13/01") com datas do Excel.
+  // Para cada data do Excel, vê qual leitura (como está × dia↔mês trocados) respeita a ordem
+  // em relação à última data-texto anterior. A leitura que mais respeita vence.
+  const detectSwap=(rows,col)=>{
+    if(col<0) return false;
+    let last=null, ok=0, okSw=0;
+    rows.slice(2).forEach(r=>{ const v=r&&r[col]; if(v===null||v===undefined||v==='') return;
+      if(v instanceof Date){
+        const d=new Date(v.getTime()+12*3600e3), a=d.getDate(), b=d.getMonth()+1;
+        if(last!==null){ if(b*100+a>=last) ok++; if(a<=12&&a*100+b>=last) okSw++; }
+        return;
+      }
+      const m=String(v).trim().match(/^(\d{1,2})[\/.](\d{1,2})/);
+      if(m) last=(+m[2])*100+(+m[1]);
+    });
+    return okSw>ok;
   };
   const cleanStr=v=>{
     if(v===null||v===undefined) return '';
+    if(typeof v==='number'&&!Number.isInteger(v)) return String(Math.round(v*100)/100);
     let s=String(v).trim();
     if(/^\d+\.0+$/.test(s)) s=s.split('.')[0];
     return s;
@@ -2989,13 +3426,22 @@ function parseIndicadosExcel(arrayBuffer){
       pais: idxOf('Country'),
       idade: idxOf('Age'),
       sistema: idxOf('Main System')>=0?idxOf('Main System'):idxOf('System'),
-      clube: idxOf('Current Club')>=0?idxOf('Current Club'):idxOf('Club'),
+      partidas: idxOf('Matches'),
+      ppj: idxOf('Points Per Match')>=0?idxOf('Points Per Match'):idxOf('PPJ'),
+      posse: idxOf('Ball Posession Avr.'),
+      ppda: idxOf('PPDA'),
+      xg: idxOf('Xg'),
+      golsMarcados: idxOf('G Scored'),
+      golsSofridos: idxOf('G Against'),
+      golSaldo: idxOf('G Difference'),
+      clubeAtual: idxOf('Current Club')>=0?idxOf('Current Club'):idxOf('Club'),
       data: idxOf('Date')>=0?idxOf('Date'):idxOf('Data'),
       recepcao: idxOf('Reception')>=0?idxOf('Reception'):idxOf('Recepção'),
-      indicacao: idxOf('Agent/Intermediary')>=0?idxOf('Agent/Intermediary'):idxOf('Indicação'),
-      indicacao2: idxOf('Agent/Intermediary 2'),
-      indicacao3: idxOf('Agent/Intermediary 3')
+      agente1: idxOf('Agent/Intermediary')>=0?idxOf('Agent/Intermediary'):idxOf('Indicação'),
+      agente2: idxOf('Agent/Intermediary 2'),
+      agente3: idxOf('Agent/Intermediary 3')
     };
+    swapDM=detectSwap(rows,cols.data);
     for(let i=2;i<rows.length;i++){
       const r=rows[i]; if(!r) continue;
       const nome=cleanStr(cols.nome>=0?r[cols.nome]:null);
@@ -3048,7 +3494,7 @@ function importIndicadosHistorico(input){
           localStorage.setItem('ind_tre',JSON.stringify(IND_TRE));
         }catch(e){}
         alert('✓ Importado localmente: '+totalJ+' jogadores e '+totalT+' treinadores');
-        if(currentView==='indicados') document.getElementById('views').innerHTML=renderIndicados();
+        refreshIndView();
       }
     }catch(err){ alert('Erro ao ler arquivo: '+err.message); }
     input.value='';
@@ -3078,7 +3524,7 @@ function importIndicadosSomenteNovos(input){
   // Para Excel, pergunta data mínima (corte opcional)
   let minDate=null;
   if(isExcel){
-    const minStr=prompt('Importar apenas linhas com data ≥ (DD/MM/AAAA):\n(deixe vazio para importar todas)','13/03/2026');
+    const minStr=prompt('Importar apenas linhas com data ≥ (DD/MM/AAAA):\n(deixe vazio para importar todas — o sistema já ignora as que existem)','');
     if(minStr===null){input.value='';return;}
     if(minStr.trim()){
       const m=minStr.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
@@ -3099,12 +3545,15 @@ function importIndicadosSomenteNovos(input){
           jog=Object.fromEntries(Object.entries(jog).filter(([,v])=>{const d=dateFromRecord(v);return d&&d>=minDate;}));
           tre=Object.fromEntries(Object.entries(tre).filter(([,v])=>{const d=dateFromRecord(v);return d&&d>=minDate;}));
         }
-        // Dedup por conteúdo: nome+ano+data+indicação
-        const keyOf=o=>slugInd(o.nome)+'|'+(o.ano||'')+'|'+(o.data||'')+'|'+slugInd(o.indicacao||'');
-        const existingJ=new Set(Object.values(IND_JOG||{}).map(keyOf));
-        const existingT=new Set(Object.values(IND_TRE||{}).map(keyOf));
-        novosJ=Object.fromEntries(Object.entries(jog).filter(([,v])=>!existingJ.has(keyOf(v))));
-        novosT=Object.fromEntries(Object.entries(tre).filter(([,v])=>!existingT.has(keyOf(v))));
+        // Dedup por conteúdo: nome+ano+data+indicação. A data entra como par {dia,mês} sem ordem,
+        // porque o Excel às vezes troca dia↔mês ("05/01" = "01/05") e o sistema guarda "16/01" ou "16/01/2026".
+        const dPar=s=>{s=String(s||'').trim();let m=s.match(/^(\d{4})-(\d{2})-(\d{2})/),a,b;if(m){a=m[3];b=m[2];}else{m=s.match(/^(\d{1,2})[\/.](\d{1,2})/);if(!m)return s;a=m[1].padStart(2,'0');b=m[2].padStart(2,'0');}return a<b?a+'~'+b:b+'~'+a;};
+        const keyJ=o=>slugInd(o.nome)+'|'+(o.ano||'')+'|'+dPar(o.data)+'|'+slugInd(o.indicacao||'');
+        const keyT=o=>slugInd(o.nome)+'|'+(o.ano||'')+'|'+dPar(o.data);
+        const soNovos=(arr,base,key)=>{ const cnt=new Map(); Object.values(base||{}).forEach(o=>{const k=key(o);cnt.set(k,(cnt.get(k)||0)+1);});
+          return Object.fromEntries(Object.entries(arr).filter(([,v])=>{const k=key(v),c=cnt.get(k)||0; if(c>0){cnt.set(k,c-1);return false;} return true;})); };
+        novosJ=soNovos(jog,IND_JOG,keyJ);
+        novosT=soNovos(tre,IND_TRE,keyT);
       } else {
         const data=JSON.parse(e.target.result);
         jog=data.ind_jog||data;
@@ -3129,7 +3578,7 @@ function importIndicadosSomenteNovos(input){
         Object.assign(IND_JOG,novosJ); Object.assign(IND_TRE,novosT);
         try{localStorage.setItem('ind_jog',JSON.stringify(IND_JOG));localStorage.setItem('ind_tre',JSON.stringify(IND_TRE));}catch(e){}
         alert(`✓ Adicionados localmente: ${nJ} jogadores\nIgnorados: ${skipJ+skipT}`);
-        if(currentView==='indicados') document.getElementById('views').innerHTML=renderIndicados();
+        refreshIndView();
       }
     }catch(err){alert('Erro ao ler arquivo: '+err.message); console.error(err);}
     input.value='';
