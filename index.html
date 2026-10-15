@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="app-versao" content="2026-10-15 16:55"><!-- AO PUBLICAR MUDANÇA, TROQUE ESTA DATA-HORA: as abas abertas mostram o aviso de versão nova -->
+<meta name="app-versao" content="2026-10-15 17:05"><!-- AO PUBLICAR MUDANÇA, TROQUE ESTA DATA-HORA: as abas abertas mostram o aviso de versão nova -->
 <title>Scout System 2026</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
@@ -501,6 +501,12 @@ table.ind-table tr:hover td{background:#f0eeea;cursor:pointer}
 .ind-hist-tbl{width:100%;border-collapse:collapse;font-size:.7rem;background:#fff}
 .ind-hist-tbl th{background:#2c2c2a;color:#f1efe8;font-weight:500;padding:3px 6px;text-align:left}
 .ind-hist-tbl td{border-bottom:1px solid #eee;padding:3px 6px;vertical-align:top}
+.sofa-sug{background:#f1f3ff;border:1px solid #c9d0ff;border-radius:8px;padding:.5rem .7rem;margin-bottom:.8rem;font-size:.75rem}
+.sofa-op{display:flex;align-items:center;gap:.5rem;width:100%;text-align:left;background:#fff;border:1px solid #e0e3f5;border-radius:6px;padding:.3rem .5rem;margin-top:.25rem;cursor:pointer;font-size:.75rem;color:#1a1a18}
+.sofa-op:hover{border-color:#374df5}
+.sofa-op.bate{border-color:#1a8040;background:#f3fbf5}
+.sofa-op em{color:#1a8040;font-style:normal;font-weight:700}
+.sofa-op img{width:26px;height:26px;border-radius:50%;object-fit:cover;background:#eee}
 .ind-rel-btn{background:transparent;border:1px solid #e0ded4;border-radius:5px;padding:1px 6px;font-size:12px;cursor:pointer;line-height:1.4}
 .ind-rel-btn:hover{background:#8B1A2E;border-color:#8B1A2E}
 .ind-vezes{display:inline-block;background:#fff1c9;color:#7a5a00;border:1px solid #f0d58a;border-radius:9px;padding:0 6px;font-size:10px;font-weight:700}
@@ -1775,6 +1781,7 @@ function buildJogForm(p){
   ${editingIndId?`<div style="display:flex;justify-content:flex-end;margin:-.3rem 0 .6rem"><button type="button" class="ind-hist-load" style="background:#8B1A2E;color:#e8c84a" onclick="closeIndModal();abrirRelatorioDe('${editingIndId}')">📄 Criar relatório deste jogador</button></div>`:''}
   <div id="indHistBox"></div>
   <div id="indHistNote" class="ind-hist-note"></div>
+  <div id="sofaSug"></div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem">
     ${ffl('Atleta *','iNome','text',p.nome||'','',true,'grid-column:span 2')}
     ${ffls('Ano','iAno',IND_ANOS,p.ano||String(yr))}
@@ -3223,6 +3230,43 @@ function indAttachNomeWatch(){
   let t=null;
   el.addEventListener('input',()=>{ clearTimeout(t); t=setTimeout(()=>{ const b=document.getElementById('indHistBox'); if(b) delete b.dataset.auto; indRenderHistorico(); },250); });
   indRenderHistorico();
+  // SofaScore: sugere o jogador pelo nome (e clube) enquanto digita — confirma num clique e a nota vem junto
+  let ts=null; const sug=()=>{ clearTimeout(ts); ts=setTimeout(sofaSugerir,700); };
+  el.addEventListener('input',sug);
+  const cl=document.getElementById('iClube'); if(cl) cl.addEventListener('change',sug);
+  if(!editingIndId) setTimeout(sofaSugerir,900);   // novo cadastro (inclusive com dados carregados de indicação anterior)
+}
+let sofaSugSeq=0;
+async function sofaSugerir(){
+  const box=document.getElementById('sofaSug'); if(!box) return;
+  const nome=gvi('iNome'), clube=gvi('iClube'), link=gvi('iSofaLink');
+  if(link||nome.length<4){ box.innerHTML=''; return; }
+  const meu=++sofaSugSeq;
+  box.innerHTML='<div class="sofa-sug"><span style="color:#888780">SofaScore: procurando…</span></div>';
+  try{
+    const j=await sofaApi('/search/all?q='+encodeURIComponent(nome));
+    if(meu!==sofaSugSeq) return;
+    const cw=slugInd(clube).split('_').filter(x=>x.length>2&&!['club','clube','fc','sem','free','cf','sc'].includes(x));
+    const pont=e=>cw.filter(c=>slugInd(e.team&&e.team.name||'').includes(c)).length;
+    const ps=(j.results||[]).filter(x=>x.type==='player').map(x=>x.entity).sort((a,b)=>pont(b)-pont(a)).slice(0,5);
+    if(!ps.length){ box.innerHTML='<div class="sofa-sug"><span style="color:#888780">SofaScore: nenhum jogador com esse nome — se quiser, cole o link no campo SofaScore.</span></div>'; return; }
+    window.__sofaSug=ps;
+    box.innerHTML=`<div class="sofa-sug"><div style="font-weight:700;color:#374df5;margin-bottom:.3rem">⭐ SofaScore — é algum destes? Clique para usar e puxar a nota</div>
+      ${ps.map((e,i)=>`<button type="button" class="sofa-op${pont(e)?' bate':''}" onclick="sofaUsarSugestao(${i})">
+        <img src="https://img.sofascore.com/api/v1/player/${e.id}/image" alt="" onerror="this.remove()">
+        <span><b>${e.name}</b> · ${e.team&&e.team.name||'sem clube'}${e.position?' · '+e.position:''}${e.country&&e.country.name?' · '+e.country.name:''}${pont(e)?' <em>✓ clube bate</em>':''}</span></button>`).join('')}</div>`;
+  }catch(e){
+    if(meu!==sofaSugSeq) return;
+    box.innerHTML=/sem extensão|fora da lista|não respondeu/.test(e.message)?`<div class="sofa-sug" style="color:#888780">SofaScore: ${sofaErroTexto(e)}</div>`:'';
+  }
+}
+async function sofaUsarSugestao(i){
+  const e=(window.__sofaSug||[])[i]; if(!e) return;
+  const link=`https://www.sofascore.com/player/${e.slug}/${e.id}`;
+  document.getElementById('iSofaLink').value=link;
+  document.getElementById('sofaSug').innerHTML=`<div class="sofa-sug">✓ SofaScore: <b>${e.name}</b> (${e.team&&e.team.name||''}) — nota no campo SofaScore abaixo.</div>`;
+  const info=document.getElementById('sofaInfo'); info.innerHTML='Buscando a nota…';
+  try{ sofaMostraForm(link,await sofaLinhas(e.id),'todas',''); }catch(err){ info.innerHTML=sofaErroTexto(err); }
 }
 function indNomesDatalist(){
   const seen=new Set(); const out=[];
