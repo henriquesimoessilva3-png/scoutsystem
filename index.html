@@ -500,6 +500,8 @@ table.ind-table tr:hover td{background:#f0eeea;cursor:pointer}
 .ind-hist-tbl{width:100%;border-collapse:collapse;font-size:.7rem;background:#fff}
 .ind-hist-tbl th{background:#2c2c2a;color:#f1efe8;font-weight:500;padding:3px 6px;text-align:left}
 .ind-hist-tbl td{border-bottom:1px solid #eee;padding:3px 6px;vertical-align:top}
+.ind-rel-btn{background:transparent;border:1px solid #e0ded4;border-radius:5px;padding:1px 6px;font-size:12px;cursor:pointer;line-height:1.4}
+.ind-rel-btn:hover{background:#8B1A2E;border-color:#8B1A2E}
 .ind-vezes{display:inline-block;background:#fff1c9;color:#7a5a00;border:1px solid #f0d58a;border-radius:9px;padding:0 6px;font-size:10px;font-weight:700}
 .rel-wrap{padding:14px 16px 40px;background:#f9f8f4;min-height:100%}
 .rel-head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:10px}
@@ -1138,7 +1140,7 @@ function rjShow(on){
   let w=document.getElementById('rjWrap');
   if(on&&!w){
     w=document.createElement('div'); w.id='rjWrap';
-    w.innerHTML=`<iframe id="rjFrame" src="${RJ_URL}" title="Relatório Jogadores" allow="clipboard-read; clipboard-write; fullscreen" style="border:0;width:100%;height:100%;display:block;background:#fff"></iframe>
+    w.innerHTML=`<iframe id="rjFrame" src="${window.__rjPrimeiraUrl||RJ_URL}" title="Relatório Jogadores" allow="clipboard-read; clipboard-write; fullscreen" style="border:0;width:100%;height:100%;display:block;background:#fff"></iframe>
       <a href="${RJ_URL}" target="_blank" rel="noopener" style="position:absolute;right:10px;bottom:8px;font-size:10px;color:#888780;background:rgba(255,255,255,.85);padding:2px 8px;border-radius:4px;text-decoration:none">abrir em nova aba ↗</a>`;
     document.body.appendChild(w);
   }
@@ -1147,6 +1149,18 @@ function rjShow(on){
   else w.style.display='none';
 }
 window.addEventListener('resize',()=>{ if(currentView==='relatorio') rjShow(true); });
+// Indicados → "📄": abre o Player Report já com o "Novo atleta" buscando esse jogador no Wyscout
+function abrirRelatorioDe(id){
+  const r=IND_JOG[id]; if(!r) return;
+  const q=new URLSearchParams({novo:r.nome||''});
+  if(r.geracao) q.set('ano',String(r.geracao));
+  if(r.clube) q.set('clube',r.clube);
+  q.set('ind',id);
+  const url=RJ_URL+'?'+q.toString();
+  const f=document.getElementById('rjFrame');
+  if(f) f.src=url; else window.__rjPrimeiraUrl=url;
+  switchView('relatorio');
+}
 
 function renderViews(preserveScroll){
   const views=document.getElementById('views');
@@ -1476,6 +1490,7 @@ function renderIndJogTable(){
 
   const cols=[
     {id:'nome',    label:'Atleta'},
+    {id:'_rel',    label:'Rel.'},
     {id:'_vezes',  label:'Indic.'},
     {id:'posicao', label:'Pos.'},
     {id:'geracao', label:'Ger.'},
@@ -1496,6 +1511,7 @@ function renderIndJogTable(){
   const tableRows=rows.map(r=>`
     <tr onclick="openIndForm('jog','${r.id}')">
       <td style="font-weight:500;min-width:140px">${r.nome||'—'}</td>
+      <td style="text-align:center"><button class="ind-rel-btn" title="Criar o relatório deste jogador (abre o Player Report já buscando ele)" onclick="event.stopPropagation();abrirRelatorioDe('${r.id}')">📄</button></td>
       <td style="text-align:center">${(()=>{const v=indVezes(r);return v>1?`<span class="ind-vezes" title="Indicado ${v} vezes no total">${v}×</span>`:'<span style="color:#c8c6bc">1</span>';})()}</td>
       <td style="text-align:center"><span class="ind-pos">${indPosLabel(r)||'—'}</span></td>
       <td style="text-align:center;color:#5f5e5a">${r.geracao||'—'}</td>
@@ -1742,6 +1758,7 @@ function buildJogForm(p){
     <button id="btnOgolBuscar" onclick="buscarOgol()" style="background:#1a4a6e;color:#fff;border:none;border-radius:6px;padding:.55rem 1.1rem;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;white-space:nowrap">🔍 Buscar Ogol</button>
   </div>
   ${indNomesDatalist()}
+  ${editingIndId?`<div style="display:flex;justify-content:flex-end;margin:-.3rem 0 .6rem"><button type="button" class="ind-hist-load" style="background:#8B1A2E;color:#e8c84a" onclick="closeIndModal();abrirRelatorioDe('${editingIndId}')">📄 Criar relatório deste jogador</button></div>`:''}
   <div id="indHistBox"></div>
   <div id="indHistNote" class="ind-hist-note"></div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem">
