@@ -1122,7 +1122,7 @@ function renderNav(){
   nav.innerHTML=views.map((v,i)=>(i===1?'<span style="width:8px;display:inline-block"></span>':'')+`<button class="nav-btn${currentView===v.id?' active':''}" style="background:${v.color||'#3a3835'};color:#fff" onclick="switchView('${v.id}')">${v.label}</button>`).join('')
     +`<button class="nav-btn" style="background:#26241f;color:#9fe3b4;font-size:11px;border:1px dashed #5a7a60" onclick="openScoutModal()" title="Adicionar ou remover scouts">+ Scout</button>`
     +`<div style="margin-left:auto;display:flex;gap:6px;align-items:center">
-        <button class="nav-btn" style="background:#8B1A2E;color:#e8c84a;font-size:11px;font-weight:600" onclick="openPrModal()">📄 Player Report</button>
+        <button class="nav-btn${currentView==='relatorio'?' active':''}" style="background:#8B1A2E;color:#e8c84a;font-size:11px;font-weight:600" onclick="switchView('relatorio')" title="Relatório Jogadores (mesmo conteúdo do site RANKING/relatorio-jogadores)">📄 Player Report</button>
         <button class="nav-btn" style="background:#1a3d2e;color:#8ed4a4;font-size:11px;font-weight:600;border:1px solid #2c6b4f" onclick="openSalaryGuide()" title="Salary Guide 2026 — mapa salarial da Série A por posição × nível">💰 Salary Guide</button>
         <button class="nav-btn" style="background:#3a3835;color:#e8c84a;font-size:11px" onclick="exportData()">⬇ Export</button>
         <label class="nav-btn" style="background:#3a3835;color:#8ed4a4;font-size:11px;cursor:pointer">⬆ Import<input type="file" accept=".json" style="display:none" onchange="importData(this)"></label>
@@ -1130,8 +1130,28 @@ function renderNav(){
 }
 
 function switchView(id){currentView=id;renderNav();renderViews();}
+/* Player Report = site Relatório Jogadores (RANKING/relatorio-jogadores), aberto aqui dentro.
+   O iframe fica num container próprio e só é criado uma vez, para não perder o relatório em edição
+   quando se troca de aba e volta. */
+const RJ_URL='https://henriquesimoessilva3-png.github.io/RANKING/relatorio-jogadores/';
+function rjShow(on){
+  let w=document.getElementById('rjWrap');
+  if(on&&!w){
+    w=document.createElement('div'); w.id='rjWrap';
+    w.innerHTML=`<iframe id="rjFrame" src="${RJ_URL}" title="Relatório Jogadores" allow="clipboard-read; clipboard-write; fullscreen" style="border:0;width:100%;height:100%;display:block;background:#fff"></iframe>
+      <a href="${RJ_URL}" target="_blank" rel="noopener" style="position:absolute;right:10px;bottom:8px;font-size:10px;color:#888780;background:rgba(255,255,255,.85);padding:2px 8px;border-radius:4px;text-decoration:none">abrir em nova aba ↗</a>`;
+    document.body.appendChild(w);
+  }
+  if(!w) return;
+  if(on){ const nav=document.querySelector('.nav'); const top=nav?nav.getBoundingClientRect().bottom:48; w.style.cssText=`position:fixed;left:0;right:0;bottom:0;top:${top}px;z-index:50;background:#fff`; }
+  else w.style.display='none';
+}
+window.addEventListener('resize',()=>{ if(currentView==='relatorio') rjShow(true); });
+
 function renderViews(preserveScroll){
   const views=document.getElementById('views');
+  if(currentView==='relatorio'){ views.innerHTML=''; rjShow(true); return; }
+  rjShow(false);
   const wrap=document.querySelector('.scroll-wrap');
   const sx=wrap?wrap.scrollLeft:0,sy=wrap?wrap.scrollTop:0;
   if(currentView==='cal'){views.innerHTML=renderCal();setTimeout(()=>{fixStickyTops();if(preserveScroll){const w=document.querySelector('.scroll-wrap');if(w){w.scrollLeft=sx;w.scrollTop=sy;}}},10);}
