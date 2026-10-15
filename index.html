@@ -1381,7 +1381,7 @@ function avalClass(v){
    INDICADOS — SAVE / DELETE
 ══════════════════════════════════════════ */
 function saveIndJog(data){
-  IND_JOG[data.id]=data;
+  IND_JOG[data.id]=data; if(typeof indInvalidateIdx==='function') indInvalidateIdx();
   if(db&&firebaseReady) db.ref('ind_jog/'+data.id).set(data).then(()=>setSyncBadge('synced','● Live')).catch(e=>{setSyncBadge('error','✕ Save failed');alert('⚠ NÃO SALVOU no banco: '+e.message+'\nRecarregue a página e tente de novo.');});
   else { try{localStorage.setItem('ind_jog',JSON.stringify(IND_JOG));}catch(e){} alert('⚠ Sem conexão com o banco: o registro ficou só neste navegador. Recarregue a página (com internet) e salve de novo.'); }
 }
@@ -1391,7 +1391,7 @@ function saveIndTre(data){
   else try{localStorage.setItem('ind_tre',JSON.stringify(IND_TRE));}catch(e){}
 }
 function deleteIndJog(id){
-  delete IND_JOG[id];
+  delete IND_JOG[id]; if(typeof indInvalidateIdx==='function') indInvalidateIdx();
   if(db&&firebaseReady) db.ref('ind_jog/'+id).remove();
   else try{localStorage.setItem('ind_jog',JSON.stringify(IND_JOG));}catch(e){}
 }
@@ -1489,6 +1489,7 @@ function renderIndJogTable(){
   });
 
   const total=rows.length;
+  rows=rows.slice(0,indLimite);   // desenhar 10 mil linhas travava a tela; o resto entra por "Mostrar mais"
   const thCls=col=>indSortJog.col===col?(indSortJog.dir==='asc'?'sort-asc':'sort-desc'):'';
 
   const cols=[
@@ -1594,7 +1595,11 @@ function renderIndJogTable(){
         <th style="width:30px;cursor:default" class="no-sort"></th>
       </tr></thead>
       <tbody>${rows.length?tableRows:emptyRow}</tbody>
-    </table>`;
+    </table>
+    ${total>rows.length?`<div style="padding:14px;text-align:center;font-size:12px;color:#5f5e5a;background:#fff">
+      Mostrando <b>${rows.length.toLocaleString('pt-BR')}</b> de <b>${total.toLocaleString('pt-BR')}</b> — use os filtros/busca ou
+      <button class="ind-add-btn" style="margin-left:6px" onclick="indLimite+=300;renderIndJogTable()">Mostrar mais 300</button>
+      <button class="ind-add-btn" style="background:#5f5e5a" onclick="indLimite=1e9;renderIndJogTable()">Mostrar todos (mais lento)</button></div>`:''}`;
 
   setTimeout(fixIndHeight, 0);
 }
@@ -1707,8 +1712,9 @@ function renderIndTreTable(){
 /* ══════════════════════════════════════════
    FILTER / SORT HELPERS
 ══════════════════════════════════════════ */
+let indLimite=300;
 function indSetFilter(key,val){
-  indFilters[key]=val;
+  indFilters[key]=val; indLimite=300;
   renderIndJogTable();
 }
 function indSetFilterTre(key,val){ indFiltersTre[key]=val; renderIndTreTable(); }
@@ -3132,11 +3138,11 @@ function indDataObj(r){
 
 /* ── chave do atleta (para achar indicações anteriores) ── */
 function indPlayerKey(r){ return slugInd(r.nome); }
-let IND_IDX=null, IND_IDX_N=-1;
+let IND_IDX=null, IND_IDX_SRC=null;
+// refeito só quando os dados mudam (o Firebase troca o objeto IND_JOG; salvar/excluir chamam indInvalidateIdx)
 function indIndex(){
-  const n=Object.keys(IND_JOG).length;
-  if(IND_IDX&&IND_IDX_N===n) return IND_IDX;
-  IND_IDX={}; IND_IDX_N=n;
+  if(IND_IDX&&IND_IDX_SRC===IND_JOG) return IND_IDX;
+  IND_IDX={}; IND_IDX_SRC=IND_JOG;
   Object.values(IND_JOG).forEach(r=>{ const k=indPlayerKey(r); if(!k) return; (IND_IDX[k]=IND_IDX[k]||[]).push(r); });
   Object.values(IND_IDX).forEach(a=>a.sort((x,y)=>(indDataObj(y)||0)-(indDataObj(x)||0)));
   return IND_IDX;
