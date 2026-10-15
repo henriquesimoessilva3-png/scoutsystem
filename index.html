@@ -1156,6 +1156,7 @@ function abrirRelatorioDe(id){
   if(r.geracao) q.set('ano',String(r.geracao));
   if(r.clube) q.set('clube',r.clube);
   q.set('ind',id);
+  q.set('_',Date.now().toString(36));   // sempre a versão mais nova do relatório
   const url=RJ_URL+'?'+q.toString();
   const f=document.getElementById('rjFrame');
   if(f) f.src=url; else window.__rjPrimeiraUrl=url;
