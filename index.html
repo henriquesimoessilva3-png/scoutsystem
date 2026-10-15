@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="app-versao" content="2026-10-15 14:20"><!-- AO PUBLICAR MUDANÇA, TROQUE ESTA DATA-HORA: as abas abertas mostram o aviso de versão nova -->
+<meta name="app-versao" content="2026-10-15 16:40"><!-- AO PUBLICAR MUDANÇA, TROQUE ESTA DATA-HORA: as abas abertas mostram o aviso de versão nova -->
 <title>Scout System 2026</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
@@ -1486,7 +1486,7 @@ function renderIndJogTable(){
       if(d) return d;
       return String(b.id).localeCompare(String(a.id));   // mesma data: o cadastrado por último primeiro
     }
-    const numCols=['geracao','ano'];
+    const numCols=['geracao','ano','sofaNota'];
     if(numCols.includes(col)||(!isNaN(parseFloat(av))&&!isNaN(parseFloat(bv))))
       return ((parseFloat(av)||0)-(parseFloat(bv)||0))*dir;
     return String(av).localeCompare(String(bv),'pt-BR',{sensitivity:'base'})*dir;
@@ -1510,7 +1510,7 @@ function renderIndJogTable(){
     {id:'indicacao',label:'Indicação'},
     {id:'avalAgrup',label:'Avaliação'},
     {id:'negStatus',label:'Negocial'},
-    {id:'eagle',   label:'Eagle'},
+    {id:'sofaNota',label:'SofaScore'},
     {id:'instat',  label:'Instat'},
     {id:'monitorado',label:'Mon.'},
     {id:'ano',     label:'Ano'},
@@ -1531,7 +1531,7 @@ function renderIndJogTable(){
       <td style="color:#5f5e5a;min-width:100px">${r.indicacao||'—'}</td>
       <td>${indAvalTexto(r)?`<span class="ind-aval ${avalClass(indAvalTexto(r))}">${indAvalTexto(r)}</span>`:''}</td>
       <td>${negResumo(r)}</td>
-      <td style="text-align:center;color:#5f5e5a">${r.eagle||'—'}</td>
+      <td style="text-align:center;white-space:nowrap">${sofaCelula(r)}</td>
       <td style="text-align:center;color:#5f5e5a">${r.instat||'—'}</td>
       <td style="text-align:center;color:#5f5e5a">${r.monitorado||'—'}</td>
       <td style="text-align:center;color:#888780">${r.ano||'—'}</td>
@@ -1584,6 +1584,7 @@ function renderIndJogTable(){
       </div>
       <input class="ind-search" type="text" placeholder="Buscar atleta, clube, agente…" value="${indFilters.search}" oninput="indSetFilter('search',this.value)">
       ${(()=>{const n=indNomesErrados().length;return n?`<button class="ind-add-btn" style="background:#c0392b" onclick="limparNomesErrados()" title="Registros em que o nome do atleta ficou com o texto da avaliação (importação com coluna errada)">⚠ ${n.toLocaleString('pt-BR')} com nome errado — remover</button>`:'';})()}
+      <button class="ind-add-btn" style="background:#374df5" onclick="sofaAtualizarLista()" title="Atualiza a nota SofaScore de quem tem link, na lista filtrada (precisa da extensão BFR Relatório Jogadores 1.4)">⭐ Atualizar notas</button>
       <span class="ind-count">${total} atleta${total!==1?'s':''}</span>
       <button class="ind-add-btn" onclick="openIndForm('jog',null)">＋ Novo Atleta</button>
       <label class="ind-add-btn" style="background:#1a4a6e;cursor:pointer" title="Importar histórico JSON (sobrescreve IDs existentes)">⬆ Histórico<input type="file" accept=".json" style="display:none" onchange="importIndicadosHistorico(this)"></label>
@@ -1786,7 +1787,14 @@ function buildJogForm(p){
     ${ffl('Recepção','iRecepcao','text',p.recepcao||'','Quem recebeu internamente')}
     ${ffl('Indicação (Agente)','iIndicacao','text',p.indicacao||'','Nome do agente/intermediário')}
     ${ffls('Avaliação Agrupado','iAvalAgrup',['',...IND_AVAL_AGRUP],p.avalAgrup||'')}
-    ${ffl('Eagle','iEagle','text',p.eagle||'','Nota ou link')}
+    <div style="display:flex;flex-direction:column;gap:.3rem">
+      <label style="font-size:.65rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#888780">SofaScore (link) — nota média no campeonato</label>
+      <div style="display:flex;gap:.4rem">
+        <input id="iSofaLink" type="url" value="${p.sofaLink||''}" placeholder="https://www.sofascore.com/player/…" style="flex:1;min-width:0;background:#f9f8f4;border:1px solid #e0ded4;border-radius:6px;color:#1a1a18;font-family:'Barlow',sans-serif;font-size:.85rem;padding:.5rem .75rem;outline:none">
+        <button type="button" id="btnSofa" onclick="sofaBuscarNoForm()" title="Busca a nota média no campeonato atual (pelo link; sem link, procura pelo nome e clube)" style="background:#374df5;color:#fff;border:none;border-radius:6px;padding:0 .8rem;font-weight:700;font-size:.75rem;cursor:pointer;white-space:nowrap">⭐ Buscar nota</button>
+      </div>
+      <div id="sofaInfo" style="font-size:.75rem;color:#5f5e5a">${p.sofaNota?`Nota <b style="font-size:1rem;color:#1a1a18">${p.sofaNota}</b> · ${p.sofaJogos||'?'} jogos · ${p.sofaTorneio||''} <span style="color:#888780">(${p.sofaEm||''})</span>`:''}</div>
+    </div>
     ${ffl('Instat','iInstat','text',p.instat||'','Nota ou link')}
     ${ffls('Monitorado','iMonitorado',['','SIM','NÃO'],p.monitorado||'')}
     ${ffl('Transfermarkt Link','iTmLink','url',p.tmLink||'','https://www.transfermarkt.com/…')}
@@ -1877,7 +1885,7 @@ function submitIndForm(type){
       pais:gvi('iPais'),clube:gvi('iClube'),data:gvi('iData'),
       responsavel:gvi('iResponsavel'),recepcao:gvi('iRecepcao'),
       indicacao:gvi('iIndicacao'),avalAgrup:gvi('iAvalAgrup'),
-      eagle:gvi('iEagle'),instat:gvi('iInstat'),monitorado:gvi('iMonitorado'),
+      sofaLink:gvi('iSofaLink'),instat:gvi('iInstat'),monitorado:gvi('iMonitorado'),
       avalMkt:document.getElementById('iAvalMkt').value.trim(),
       comments:document.getElementById('iComments').value.trim(),
       ogolLink:gvi('iOgolLink')||'',
@@ -1889,9 +1897,13 @@ function submitIndForm(type){
       negObs:(document.getElementById('iNegObs')||{value:''}).value.trim(),
     };
     if(!data.data) data.data=indHoje();   // sem data, o registro ia para o fim da lista (ordenada por data)
+    if(window.__sofaForm&&window.__sofaForm.link===data.sofaLink) Object.assign(data,window.__sofaForm.campos);
+    const sofaDepois=data.sofaLink&&(data.sofaLink!==prevRec.sofaLink||!data.sofaNota)&&!(window.__sofaForm&&window.__sofaForm.link===data.sofaLink);
     Object.keys(data).forEach(k=>{ if(data[k]===''&&prevRec[k]===undefined) delete data[k]; });
     window.__indUltimoSalvo=data.id;
     saveIndJog(data);
+    window.__sofaForm=null;
+    if(sofaDepois) sofaAtualizarRegistro(data.id).catch(()=>{});
   } else {
     const nome=gvi('tNome');
     if(!nome){alert('Informe o nome do treinador.');return;}
@@ -3083,7 +3095,7 @@ window.addEventListener('resize',()=>{ fixStickyTops(); if(currentView==='indica
 const NEG_STATUS=['Não iniciada','Em conversa','Proposta enviada','Contraproposta','Fechado','Não avançou'];
 const NEG_TIPO=['Compra definitiva','Empréstimo','Empréstimo c/ opção de compra','Empréstimo c/ obrigação de compra','Livre (fim de contrato)','Troca'];
 // campos do atleta (não da oferta) que podem ser trazidos de uma indicação anterior
-const IND_CARRY=['posicao','geracao','pais','clube','responsavel','avalAgrup','eagle','instat','monitorado','tmLink','ogolLink','agencia','agenciaContato','negStatus','negTipo','negValor','negSalario','negContrato','negObs'];
+const IND_CARRY=['posicao','geracao','pais','clube','responsavel','avalAgrup','sofaLink','instat','monitorado','tmLink','ogolLink','agencia','agenciaContato','negStatus','negTipo','negValor','negSalario','negContrato','negObs'];
 
 function negClass(s){
   const v=(s||'').toLowerCase();
@@ -3188,7 +3200,7 @@ function indRenderHistorico(){
     indCarregarDe(grupos[gKeys[0]][0].id,false);
   }
 }
-const IND_FIELD_IDS={posicao:'iPosicao',geracao:'iGeracao',pais:'iPais',clube:'iClube',responsavel:'iResponsavel',avalAgrup:'iAvalAgrup',eagle:'iEagle',instat:'iInstat',monitorado:'iMonitorado',tmLink:'iTmLink',ogolLink:'iOgolLink',agencia:'iAgencia',agenciaContato:'iAgenciaContato',negStatus:'iNegStatus',negTipo:'iNegTipo',negValor:'iNegValor',negSalario:'iNegSalario',negContrato:'iNegContrato',negObs:'iNegObs'};
+const IND_FIELD_IDS={posicao:'iPosicao',geracao:'iGeracao',pais:'iPais',clube:'iClube',responsavel:'iResponsavel',avalAgrup:'iAvalAgrup',sofaLink:'iSofaLink',instat:'iInstat',monitorado:'iMonitorado',tmLink:'iTmLink',ogolLink:'iOgolLink',agencia:'iAgencia',agenciaContato:'iAgenciaContato',negStatus:'iNegStatus',negTipo:'iNegTipo',negValor:'iNegValor',negSalario:'iNegSalario',negContrato:'iNegContrato',negObs:'iNegObs'};
 // sobrescrever=false → só preenche campos vazios
 function indCarregarDe(id,sobrescrever){
   const src=IND_JOG[id]; if(!src) return;
@@ -3443,6 +3455,104 @@ async function checarVersaoNova(){
 }
 setInterval(checarVersaoNova,15*60*1000);
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) checarVersaoNova(); });
+
+/* ══ SofaScore (15/10/2026, pedido do Brunno) ══
+   Coluna "SofaScore" no lugar de "Eagle": link do jogador + nota média no campeonato atual.
+   O SofaScore não deixa o site ler a API direto (403); quem busca é a extensão BFR Relatório Jogadores
+   (1.4.0+, mesma do Relatório Jogadores), pelo pedido 'baixar' em www.sofascore.com/api/v1. */
+const RJ_EXT_ID='ohjijihiclegbdhbpphaofkjicenplla';
+const RJ_EXT_ZIP='https://henriquesimoessilva3-png.github.io/RANKING/relatorio-jogadores/static/download/extensao-bfr-relatorio-jogadores.zip';
+function extPedido(msg){
+  return new Promise((res,rej)=>{
+    if(!(window.chrome&&chrome.runtime&&chrome.runtime.connect)) return rej(new Error('sem extensão'));
+    let port; try{ port=chrome.runtime.connect(RJ_EXT_ID,{name:'scoutsystem'}); }catch(e){ return rej(new Error('sem extensão')); }
+    const id=Date.now()+Math.random(); let fim=false;
+    const t=setTimeout(()=>{ if(!fim){fim=true;try{port.disconnect()}catch(e){} rej(new Error('a extensão não respondeu'));} },20000);
+    port.onMessage.addListener(m=>{ if(m.id!==id||m.log) return; fim=true; clearTimeout(t); try{port.disconnect()}catch(e){} m.erro?rej(new Error(m.erro)):res(m); });
+    port.onDisconnect.addListener(()=>{ void chrome.runtime.lastError; if(!fim){fim=true;clearTimeout(t);rej(new Error('sem extensão'));} });
+    port.postMessage({id,...msg});
+  });
+}
+async function sofaApi(caminho){
+  const r=await extPedido({tipo:'baixar',url:'https://www.sofascore.com/api/v1'+caminho,como:'json'});
+  return JSON.parse(r.texto);
+}
+function sofaIdDoLink(l){ const m=String(l||'').match(/sofascore\.com\/.*player\/[^/]*\/(\d+)/i)||String(l||'').match(/\/player\/(\d+)/); return m?m[1]:null; }
+// sem link: procura pelo nome; prefere o do mesmo clube
+async function sofaProcurar(nome,clube){
+  const j=await sofaApi('/search/all?q='+encodeURIComponent(nome));
+  const ps=(j.results||[]).filter(x=>x.type==='player').map(x=>x.entity);
+  if(!ps.length) return null;
+  const cw=slugInd(clube||'').split('_').filter(x=>x.length>2&&!['club','clube','fc','sem','free','cf','sc'].includes(x));
+  const pont=e=>{ const t=slugInd(e.team&&e.team.name||''); return cw.filter(c=>t.includes(c)).length; };
+  ps.sort((a,b)=>pont(b)-pont(a));
+  return ps[0];
+}
+const SOFA_COPA=/copa|cup|libertadores|sudamericana|champions|europa league|conference|supercopa|recopa|friendl|amistos|qualif|elimin/i;
+async function sofaNotaAtual(id){
+  const sj=await sofaApi(`/player/${id}/statistics/seasons`);
+  const uts=sj.uniqueTournamentSeasons||[];
+  if(!uts.length) return null;
+  const ut=uts.find(u=>!SOFA_COPA.test(u.uniqueTournament.name))||uts[0];
+  const se=ut.seasons[0];
+  const st=await sofaApi(`/player/${id}/unique-tournament/${ut.uniqueTournament.id}/season/${se.id}/statistics/overall`);
+  const x=st.statistics||{};
+  return {sofaNota:x.rating!=null?(Math.round(x.rating*100)/100).toFixed(2):'',sofaJogos:x.appearances!=null?String(x.appearances):'',sofaMin:x.minutesPlayed!=null?String(x.minutesPlayed):'',sofaTorneio:`${ut.uniqueTournament.name} ${se.year||''}`.trim(),sofaEm:indHoje()};
+}
+function sofaErroTexto(e){
+  return /sem extensão|não respondeu/.test(e.message)?`Precisa da extensão BFR Relatório Jogadores 1.4 neste Chrome — <a href="${RJ_EXT_ZIP}" style="color:#374df5">baixe aqui</a> (troque os arquivos na pasta da extensão e clique ↻ em chrome://extensions).`
+    :/fora da lista/.test(e.message)?`A extensão está desatualizada (precisa da 1.4) — <a href="${RJ_EXT_ZIP}" style="color:#374df5">baixe aqui</a> e clique ↻ em chrome://extensions.`
+    :'Não deu para buscar no SofaScore: '+e.message;
+}
+async function sofaBuscarNoForm(){
+  const info=document.getElementById('sofaInfo'), btn=document.getElementById('btnSofa');
+  let link=gvi('iSofaLink'); btn.disabled=true; info.innerHTML='Buscando no SofaScore…';
+  try{
+    let id=sofaIdDoLink(link), achado='';
+    if(!id){
+      const e=await sofaProcurar(gvi('iNome'),gvi('iClube'));
+      if(!e){ info.innerHTML='Não achei esse nome no SofaScore — cole o link do jogador.'; return; }
+      id=e.id; link=`https://www.sofascore.com/player/${e.slug}/${e.id}`; document.getElementById('iSofaLink').value=link;
+      achado=` · achado pelo nome: <b>${e.name}</b> (${e.team&&e.team.name||'—'}) — confira o link`;
+    }
+    const n=await sofaNotaAtual(id);
+    if(!n||!n.sofaNota){ info.innerHTML='Sem nota no SofaScore para o campeonato atual.'+achado; window.__sofaForm={link,campos:{...(n||{}),sofaNota:''}}; return; }
+    window.__sofaForm={link,campos:n};
+    info.innerHTML=`Nota <b style="font-size:1rem;color:#1a1a18">${n.sofaNota}</b> · ${n.sofaJogos} jogos · ${n.sofaTorneio}${achado}`;
+  }catch(e){ info.innerHTML=sofaErroTexto(e); }
+  finally{ btn.disabled=false; }
+}
+async function sofaAtualizarRegistro(id){
+  const r=IND_JOG[id]; if(!r||!r.sofaLink) return false;
+  const sid=sofaIdDoLink(r.sofaLink); if(!sid) return false;
+  const n=await sofaNotaAtual(sid); if(!n) return false;
+  const upd={...r,...n}; IND_JOG[id]=upd;
+  if(db&&firebaseReady) await db.ref('ind_jog/'+id).update(n);
+  return true;
+}
+async function sofaAtualizarLista(){
+  const ids=[...document.querySelectorAll('#indTableContent tr[onclick]')].map(tr=>(tr.getAttribute('onclick').match(/'([^']+)'\)/)||[])[1]).filter(id=>id&&IND_JOG[id]&&IND_JOG[id].sofaLink);
+  if(!ids.length){ alert('Nenhum jogador da lista tem link do SofaScore. Cole o link no cadastro (campo SofaScore).'); return; }
+  const btn=event&&event.target; let ok=0, err=null;
+  for(let i=0;i<ids.length;i++){
+    if(btn) btn.textContent=`⭐ ${i+1}/${ids.length}…`;
+    try{ if(await sofaAtualizarRegistro(ids[i])) ok++; }catch(e){ err=e; if(/sem extensão|fora da lista/.test(e.message)) break; }
+    await new Promise(r=>setTimeout(r,400));
+  }
+  if(btn) btn.textContent='⭐ Atualizar notas';
+  if(err&&!ok){ const d=document.createElement('div'); d.innerHTML=sofaErroTexto(err); alert(d.textContent); }
+  else alert(`✓ Notas atualizadas: ${ok} de ${ids.length}`);
+  refreshIndView();
+}
+function sofaCelula(r){
+  if(r.sofaNota){
+    const v=parseFloat(r.sofaNota), cor=v>=7.2?'#1a8040':v>=6.8?'#1562B8':v>=6.5?'#b8860b':'#c0392b';
+    const t=`${r.sofaTorneio||''} · ${r.sofaJogos||'?'} jogos${r.sofaMin?' · '+r.sofaMin+' min':''} · atualizado ${r.sofaEm||''}`;
+    return r.sofaLink?`<a href="${r.sofaLink}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="${t}" style="font-weight:800;font-size:13px;color:${cor};text-decoration:none">${r.sofaNota}</a>`:`<b style="color:${cor}" title="${t}">${r.sofaNota}</b>`;
+  }
+  if(r.sofaLink) return `<a href="${r.sofaLink}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="font-size:10px;color:#374df5">link</a>`;
+  return r.eagle?`<span style="color:#b8b6ac;font-size:10px" title="Eagle (antigo)">${r.eagle}</span>`:'<span style="color:#c8c6bc">—</span>';
+}
 
 /* re-render seguro da tela de Indicados (shell + aba atual) */
 function refreshIndView(){
