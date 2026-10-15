@@ -1539,6 +1539,7 @@ function renderIndJogTable(){
         </select>
       </div>
       <input class="ind-search" type="text" placeholder="Buscar atleta, clube, agente…" value="${indFilters.search}" oninput="indSetFilter('search',this.value)">
+      ${(()=>{const n=indNomesErrados().length;return n?`<button class="ind-add-btn" style="background:#c0392b" onclick="limparNomesErrados()" title="Registros em que o nome do atleta ficou com o texto da avaliação (importação com coluna errada)">⚠ ${n.toLocaleString('pt-BR')} com nome errado — remover</button>`:'';})()}
       <span class="ind-count">${total} atleta${total!==1?'s':''}</span>
       <button class="ind-add-btn" onclick="openIndForm('jog',null)">＋ Novo Atleta</button>
       <label class="ind-add-btn" style="background:#1a4a6e;cursor:pointer" title="Importar histórico JSON (sobrescreve IDs existentes)">⬆ Histórico<input type="file" accept=".json" style="display:none" onchange="importIndicadosHistorico(this)"></label>
@@ -3174,7 +3175,8 @@ let indRelFilters={ano:'',pos:'',resp:'',de:'',ate:''};
 function indRelSetFilter(k,v){ indRelFilters[k]=v; renderIndRelatorios(); }
 
 function indRelRows(){
-  let rows=Object.values(IND_JOG);
+  // fora do relatório: registros com o nome trocado pela avaliação (importação com coluna errada)
+  let rows=Object.values(IND_JOG).filter(r=>{ const n=(r.nome||'').trim(); return !(n&&(n===(r.avalMkt||'').trim()||n===(r.avalAgrup||'').trim())); });
   const f=indRelFilters;
   if(f.ano) rows=rows.filter(r=>String(r.ano||'')===f.ano);
   if(f.pos) rows=rows.filter(r=>indPosCode(r)===f.pos);
@@ -3333,6 +3335,23 @@ function imprimirRelIndicados(){
   w.document.close();
 }
 
+/* registros importados com a coluna errada: o "nome" é igual ao texto da avaliação */
+function indNomesErrados(){
+  return Object.values(IND_JOG).filter(r=>{ const n=(r.nome||'').trim(); return n&&(n===(r.avalMkt||'').trim()||n===(r.avalAgrup||'').trim()); });
+}
+function limparNomesErrados(){
+  const lista=indNomesErrados(); if(!lista.length) return;
+  const anos={}; lista.forEach(r=>anos[r.ano]=(anos[r.ano]||0)+1);
+  // 1) cópia de segurança
+  const blob=new Blob([JSON.stringify({ind_jog:Object.fromEntries(lista.map(r=>[r.id,r]))},null,1)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='backup_indicados_nome_errado_'+new Date().toISOString().slice(0,10)+'.json'; document.body.appendChild(a); a.click(); a.remove();
+  // 2) confirmação
+  if(!confirm(`Remover ${lista.length} registro(s) em que o nome ficou com o texto da avaliação?\nPor ano: ${Object.entries(anos).map(([k,v])=>k+': '+v).join(' · ')}\n\nUma cópia de segurança foi baixada (pode ser reimportada pelo botão ⬆ Histórico).`)) return;
+  const upd={}; lista.forEach(r=>{ upd['ind_jog/'+r.id]=null; delete IND_JOG[r.id]; });
+  if(db&&firebaseReady){ setSyncBadge('syncing','⟳ Removendo…'); db.ref('/').update(upd).then(()=>{ setSyncBadge('synced','● Live'); alert('✓ Removidos: '+lista.length); refreshIndView(); }).catch(e=>{ setSyncBadge('error','✕ Erro'); alert('Erro: '+e.message); }); }
+  else { try{localStorage.setItem('ind_jog',JSON.stringify(IND_JOG));}catch(e){} refreshIndView(); }
+}
+
 /* re-render seguro da tela de Indicados (shell + aba atual) */
 function refreshIndView(){
   if(currentView!=='indicados') return;
@@ -3370,10 +3389,10 @@ function parseIndicadosExcel(arrayBuffer){
   // As linhas estão em ordem cronológica e misturam datas-texto ("13/01") com datas do Excel.
   // Para cada data do Excel, vê qual leitura (como está × dia↔mês trocados) respeita a ordem
   // em relação à última data-texto anterior. A leitura que mais respeita vence.
-  const detectSwap=(rows,col)=>{
+  const detectSwap=(rows,col,hRowRef=1)=>{
     if(col<0) return false;
     let last=null, ok=0, okSw=0;
-    rows.slice(2).forEach(r=>{ const v=r&&r[col]; if(v===null||v===undefined||v==='') return;
+    rows.slice(hRowRef+1).forEach(r=>{ const v=r&&r[col]; if(v===null||v===undefined||v==='') return;
       if(v instanceof Date){
         const d=new Date(v.getTime()+12*3600e3), a=d.getDate(), b=d.getMonth()+1;
         if(last!==null){ if(b*100+a>=last) ok++; if(a<=12&&a*100+b>=last) okSw++; }
@@ -3401,10 +3420,22 @@ function parseIndicadosExcel(arrayBuffer){
     const ws=wb.Sheets[name];
     const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
     if(rows.length<3) return;
-    const header=rows[1]||[];
-    const idxOf=nm=>header.findIndex(h=>String(h||'').trim().toLowerCase()===nm.toLowerCase());
+    // linha de cabeçalho: a primeira (das 6 iniciais) que tem "Data"/"Date" e "Clube"/"País"/"Country"
+    const normH=h=>String(h||'').trim().toLowerCase();
+    let hRow=rows.slice(0,6).findIndex(r=>r&&r.some(h=>['data','date'].includes(normH(h)))&&r.some(h=>['clube','país','country','current club','club'].includes(normH(h))));
+    if(hRow<0) hRow=1;
+    const header=rows[hRow]||[];
+    const idxOf=nm=>header.findIndex(h=>normH(h)===nm.toLowerCase());
+    // coluna do nome: cabeçalho "Atleta"/"Nome"/"Jogador"; sem cabeçalho, é a coluna logo antes da avaliação
+    const nomeIdx=(()=>{
+      for(const n of ['Atleta','Nome','Jogador','Name']){ const i=idxOf(n); if(i>=0) return i; }
+      const av=header.findIndex(h=>normH(h).startsWith('avaliação'));
+      if(av>0) return av-1;
+      const ps=header.findIndex(h=>['posição','position'].includes(normH(h)));
+      return ps>0?Math.max(0,ps-4):1;
+    })();
     const cols=isJog?{
-      nome: idxOf('Atleta')>=0?idxOf('Atleta'):1,
+      nome: nomeIdx,
       avalMkt: idxOf('Avaliação Dep. de Mercado'),
       avalAgrup: idxOf('Avaliação - AGRUPADO'),
       eagle: idxOf('EAGLE'),
@@ -3441,11 +3472,13 @@ function parseIndicadosExcel(arrayBuffer){
       agente2: idxOf('Agent/Intermediary 2'),
       agente3: idxOf('Agent/Intermediary 3')
     };
-    swapDM=detectSwap(rows,cols.data);
-    for(let i=2;i<rows.length;i++){
+    swapDM=detectSwap(rows,cols.data,hRow);
+    for(let i=hRow+1;i<rows.length;i++){
       const r=rows[i]; if(!r) continue;
       const nome=cleanStr(cols.nome>=0?r[cols.nome]:null);
       if(!nome) continue;
+      // trava: se o "nome" é texto de avaliação, a coluna foi lida errada — não importa a linha
+      if(/^(aprovad|descartad|monitor|em avalia)/i.test(nome)){ result._nomesSuspeitos=(result._nomesSuspeitos||0)+1; continue; }
       const obj={ano,nome};
       for(const[k,idx] of Object.entries(cols)){
         if(k==='nome'||idx<0||idx===undefined) continue;
@@ -3539,7 +3572,7 @@ function importIndicadosSomenteNovos(input){
       if(isExcel){
         if(typeof XLSX==='undefined'){alert('Biblioteca Excel não carregou. Verifique conexão e recarregue a página.');input.value='';return;}
         const parsed=parseIndicadosExcel(e.target.result);
-        jog=parsed.ind_jog; tre=parsed.ind_tre;
+        window.__ultimoParse=parsed; jog=parsed.ind_jog; tre=parsed.ind_tre;
         // Filtro por data mínima (se informada)
         if(minDate){
           jog=Object.fromEntries(Object.entries(jog).filter(([,v])=>{const d=dateFromRecord(v);return d&&d>=minDate;}));
@@ -3565,7 +3598,9 @@ function importIndicadosSomenteNovos(input){
       skipJ=Object.keys(jog).length-nJ; skipT=Object.keys(tre).length-nT;
       if(nJ+nT===0){alert(`Nenhum registro novo encontrado.\n${skipJ+skipT} já existiam e foram ignorados.`);input.value='';return;}
       const tipoFonte=isExcel?'Excel':'JSON';
-      if(!confirm(`Fonte: ${tipoFonte}\nImportar ${nJ} jogador(es) e ${nT} treinador(es) novos?\n${skipJ+skipT} já existiam → serão IGNORADOS.`)){input.value='';return;}
+      const porAnoNovos=Object.entries(Object.values(novosJ).reduce((m,o)=>{m[o.ano]=(m[o.ano]||0)+1;return m;},{})).sort().map(([a,n])=>a+': '+n).join(' · ');
+      const suspeitos=isExcel&&window.__ultimoParse?(window.__ultimoParse._nomesSuspeitos||0):0;
+      if(!confirm(`Fonte: ${tipoFonte}\nImportar ${nJ} jogador(es) e ${nT} treinador(es) novos?\nJogadores novos por ano → ${porAnoNovos||'—'}\n${skipJ+skipT} já existiam → serão IGNORADOS.`+(suspeitos?`\n\n⚠ ${suspeitos} linha(s) foram descartadas porque o "nome" era texto de avaliação (coluna errada na planilha). Confira a planilha.`:''))){input.value='';return;}
       if(db&&firebaseReady){
         setSyncBadge('syncing','⟳ Importando…');
         const updates={};
