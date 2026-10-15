@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="app-versao" content="2026-10-15 14:10"><!-- AO PUBLICAR MUDANÇA, TROQUE ESTA DATA-HORA: as abas abertas mostram o aviso de versão nova -->
 <title>Scout System 2026</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
@@ -3418,23 +3419,26 @@ function limparNomesErrados(){
 }
 
 /* ── Aviso de versão nova ──
-   O GitHub Pages deixa a página guardada no navegador por até 10 min, e abas abertas há horas ficam na versão velha.
-   A cada 3 min a página confere a versão publicada; se mudou, mostra uma faixa com "Recarregar".
-   >>> AO PUBLICAR MUDANÇA, TROQUE O VALOR DE APP_VERSAO (data-hora). <<< */
-const APP_VERSAO='2026-10-15 14:05';
+   Confere só o começo da página publicada (2 KB, o <meta name="app-versao"> no topo), quando a pessoa volta para a aba
+   e no máximo a cada 15 min. Não recarrega nada sozinho: se a versão mudou, mostra uma faixa com "Recarregar". */
+const APP_VERSAO=(document.querySelector('meta[name="app-versao"]')||{}).content||'';
+let versaoUltimaChecagem=0;
 async function checarVersaoNova(){
+  if(!APP_VERSAO||document.getElementById('faixaVersao')) return;
+  if(Date.now()-versaoUltimaChecagem<15*60*1000) return;
+  versaoUltimaChecagem=Date.now();
   try{
-    const t=await fetch(location.pathname+'?v='+Date.now(),{cache:'no-store'}).then(r=>r.text());
-    const m=t.match(/const APP_VERSAO='([^']+)'/);
-    if(m&&m[1]!==APP_VERSAO&&!document.getElementById('faixaVersao')){
+    const t=await fetch(location.pathname+'?v='+Date.now(),{cache:'no-store',headers:{Range:'bytes=0-2047'}}).then(r=>r.text());
+    const m=t.slice(0,4096).match(/name="app-versao" content="([^"]+)"/);
+    if(m&&m[1]!==APP_VERSAO){
       const d=document.createElement('div'); d.id='faixaVersao';
       d.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:#e8c84a;color:#1a1a18;font:600 13px Barlow,sans-serif;padding:8px 12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.2)';
-      d.innerHTML='Saiu uma versão nova do Scout System. <button onclick="location.reload()" style="margin-left:8px;background:#1a1a18;color:#e8c84a;border:none;border-radius:5px;padding:4px 12px;font-weight:700;cursor:pointer">↻ Recarregar</button> <span style="font-weight:400;opacity:.7">(salve o que estiver editando antes)</span>';
+      d.innerHTML='Saiu uma versão nova do Scout System. <button onclick="location.reload()" style="margin-left:8px;background:#1a1a18;color:#e8c84a;border:none;border-radius:5px;padding:4px 12px;font-weight:700;cursor:pointer">↻ Recarregar</button> <span style="font-weight:400;opacity:.7">(salve o que estiver editando antes)</span> <button onclick="this.parentNode.remove()" style="margin-left:6px;background:transparent;border:none;cursor:pointer;font-size:14px">✕</button>';
       document.body.appendChild(d);
     }
   }catch(e){}
 }
-setInterval(checarVersaoNova,3*60*1000); setTimeout(checarVersaoNova,20000);
+setInterval(checarVersaoNova,15*60*1000);
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) checarVersaoNova(); });
 
 /* re-render seguro da tela de Indicados (shell + aba atual) */
