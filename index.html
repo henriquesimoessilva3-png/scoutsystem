@@ -1361,7 +1361,9 @@ function renderScoutView(scout){
 ══════════════════════════════════════════ */
 const IND_POSITIONS=['1 - GK','2 - RB','3 - LB','4 - RCB/LCB','5 - DM','6 - CM','7 - AM','8 - RW/LW','9 - CF'];
 const IND_AVAL_AGRUP=['APROVADO - A Team','APROVADO - Squad Player','APROVADO - Time B/RWD','APROVADO - Youth Player','APROVADO U20','Em Avaliação','Monitorando/Monitorar','Descartado'];
-const IND_RESPONSAVEIS=['Brunno','Cristian','Gabriel','Humberto','Base'];
+// Responsáveis = scouts do cadastro (botão "+ Scout") + os fixos de sempre
+const IND_RESP_BASE=['Brunno','Cristian','Gabriel','Humberto','Base'];
+function indResponsaveis(){ const l=[...(typeof SCOUTS!=='undefined'?SCOUTS:[]),...IND_RESP_BASE]; return [...new Set(l.filter(Boolean))]; }
 const IND_ANOS=Array.from({length:new Date().getFullYear()-2020},(_,i)=>String(2022+i));
 
 function avalClass(v){
@@ -1380,12 +1382,12 @@ function avalClass(v){
 ══════════════════════════════════════════ */
 function saveIndJog(data){
   IND_JOG[data.id]=data;
-  if(db&&firebaseReady) db.ref('ind_jog/'+data.id).set(data).then(()=>setSyncBadge('synced','● Live')).catch(e=>setSyncBadge('error','✕ Save failed'));
-  else try{localStorage.setItem('ind_jog',JSON.stringify(IND_JOG));}catch(e){}
+  if(db&&firebaseReady) db.ref('ind_jog/'+data.id).set(data).then(()=>setSyncBadge('synced','● Live')).catch(e=>{setSyncBadge('error','✕ Save failed');alert('⚠ NÃO SALVOU no banco: '+e.message+'\nRecarregue a página e tente de novo.');});
+  else { try{localStorage.setItem('ind_jog',JSON.stringify(IND_JOG));}catch(e){} alert('⚠ Sem conexão com o banco: o registro ficou só neste navegador. Recarregue a página (com internet) e salve de novo.'); }
 }
 function saveIndTre(data){
   IND_TRE[data.id]=data;
-  if(db&&firebaseReady) db.ref('ind_tre/'+data.id).set(data).then(()=>setSyncBadge('synced','● Live')).catch(e=>setSyncBadge('error','✕ Save failed'));
+  if(db&&firebaseReady) db.ref('ind_tre/'+data.id).set(data).then(()=>setSyncBadge('synced','● Live')).catch(e=>{setSyncBadge('error','✕ Save failed');alert('⚠ NÃO SALVOU no banco: '+e.message+'\nRecarregue a página e tente de novo.');});
   else try{localStorage.setItem('ind_tre',JSON.stringify(IND_TRE));}catch(e){}
 }
 function deleteIndJog(id){
@@ -1564,7 +1566,7 @@ function renderIndJogTable(){
         <span class="ind-filter-label">Responsável:</span>
         <select class="ind-select" onchange="indSetFilter('resp',this.value)">
           <option value="">Todos</option>
-          ${IND_RESPONSAVEIS.map(r=>`<option value="${r}"${indFilters.resp===r?' selected':''}>${r}</option>`).join('')}
+          ${indResponsaveis().map(r=>`<option value="${r}"${indFilters.resp===r?' selected':''}>${r}</option>`).join('')}
         </select>
       </div>
       <div class="ind-filter-group">
@@ -1769,8 +1771,8 @@ function buildJogForm(p){
     ${ffl('Geração (ano nasc.)','iGeracao','number',p.geracao||'','ex: 2004')}
     ${ffl('País','iPais','text',p.pais||'','ex: Brasil')}
     ${ffl('Clube','iClube','text',p.clube||'','ex: Flamengo')}
-    ${ffl('Data','iData','text',p.data||'','ex: 15/01')}
-    ${ffls('Responsável','iResponsavel',['',...IND_RESPONSAVEIS],p.responsavel||'')}
+    ${ffl('Data','iData','text',p.data||(editingIndId?'':indHoje()),'ex: 15/01/2026')}
+    ${ffls('Responsável','iResponsavel',[...new Set(['',...indResponsaveis(),...(p.responsavel?[p.responsavel]:[])])],p.responsavel||'')}
     ${ffl('Recepção','iRecepcao','text',p.recepcao||'','Quem recebeu internamente')}
     ${ffl('Indicação (Agente)','iIndicacao','text',p.indicacao||'','Nome do agente/intermediário')}
     ${ffls('Avaliação Agrupado','iAvalAgrup',['',...IND_AVAL_AGRUP],p.avalAgrup||'')}
@@ -1819,7 +1821,7 @@ function buildTreForm(p){
     ${ffl('Gols Sofridos (m.)','tGolsS','number',p.golsSofridos||'','Média por jogo')}
     ${ffl('Saldo de Gols','tGolSaldo','number',p.golSaldo||'')}
     ${ffl('Clube Atual','tClubeAtual','text',p.clubeAtual||'','ex: Sem clube')}
-    ${ffl('Data','tData','text',p.data||'','ex: 22/03')}
+    ${ffl('Data','tData','text',p.data||(editingIndId?'':indHoje()),'ex: 22/03/2026')}
     ${ffl('Recepção','tRecepcao','text',p.recepcao||'')}
     ${ffl('Agente / Intermediário 1','tAgente1','text',p.agente1||'')}
     ${ffl('Agente / Intermediário 2','tAgente2','text',p.agente2||'')}
@@ -1844,6 +1846,7 @@ function ffl(lbl,id,type,val,ph,req,style){
   </div>`;
 }
 function ffls(lbl,id,options,val){
+  if(val&&!options.includes(val)) options=[...options,val];   // valor antigo fora da lista não se perde ao salvar
   return `<div style="display:flex;flex-direction:column;gap:.3rem">
     <label style="font-size:.65rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#888780">${lbl}</label>
     <select id="${id}" style="background:#f9f8f4;border:1px solid #e0ded4;border-radius:6px;color:#1a1a18;font-family:'Barlow',sans-serif;font-size:.85rem;padding:.5rem .75rem;outline:none;width:100%;-webkit-appearance:none">
@@ -1875,7 +1878,9 @@ function submitIndForm(type){
       negSalario:gvi('iNegSalario'),negContrato:gvi('iNegContrato'),
       negObs:(document.getElementById('iNegObs')||{value:''}).value.trim(),
     };
+    if(!data.data) data.data=indHoje();   // sem data, o registro ia para o fim da lista (ordenada por data)
     Object.keys(data).forEach(k=>{ if(data[k]===''&&prevRec[k]===undefined) delete data[k]; });
+    window.__indUltimoSalvo=data.id;
     saveIndJog(data);
   } else {
     const nome=gvi('tNome');
@@ -1890,10 +1895,26 @@ function submitIndForm(type){
       clubeAtual:gvi('tClubeAtual'),data:gvi('tData'),recepcao:gvi('tRecepcao'),
       agente1:gvi('tAgente1'),agente2:gvi('tAgente2'),agente3:gvi('tAgente3'),
     };
+    if(!data.data) data.data=indHoje();
+    window.__indUltimoSalvo=data.id;
     saveIndTre(data);
   }
   closeIndModal();
   refreshIndView();
+  indMostrarSalvo();
+}
+function indHoje(){ const d=new Date(); return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear(); }
+// depois de salvar: rola até a linha, destaca e mostra "✓ Salvo"
+function indMostrarSalvo(){
+  const id=window.__indUltimoSalvo; if(!id) return;
+  setTimeout(()=>{
+    const tr=document.querySelector(`#indTableContent tr[onclick*="'${id}'"]`);
+    if(tr){ tr.scrollIntoView({block:'center'}); tr.querySelectorAll('td').forEach(td=>{ td.style.transition='background 1.5s'; td.style.background='#fff1c9'; setTimeout(()=>td.style.background='',2500); }); }
+    const t=document.createElement('div');
+    t.textContent=tr?'✓ Salvo':'✓ Salvo — não aparece com os filtros atuais';
+    t.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1a8040;color:#fff;padding:8px 18px;border-radius:6px;font-weight:700;font-size:13px;z-index:5000;box-shadow:0 4px 16px rgba(0,0,0,.2)';
+    document.body.appendChild(t); setTimeout(()=>t.remove(),2800);
+  },150);
 }
 
 function confirmDeleteInd(type,id){
@@ -3250,7 +3271,7 @@ function renderIndRelatorios(){
   if(ctrlEl) ctrlEl.innerHTML=`<div class="ind-controls">
     <div class="ind-filter-group"><span class="ind-filter-label">Ano:</span><select class="ind-select" onchange="indRelSetFilter('ano',this.value)"><option value="">Todos</option>${anos.map(a=>`<option${f.ano===a?' selected':''}>${a}</option>`).join('')}</select></div>
     <div class="ind-filter-group"><span class="ind-filter-label">Posição:</span><select class="ind-select" onchange="indRelSetFilter('pos',this.value)"><option value="">Todas</option>${IND_POSITIONS.map(p=>`<option${f.pos===p?' selected':''}>${p}</option>`).join('')}</select></div>
-    <div class="ind-filter-group"><span class="ind-filter-label">Responsável:</span><select class="ind-select" onchange="indRelSetFilter('resp',this.value)"><option value="">Todos</option>${IND_RESPONSAVEIS.map(p=>`<option${f.resp===p?' selected':''}>${p}</option>`).join('')}</select></div>
+    <div class="ind-filter-group"><span class="ind-filter-label">Responsável:</span><select class="ind-select" onchange="indRelSetFilter('resp',this.value)"><option value="">Todos</option>${indResponsaveis().map(p=>`<option${f.resp===p?' selected':''}>${p}</option>`).join('')}</select></div>
     <div class="ind-filter-group"><span class="ind-filter-label">De:</span><input type="date" class="ind-select" value="${f.de}" onchange="indRelSetFilter('de',this.value)"></div>
     <div class="ind-filter-group"><span class="ind-filter-label">Até:</span><input type="date" class="ind-select" value="${f.ate}" onchange="indRelSetFilter('ate',this.value)"></div>
     ${(f.ano||f.pos||f.resp||f.de||f.ate)?`<button class="ind-select" onclick="indRelFilters={ano:'',pos:'',resp:'',de:'',ate:''};renderIndRelatorios()">✕ Limpar</button>`:''}
