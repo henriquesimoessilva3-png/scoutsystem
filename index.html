@@ -3417,6 +3417,26 @@ function limparNomesErrados(){
   else { try{localStorage.setItem('ind_jog',JSON.stringify(IND_JOG));}catch(e){} refreshIndView(); }
 }
 
+/* ── Aviso de versão nova ──
+   O GitHub Pages deixa a página guardada no navegador por até 10 min, e abas abertas há horas ficam na versão velha.
+   A cada 3 min a página confere a versão publicada; se mudou, mostra uma faixa com "Recarregar".
+   >>> AO PUBLICAR MUDANÇA, TROQUE O VALOR DE APP_VERSAO (data-hora). <<< */
+const APP_VERSAO='2026-10-15 14:05';
+async function checarVersaoNova(){
+  try{
+    const t=await fetch(location.pathname+'?v='+Date.now(),{cache:'no-store'}).then(r=>r.text());
+    const m=t.match(/const APP_VERSAO='([^']+)'/);
+    if(m&&m[1]!==APP_VERSAO&&!document.getElementById('faixaVersao')){
+      const d=document.createElement('div'); d.id='faixaVersao';
+      d.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:#e8c84a;color:#1a1a18;font:600 13px Barlow,sans-serif;padding:8px 12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.2)';
+      d.innerHTML='Saiu uma versão nova do Scout System. <button onclick="location.reload()" style="margin-left:8px;background:#1a1a18;color:#e8c84a;border:none;border-radius:5px;padding:4px 12px;font-weight:700;cursor:pointer">↻ Recarregar</button> <span style="font-weight:400;opacity:.7">(salve o que estiver editando antes)</span>';
+      document.body.appendChild(d);
+    }
+  }catch(e){}
+}
+setInterval(checarVersaoNova,3*60*1000); setTimeout(checarVersaoNova,20000);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) checarVersaoNova(); });
+
 /* re-render seguro da tela de Indicados (shell + aba atual) */
 function refreshIndView(){
   if(currentView!=='indicados') return;
