@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="app-versao" content="2026-10-15 14:10"><!-- AO PUBLICAR MUDANÇA, TROQUE ESTA DATA-HORA: as abas abertas mostram o aviso de versão nova -->
+<meta name="app-versao" content="2026-10-15 14:20"><!-- AO PUBLICAR MUDANÇA, TROQUE ESTA DATA-HORA: as abas abertas mostram o aviso de versão nova -->
 <title>Scout System 2026</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
@@ -705,7 +705,7 @@ let IND_TRE={};     // { id: {...} }
 let indTab='jog';   // 'jog' | 'tre'
 let indSortJog={col:'data',dir:'desc'};
 let indSortTre={col:'data',dir:'desc'};
-let indFilters={ano:'',pos:'',aval:'',resp:'',neg:'',search:''};
+let indFilters={ano:String(new Date().getFullYear()),pos:'',aval:'',resp:'',neg:'',search:''};   // abre no ano atual (mais leve)
 let indFiltersTre={ano:'',search:''};
 let editingIndId=null;
 
@@ -1480,8 +1480,11 @@ function renderIndJogTable(){
     const aEmpty=(av===''||av==null), bEmpty=(bv===''||bv==null);
     if(aEmpty&&bEmpty) return 0; if(aEmpty) return 1; if(bEmpty) return -1;
     if(col==='data'){
-      const pd=s=>{s=String(s).trim();let m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);if(m)return new Date(+m[3],+m[2]-1,+m[1]).getTime();m=s.match(/^(\d{1,2})\/(\d{1,2})$/);if(m)return new Date(2000,+m[2]-1,+m[1]).getTime();m=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);if(m)return new Date(+m[1],+m[2]-1,+m[3]).getTime();return 0;};
-      return (pd(av)-pd(bv))*dir;
+      // "16/01" sem ano usa o ano do registro (antes virava ano 2000 e ia para o fim da lista)
+      const da=indDataObj(a), db_=indDataObj(b);
+      const d=((da?da.getTime():0)-(db_?db_.getTime():0))*dir;
+      if(d) return d;
+      return String(b.id).localeCompare(String(a.id));   // mesma data: o cadastrado por último primeiro
     }
     const numCols=['geracao','ano'];
     if(numCols.includes(col)||(!isNaN(parseFloat(av))&&!isNaN(parseFloat(bv))))
@@ -1599,7 +1602,7 @@ function renderIndJogTable(){
     </table>
     ${total>rows.length?`<div style="padding:14px;text-align:center;font-size:12px;color:#5f5e5a;background:#fff">
       Mostrando <b>${rows.length.toLocaleString('pt-BR')}</b> de <b>${total.toLocaleString('pt-BR')}</b> — use os filtros/busca ou
-      <button class="ind-add-btn" style="margin-left:6px" onclick="indLimite+=300;renderIndJogTable()">Mostrar mais 300</button>
+      <button class="ind-add-btn" style="margin-left:6px" onclick="indLimite+=500;renderIndJogTable()">Mostrar mais 500</button>
       <button class="ind-add-btn" style="background:#5f5e5a" onclick="indLimite=1e9;renderIndJogTable()">Mostrar todos (mais lento)</button></div>`:''}`;
 
   setTimeout(fixIndHeight, 0);
@@ -1713,9 +1716,9 @@ function renderIndTreTable(){
 /* ══════════════════════════════════════════
    FILTER / SORT HELPERS
 ══════════════════════════════════════════ */
-let indLimite=300;
+let indLimite=500;
 function indSetFilter(key,val){
-  indFilters[key]=val; indLimite=300;
+  indFilters[key]=val; indLimite=500;
   renderIndJogTable();
 }
 function indSetFilterTre(key,val){ indFiltersTre[key]=val; renderIndTreTable(); }
