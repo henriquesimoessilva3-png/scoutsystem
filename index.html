@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="app-versao" content="2026-10-15 17:05"><!-- AO PUBLICAR MUDANÇA, TROQUE ESTA DATA-HORA: as abas abertas mostram o aviso de versão nova -->
+<meta name="app-versao" content="2026-10-16 10:20"><!-- AO PUBLICAR MUDANÇA, TROQUE ESTA DATA-HORA: as abas abertas mostram o aviso de versão nova -->
 <title>Scout System 2026</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
@@ -3549,7 +3549,7 @@ function sofaOpcoes(L){
   const clube=L.filter(l=>!l.selecao);
   if(!clube.length) return {ano:'',opcoes:[]};
   const ano=clube[0].ano, daTemp=clube.filter(l=>l.ano===ano);
-  const op=[{v:'todas',txt:`Todas as competições do clube — ${ano}`}];
+  const op=[{v:'todas',txt:`Todas as competições do clube — ${ano} (aba Career)`}];
   daTemp.forEach(l=>op.push({v:l.chave,txt:`${l.comp} ${l.ano} (${l.time}) — ${l.nota!=null?l.nota.toFixed(2):'s/ nota'} · ${l.jogos} j`}));
   return {ano,opcoes:op};
 }
@@ -3558,9 +3558,11 @@ function sofaCalcula(L,escolha){
   const ano=clube[0].ano;
   let sel=escolha&&escolha!=='todas'?clube.filter(l=>l.chave===escolha):[];
   if(!sel.length){ escolha='todas'; sel=clube.filter(l=>l.ano===ano); }
-  const comNota=sel.filter(l=>l.nota!=null&&l.jogos>0);
-  const jg=comNota.reduce((a,l)=>a+l.jogos,0);
-  const nota=jg?comNota.reduce((a,l)=>a+l.nota*l.jogos,0)/jg:null;
+  // média ponderada pelos MINUTOS — é a conta da aba Career "All club competitions" do SofaScore
+  // (caso Perelló 2026: LigaPro 6,99 / 1483 min + Libertadores 6,92 / 391 min = 6,98, igual à tela)
+  const comNota=sel.filter(l=>l.nota!=null&&l.min>0);
+  const mn=comNota.reduce((a,l)=>a+l.min,0);
+  const nota=mn?comNota.reduce((a,l)=>a+l.nota*l.min,0)/mn:null;
   return {sofaNota:nota!=null?(Math.round(nota*100)/100).toFixed(2):'', sofaJogos:String(sel.reduce((a,l)=>a+l.jogos,0)),
     sofaMin:String(sel.reduce((a,l)=>a+l.min,0)), sofaTorneio:escolha==='todas'?`Todas do clube ${ano}`:`${sel[0].comp} ${sel[0].ano}`,
     sofaEscolha:escolha, sofaEm:indHoje()};
