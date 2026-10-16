@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="app-versao" content="2026-10-16 10:20"><!-- AO PUBLICAR MUDANÇA, TROQUE ESTA DATA-HORA: as abas abertas mostram o aviso de versão nova -->
+<meta name="app-versao" content="2026-10-16 11:50"><!-- AO PUBLICAR MUDANÇA, TROQUE ESTA DATA-HORA: as abas abertas mostram o aviso de versão nova -->
 <title>Scout System 2026</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
@@ -1482,6 +1482,7 @@ function renderIndJogTable(){
     let av=a[col]??'', bv=b[col]??'';
     if(col==='_vezes'){av=indVezes(a);bv=indVezes(b);}
     if(col==='posicao'){av=indPosLabel(a);bv=indPosLabel(b);}
+    if(col==='sofaNota'){av=sofaValida(a)?a.sofaNota:'';bv=sofaValida(b)?b.sofaNota:'';}
     if(col==='avalAgrup'){av=indAvalTexto(a);bv=indAvalTexto(b);}
     const aEmpty=(av===''||av==null), bEmpty=(bv===''||bv==null);
     if(aEmpty&&bEmpty) return 0; if(aEmpty) return 1; if(bEmpty) return -1;
@@ -3582,7 +3583,7 @@ function sofaMostraForm(link,L,escolha,achado){
   info.innerHTML=`<div style="display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;margin-top:.2rem">
      <select id="iSofaComp" onchange="sofaTrocaComp()" style="background:#f9f8f4;border:1px solid #e0ded4;border-radius:6px;font-size:.75rem;padding:.3rem .4rem;max-width:100%">
        ${opcoes.map(o=>`<option value="${o.v}"${o.v===(n&&n.sofaEscolha)?' selected':''}>${o.txt}</option>`).join('')}</select>
-     <span>Nota <b style="font-size:1.05rem;color:#1a1a18">${n&&n.sofaNota||'—'}</b> · ${n?n.sofaJogos:0} jogos</span></div>${achado||''}`;
+     <span>Nota <b style="font-size:1.05rem;color:#1a1a18">${n&&n.sofaNota||'—'}</b> · ${n?n.sofaJogos:0} jogos${n&&n.sofaNota&&(parseInt(n.sofaJogos)||0)<SOFA_MIN_JOGOS?` <span style="color:#b8860b">(menos de ${SOFA_MIN_JOGOS} jogos: não aparece na lista)</span>`:''}</span></div>${achado||''}`;
   window.__sofaL=L; window.__sofaLink=link;
 }
 function sofaTrocaComp(){ const v=document.getElementById('iSofaComp').value; sofaMostraForm(window.__sofaLink,window.__sofaL,v,''); }
@@ -3643,7 +3644,14 @@ async function sofaAtualizarLista(ev){
   else alert(`✓ Notas atualizadas: ${ok} de ${comLink.length}`+(procurar?`\nAchados pelo nome (conferir): ${ach} de ${semLink.length}`:''));
   refreshIndView();
 }
+// nota só vale com amostra mínima (pedido do Brunno, 16/10): jogador de 1-2-3 jogos com rating alto não entra
+const SOFA_MIN_JOGOS=7;
+function sofaValida(r){ return !!(r&&r.sofaNota&&(parseInt(r.sofaJogos)||0)>=SOFA_MIN_JOGOS); }
 function sofaCelula(r){
+  if(r.sofaNota&&!sofaValida(r)){
+    const t=`Menos de ${SOFA_MIN_JOGOS} jogos na temporada (${r.sofaJogos||0}) — nota ${r.sofaNota} não exibida · ${r.sofaTorneio||''}`;
+    return `${r.sofaLink?`<a href="${r.sofaLink}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="${t}" style="font-size:10px;color:#888780;text-decoration:none">${r.sofaJogos||0} j</a>`:`<span title="${t}" style="font-size:10px;color:#888780">${r.sofaJogos||0} j</span>`}`;
+  }
   if(r.sofaNota){
     const v=parseFloat(r.sofaNota), cor=v>=7.2?'#1a8040':v>=6.8?'#1562B8':v>=6.5?'#b8860b':'#c0392b';
     const t=`${r.sofaTorneio||''} · ${r.sofaJogos||'?'} jogos${r.sofaMin?' · '+r.sofaMin+' min':''} · atualizado ${r.sofaEm||''}`;
