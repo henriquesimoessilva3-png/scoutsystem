@@ -1945,7 +1945,7 @@ function indMostrarSalvo(){
     t.textContent=tr?'✓ Salvo':'✓ Salvo — não aparece com os filtros atuais';
     t.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1a8040;color:#fff;padding:8px 18px;border-radius:6px;font-weight:700;font-size:13px;z-index:5000;box-shadow:0 4px 16px rgba(0,0,0,.2)';
     document.body.appendChild(t); setTimeout(()=>t.remove(),2800);
-  },150);
+  },650);   // depois do redesenho (refreshIndView espera 400 ms)
 }
 
 function confirmDeleteInd(type,id){
