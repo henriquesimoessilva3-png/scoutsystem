@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="app-versao" content="2026-10-16 11:50"><!-- AO PUBLICAR MUDANÇA, TROQUE ESTA DATA-HORA: as abas abertas mostram o aviso de versão nova -->
+<meta name="app-versao" content="2026-10-16 12:55"><!-- AO PUBLICAR MUDANÇA, TROQUE ESTA DATA-HORA: as abas abertas mostram o aviso de versão nova -->
 <title>Scout System 2026</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
@@ -893,6 +893,7 @@ function initFirebase(){
         refreshIndView();
       });
       db.ref('ind_jog').on('value',snap=>{ IND_JOG=snap.val()||{}; try{localStorage.setItem('ind_jog',JSON.stringify(IND_JOG));}catch(e){} refreshIndView(); });
+      if(!window.__sofaRotinaIniciada){ window.__sofaRotinaIniciada=true; setTimeout(()=>{ try{ sofaRotinaSemanal(); }catch(e){} },20000); }
       db.ref('ind_tre').on('value',snap=>{ IND_TRE=snap.val()||{}; try{localStorage.setItem('ind_tre',JSON.stringify(IND_TRE));}catch(e){} refreshIndView(); });
       db.ref('deb_jog').on('value',snap=>{ DEB_JOG=snap.val()||{}; try{localStorage.setItem('deb_jog',JSON.stringify(DEB_JOG));}catch(e){} if(currentView==='debatidos'){ if(debEditandoInline()) window._debPendRender=true; else renderViews(); } });
       setSyncBadge('synced','● Live');
@@ -3647,6 +3648,44 @@ async function sofaAtualizarLista(ev){
 // nota só vale com amostra mínima (pedido do Brunno, 16/10): jogador de 1-2-3 jogos com rating alto não entra
 const SOFA_MIN_JOGOS=7;
 function sofaValida(r){ return !!(r&&r.sofaNota&&(parseInt(r.sofaJogos)||0)>=SOFA_MIN_JOGOS); }
+/* ── Rotina semanal da nota SofaScore (16/10/2026) ──
+   O SofaScore bloqueia servidores (403), então a rotina roda no navegador de quem abre o Scout System
+   com a extensão BFR Relatório Jogadores 1.4+: atualiza, em segundo plano, as notas com mais de 7 dias.
+   Se a aba fechar, continua na próxima visita. Trava no banco (sofa_rotina/trava) evita dois computadores
+   fazendo o mesmo trabalho ao mesmo tempo. */
+const SOFA_DIAS=7;
+function sofaDataEm(s){ const m=String(s||'').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); return m?new Date(+m[3],+m[2]-1,+m[1]):null; }
+async function sofaRotinaSemanal(){
+  if(!(db&&firebaseReady)) return;
+  try{ const p=await extPedido({tipo:'ping'}); if(!p||!p.versao||p.versao<'1.4') return; }catch(e){ return; }   // sem extensão 1.4: não faz nada
+  const limite=Date.now()-SOFA_DIAS*864e5;
+  const porId={};
+  Object.values(IND_JOG).forEach(r=>{ const id=sofaIdDoLink(r.sofaLink); if(!id) return; const d=sofaDataEm(r.sofaEm); if(d&&d.getTime()>limite) return; (porId[id]=porId[id]||[]).push(r.id); });
+  const ids=Object.keys(porId); if(!ids.length) return;
+  const eu=Math.random().toString(36).slice(2);
+  const pegaTrava=async()=>{ const t=(await db.ref('sofa_rotina/trava').once('value')).val(); if(t&&t.ate>Date.now()&&t.por!==eu) return false; await db.ref('sofa_rotina/trava').set({por:eu,ate:Date.now()+3*60*1000}); return true; };
+  if(!(await pegaTrava())) return;
+  const selo=document.createElement('div'); selo.id='sofaRotinaSelo';
+  selo.style.cssText='position:fixed;left:12px;bottom:12px;z-index:4000;background:#374df5;color:#fff;font:600 11px Barlow,sans-serif;padding:5px 10px;border-radius:6px;opacity:.85;box-shadow:0 2px 8px rgba(0,0,0,.2)';
+  document.body.appendChild(selo);
+  let feitos=0, erros=0, ultimaTrava=Date.now(), lote={}, noLote=0;
+  for(const sid of ids){
+    if(Date.now()-ultimaTrava>60000){ if(!(await pegaTrava())) break; ultimaTrava=Date.now(); }
+    selo.textContent=`⭐ Atualizando notas SofaScore (semanal): ${feitos+1}/${ids.length}`;
+    try{
+      SOFA_CACHE={}; const L=await sofaLinhas(sid);
+      porId[sid].forEach(rid=>{ const r=IND_JOG[rid]; if(!r) return; const n=sofaCalcula(L,r.sofaEscolha||'todas'); if(!n) return; Object.entries(n).forEach(([k,v])=>{ lote['ind_jog/'+rid+'/'+k]=v; }); });
+      if(++noLote>=25){ await db.ref('/').update(lote); lote={}; noLote=0; }
+      erros=0;
+    }catch(e){ if(++erros>=5||/sem extensão|fora da lista/.test(e.message)) break; await new Promise(r=>setTimeout(r,3000)); }
+    feitos++;
+    await new Promise(r=>setTimeout(r,500));
+  }
+  if(Object.keys(lote).length) await db.ref('/').update(lote);
+  await db.ref('sofa_rotina').update({trava:null,ultima:new Date().toISOString(),feitos});
+  selo.textContent=`✓ Notas SofaScore atualizadas: ${feitos}`; setTimeout(()=>selo.remove(),5000);
+}
+
 function sofaCelula(r){
   if(r.sofaNota&&!sofaValida(r)){
     const t=`Menos de ${SOFA_MIN_JOGOS} jogos na temporada (${r.sofaJogos||0}) — nota ${r.sofaNota} não exibida · ${r.sofaTorneio||''}`;
@@ -3663,12 +3702,23 @@ function sofaCelula(r){
 }
 
 /* re-render seguro da tela de Indicados (shell + aba atual) */
+// várias gravações seguidas (ex.: rotina do SofaScore) viram um redesenho só, e a rolagem é mantida
+let indRefreshTimer=null;
 function refreshIndView(){
   if(currentView!=='indicados') return;
-  indInvalidateIdx();
-  const v=document.getElementById('views'); if(!v) return;
-  v.innerHTML=renderIndicados();
-  setTimeout(()=>{ fixStickyTops(); renderIndTabAtual(); fixIndHeight(); },10);
+  clearTimeout(indRefreshTimer);
+  indRefreshTimer=setTimeout(()=>{
+    if(currentView!=='indicados') return;
+    indInvalidateIdx();
+    const v=document.getElementById('views'); if(!v) return;
+    const w=document.getElementById('indTableWrap'), st=w?w.scrollTop:0, sl=w?w.scrollLeft:0;
+    const busca=document.activeElement&&document.activeElement.classList&&document.activeElement.classList.contains('ind-search');
+    v.innerHTML=renderIndicados();
+    setTimeout(()=>{ fixStickyTops(); renderIndTabAtual(); fixIndHeight();
+      const w2=document.getElementById('indTableWrap'); if(w2){ w2.scrollTop=st; w2.scrollLeft=sl; }
+      if(busca){ const b=document.querySelector('.ind-search'); if(b){ b.focus(); b.setSelectionRange(b.value.length,b.value.length); } }
+    },10);
+  },400);
 }
 function renderIndTabAtual(){
   if(indTab==='jog') renderIndJogTable();
