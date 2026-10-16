@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="app-versao" content="2026-10-16 12:55"><!-- AO PUBLICAR MUDANÇA, TROQUE ESTA DATA-HORA: as abas abertas mostram o aviso de versão nova -->
+<meta name="app-versao" content="2026-10-16 13:10"><!-- AO PUBLICAR MUDANÇA, TROQUE ESTA DATA-HORA: as abas abertas mostram o aviso de versão nova -->
 <title>Scout System 2026</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
@@ -3543,7 +3543,8 @@ async function sofaLinhas(id){
   const L=(j.seasons||[]).filter(x=>x.statistics&&x.uniqueTournament).map(x=>({
     ano:x.year||(x.season&&x.season.year)||'', time:x.team&&x.team.name||'', selecao:!!(x.team&&x.team.national),
     comp:x.uniqueTournament.name, chave:x.uniqueTournament.id+'|'+(x.season&&x.season.id),
-    jogos:+x.statistics.appearances||0, min:+x.statistics.minutesPlayed||0, nota:x.statistics.rating!=null?+x.statistics.rating:null }));
+    jogos:+x.statistics.appearances||0, min:+x.statistics.minutesPlayed||0, nota:x.statistics.rating!=null?+x.statistics.rating:null,
+    somaNotas:x.statistics.totalRating!=null?+x.statistics.totalRating:null, jogosComNota:x.statistics.countRating!=null?+x.statistics.countRating:null }));
   return SOFA_CACHE[id]=L;
 }
 // opções da temporada atual do clube: "todas" + cada competição
@@ -3560,11 +3561,13 @@ function sofaCalcula(L,escolha){
   const ano=clube[0].ano;
   let sel=escolha&&escolha!=='todas'?clube.filter(l=>l.chave===escolha):[];
   if(!sel.length){ escolha='todas'; sel=clube.filter(l=>l.ano===ano); }
-  // média ponderada pelos MINUTOS — é a conta da aba Career "All club competitions" do SofaScore
-  // (caso Perelló 2026: LigaPro 6,99 / 1483 min + Libertadores 6,92 / 391 min = 6,98, igual à tela)
-  const comNota=sel.filter(l=>l.nota!=null&&l.min>0);
-  const mn=comNota.reduce((a,l)=>a+l.min,0);
-  const nota=mn?comNota.reduce((a,l)=>a+l.nota*l.min,0)/mn:null;
+  // conta da aba Career do SofaScore (conferida 16/10 no Laméndola 2026 = 6,92 e Perelló 2026 = 6,98):
+  // soma das notas de todos os jogos com nota ÷ quantidade desses jogos (totalRating ÷ countRating),
+  // juntando as competições do clube na temporada. Sem esses campos, cai na média pesada pelos jogos.
+  const comSoma=sel.filter(l=>l.somaNotas!=null&&l.jogosComNota>0);
+  let nota=null;
+  if(comSoma.length){ const sn=comSoma.reduce((a,l)=>a+l.somaNotas,0), cn=comSoma.reduce((a,l)=>a+l.jogosComNota,0); nota=cn?sn/cn:null; }
+  else { const comNota=sel.filter(l=>l.nota!=null&&l.jogos>0); const jg=comNota.reduce((a,l)=>a+l.jogos,0); nota=jg?comNota.reduce((a,l)=>a+l.nota*l.jogos,0)/jg:null; }
   return {sofaNota:nota!=null?(Math.round(nota*100)/100).toFixed(2):'', sofaJogos:String(sel.reduce((a,l)=>a+l.jogos,0)),
     sofaMin:String(sel.reduce((a,l)=>a+l.min,0)), sofaTorneio:escolha==='todas'?`Todas do clube ${ano}`:`${sel[0].comp} ${sel[0].ano}`,
     sofaEscolha:escolha, sofaEm:indHoje()};
@@ -3647,6 +3650,7 @@ async function sofaAtualizarLista(ev){
 }
 // nota só vale com amostra mínima (pedido do Brunno, 16/10): jogador de 1-2-3 jogos com rating alto não entra
 const SOFA_MIN_JOGOS=7;
+function sofaLinkCareer(l){ return String(l||'').replace(/#.*$/,'')+'#tab:career'; }
 function sofaValida(r){ return !!(r&&r.sofaNota&&(parseInt(r.sofaJogos)||0)>=SOFA_MIN_JOGOS); }
 /* ── Rotina semanal da nota SofaScore (16/10/2026) ──
    O SofaScore bloqueia servidores (403), então a rotina roda no navegador de quem abre o Scout System
@@ -3689,15 +3693,15 @@ async function sofaRotinaSemanal(){
 function sofaCelula(r){
   if(r.sofaNota&&!sofaValida(r)){
     const t=`Menos de ${SOFA_MIN_JOGOS} jogos na temporada (${r.sofaJogos||0}) — nota ${r.sofaNota} não exibida · ${r.sofaTorneio||''}`;
-    return `${r.sofaLink?`<a href="${r.sofaLink}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="${t}" style="font-size:10px;color:#888780;text-decoration:none">${r.sofaJogos||0} j</a>`:`<span title="${t}" style="font-size:10px;color:#888780">${r.sofaJogos||0} j</span>`}`;
+    return `${r.sofaLink?`<a href="${sofaLinkCareer(r.sofaLink)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="${t}" style="font-size:10px;color:#888780;text-decoration:none">${r.sofaJogos||0} j</a>`:`<span title="${t}" style="font-size:10px;color:#888780">${r.sofaJogos||0} j</span>`}`;
   }
   if(r.sofaNota){
     const v=parseFloat(r.sofaNota), cor=v>=7.2?'#1a8040':v>=6.8?'#1562B8':v>=6.5?'#b8860b':'#c0392b';
     const t=`${r.sofaTorneio||''} · ${r.sofaJogos||'?'} jogos${r.sofaMin?' · '+r.sofaMin+' min':''} · atualizado ${r.sofaEm||''}`;
     const auto=r.sofaAuto?`<span title="Achado automático pelo nome: ${r.sofaAuto} — confira o link no cadastro" style="color:#b8860b;font-size:10px;margin-left:2px">⚠</span>`:'';
-    return (r.sofaLink?`<a href="${r.sofaLink}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="${t}" style="font-weight:800;font-size:13px;color:${cor};text-decoration:none">${r.sofaNota}</a>`:`<b style="color:${cor}" title="${t}">${r.sofaNota}</b>`)+auto;
+    return (r.sofaLink?`<a href="${sofaLinkCareer(r.sofaLink)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="${t}" style="font-weight:800;font-size:13px;color:${cor};text-decoration:none">${r.sofaNota}</a>`:`<b style="color:${cor}" title="${t}">${r.sofaNota}</b>`)+auto;
   }
-  if(r.sofaLink) return `<a href="${r.sofaLink}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="font-size:10px;color:#374df5">link</a>`;
+  if(r.sofaLink) return `<a href="${sofaLinkCareer(r.sofaLink)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="font-size:10px;color:#374df5">link</a>`;
   return r.eagle?`<span style="color:#b8b6ac;font-size:10px" title="Eagle (antigo)">${r.eagle}</span>`:'<span style="color:#c8c6bc">—</span>';
 }
 
