@@ -133,9 +133,9 @@ body{font-family:"BFR",sans-serif;-webkit-print-color-adjust:exact;print-color-a
 .cx h4 small{font-weight:400;color:#888}
 .lr{display:flex;align-items:center;gap:5px;margin-bottom:5px}
 .lr input{flex:1;min-width:0;font:12px system-ui;padding:4px 6px;border:1px solid #d6d3c8;border-radius:5px}
-.lr .st{font-size:11px;width:118px;flex:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lr .st{font-size:11px;width:96px;flex:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lr .st.ok{color:#1a6e3a}.lr .st.novo{color:#b8860b}.lr .st.erro{color:#b91c1c}
-.lr select{font:11px system-ui;width:118px;flex:none}
+.lr select{font:11px system-ui;width:120px;flex:none}
 .lr button,.cx .mais{font:12px system-ui;border:1px solid #d6d3c8;background:#fff;border-radius:5px;cursor:pointer;padding:2px 6px}
 .cx .mais{width:100%;margin-top:2px;color:#555}
 .rodape-jan{display:flex;gap:10px;justify-content:flex-end;align-items:center;margin-top:14px;flex-wrap:wrap}
@@ -478,8 +478,8 @@ function rotuloCaixa(t){
   if(/^CA/.test(t)) return 'CAM';
   if(/^L[BS8]/.test(t)) return 'LB';
   if(/^R[BS8]/.test(t)) return 'RB';
-  if(/^LM/.test(t)) return 'LM';
-  if(/^RM/.test(t)) return 'RM';
+  if(/^[LI1][MN]/.test(t)) return 'LM';
+  if(/^R[MN]/.test(t)) return 'RM';
   if(/^S[TI]/.test(t)) return 'ST';
   return null;
 }
@@ -498,8 +498,13 @@ async function lerPrint(im,log){
   for(const g of grupos){
     const h=g.linhas[0].h;
     await w.setParameters({tessedit_pageseg_mode:'7',tessedit_char_whitelist:'GKLBCRDMSTA12'});
-    const cab=recorte(cv,g.x,Math.max(0,g.ini-h*1.3),g.w*.45,h*1.15,3*Math.max(1,30/h),true,140);
-    const rot=rotuloCaixa((await w.recognize(cab)).data.text);
+    // rótulo da caixa: tenta alguns recortes/limiares (a linha do meio-campo às vezes atrapalha)
+    let rot=null;
+    for(const [y0,hh,lim,larg] of [[1.3,1.15,140,.45],[1.2,.95,110,.3],[1.25,1.05,170,.3],[1.35,1.2,125,.38]]){
+      const cab=recorte(cv,g.x,Math.max(0,g.ini-h*y0),g.w*larg,h*hh,3*Math.max(1,30/h),true,lim);
+      rot=rotuloCaixa((await w.recognize(cab)).data.text); if(rot) break;
+    }
+    g.rot=rot;
     await w.setParameters({tessedit_pageseg_mode:'7',tessedit_char_whitelist:''});
     const nomes=[];
     for(const r of g.linhas){
@@ -507,10 +512,18 @@ async function lerPrint(im,log){
       const t=(await w.recognize(c)).data.text.replace(/[^\p{L}\p{N} .'\-]/gu,' ').replace(/\s+/g,' ').trim();
       if(t) nomes.push(t);
     }
+    g.nomes=nomes;
     log(`  ${rot||'??'}: ${nomes.join(', ')}`);
-    if(!rot){ continue; }
-    const k=ROTULO_CAIXA[rot];
-    caixas[k]=[...(caixas[k]||[]),...nomes.filter(n=>!(caixas[k]||[]).some(x=>sem(x)===sem(n)))];
+  }
+  // sem rótulo lido: se só faltar uma caixa e só um grupo estiver sem rótulo, é ela
+  const semRot=grupos.filter(g=>!g.rot&&g.nomes&&g.nomes.length);
+  const usados=new Set(grupos.map(g=>g.rot).filter(Boolean));
+  const livres=Object.keys(ROTULO_CAIXA).filter(r=>!usados.has(r));
+  if(semRot.length===1&&livres.length===1){ semRot[0].rot=livres[0]; log(`  (a caixa sem rótulo é ${livres[0]} — a única que faltava)`); }
+  for(const g of grupos){
+    if(!g.rot||!g.nomes) continue;
+    const k=ROTULO_CAIXA[g.rot];
+    caixas[k]=[...(caixas[k]||[]),...g.nomes.filter(n=>!(caixas[k]||[]).some(x=>sem(x)===sem(n)))];
   }
   return caixas;
 }
