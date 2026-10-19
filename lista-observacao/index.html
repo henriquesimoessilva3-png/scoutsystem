@@ -647,7 +647,7 @@ async function sofaAchar(j){
       const a=p.dateOfBirthTimestamp?idadeDe(p.dateOfBirthTimestamp*1000):null;
       const okIdade=a==null||j.idade==null||Math.abs(a-j.idade)<=1;
       const okClube=clubeBate(j.clube&&j.clube.nome,p.team&&p.team.name)||clubeBate(j.origem&&j.origem.nome,p.team&&p.team.name);
-      if(okIdade&&(okClube||ps.length===1)) return p;
+      if(okIdade&&(okClube||ps.length===1)){ p.__conferir=okClube?'':`achado só pelo nome e idade (no SofaScore está no ${p.team&&p.team.name||'?'}) — confira`; return p; }
     }
   }
   return null;
@@ -753,7 +753,7 @@ async function gerarLista(){
         if(!ehNovo&&!document.getElementById('optSS').checked) continue;
         try{
           let sid=j.ss&&j.ss.sid;
-          if(!sid){ log(`  [${i}/${ids.length}] ${j.nome}: procurando no SofaScore…`); const p=await sofaAchar(j); sid=p&&p.id; if(!sid) log(`    não achei ${j.nome} no SofaScore com o mesmo clube e idade`); }
+          if(!sid){ log(`  [${i}/${ids.length}] ${j.nome}: procurando no SofaScore…`); const p=await sofaAchar(j); sid=p&&p.id; if(!sid) log(`    não achei ${j.nome} no SofaScore com o mesmo clube e idade`); else if(p.__conferir){ log(`    ⚠ ${j.nome}: ${p.__conferir}`); j.ssConferir=p.__conferir; } }
           if(sid){
             const d=await sofaDados(sid);
             j.ss={...(j.ss||{}),...d};
