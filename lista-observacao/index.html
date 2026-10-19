@@ -310,7 +310,7 @@ function folhaCampo(C){
   const caixas=Object.keys(CAIXA_X).map(k=>{
     const js=C.caixas[k]||[]; if(!js.length) return "";
     const h=42.3+33.77*js.length, top=CAIXA_CY[k]-h/2;
-    const linhas=js.map((j,i)=>{ const e=escudoDe(j); return `<div class="lin" style="background:${CINZAS[Math.min(i,4)]}"><span class="n">${esc(String(j.nome||'').toUpperCase())}</span><span class="i">${j.idade??"–"}</span><span class="e">${e?`<img src="${esc(e)}" alt="">`:""}</span><span class="s">${esc(siglaClube(j.clube))}</span></div>`; }).join("");
+    const linhas=js.map((j,i)=>{ const e=escudoDe(j); return `<div class="lin" style="background:${CINZAS[Math.min(i,4)]}"><span class="n">${esc(String(j.nome||'').toUpperCase())}</span><span class="i">${j.idade??"–"}</span><span class="e">${e?`<img referrerpolicy="no-referrer" src="${esc(e)}" alt="">`:""}</span><span class="s">${esc(siglaClube(j.clube))}</span></div>`; }).join("");
     return `<div class="caixa" style="left:${CAIXA_X[k]}px;top:${top.toFixed(1)}px;height:${h.toFixed(1)}px"><h3>${esc(POSICOES[k])}</h3>${linhas}</div>`;
   }).join("");
   return `<section class="folha fundo">${cabecalho(C,true)}<div class="campo"></div>${caixas}<div class="rodape">Última atualização: ${esc(C.atualizado)}</div></section>`;
@@ -329,7 +329,7 @@ function grafico(j,x,y,w,h){
   if(!js.length) return `<div class="graf" style="${caixa}"><span class="vazio">Sem jogos recentes no SofaScore</span></div>`;
   const yy=n=>Math.max(0,Math.min(100,(n-5)/4*100));
   const media=js.reduce((a,g)=>a+g.nota,0)/js.length;
-  const cols=js.map(g=>`<div class="col"><span class="dt">${dataSS(g.ts)}</span><img class="ad" src="${escSS(g.advId)}" alt="">
+  const cols=js.map(g=>`<div class="col"><span class="dt">${dataSS(g.ts)}</span><img class="ad" referrerpolicy="no-referrer" src="${escSS(g.advId)}" alt="">
     <div class="area"><span class="media" style="bottom:${yy(media)}%"></span><span class="nota" style="bottom:${yy(g.nota)}%;background:${corNota(g.nota)}">${String(g.nota).replace(".",",")}</span></div></div>`).join("");
   return `<div class="graf" style="${caixa}"><span class="seta" style="left:6px">‹</span><span class="seta" style="right:6px">›</span>${cols}<span class="esc"></span></div>`;
 }
@@ -349,8 +349,8 @@ function cartao(C,j,i){
   const texto=((T[C.lista]||{})[j.id]||{}).perfil||"";
   return `${i?`<div class="sep" style="top:${y0-3}px"></div>`:""}
     <div class="nm" style="top:${y0+16}px">${esc(j.nome)}</div><div class="cl" style="top:${y0+73}px">${esc(j.clube&&j.clube.nome||"")}</div>
-    ${e?`<img class="fesc" style="top:${y0+107}px" src="${esc(e)}" alt="">`:""}
-    ${j.foto?`<img class="foto" style="top:${y0+95}px" src="${esc(j.foto)}" alt="" onerror="this.outerHTML='<div class=&quot;semfoto&quot; style=&quot;top:${y0+105}px&quot;>${ini}</div>'">`:`<div class="semfoto" style="top:${y0+105}px">${ini}</div>`}
+    ${e?`<img class="fesc" referrerpolicy="no-referrer" style="top:${y0+107}px" src="${esc(e)}" alt="">`:""}
+    ${j.foto?`<img class="foto" referrerpolicy="no-referrer" style="top:${y0+95}px" src="${esc(j.foto)}" alt="" onerror="this.outerHTML='<div class=&quot;semfoto&quot; style=&quot;top:${y0+105}px&quot;>${ini}</div>'">`:`<div class="semfoto" style="top:${y0+105}px">${ini}</div>`}
     <div class="bar" style="left:${473.7+dx}px;top:${y0+10.5}px;width:430px">INFORMAÇÕES DO JOGADOR</div>
     ${cp("NACIONALIDADE",esc(nac),0)}${cp("IDADE",j.idade!=null?`${j.idade} ANOS`:"–",1)}${cp("VALOR DE MERCADO",v,2)}${cp("CONTRATO",contrato,3)}
     ${campinho(j,764+dx,y0+54)}
