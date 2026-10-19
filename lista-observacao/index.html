@@ -9,6 +9,11 @@
      jogadores e monta o documento no desenho do Pedro (capa + campograma + cards). Textos de avaliação editáveis e
      salvos no Firebase do Scout System (lista_obs/...). Dados novos (TransferRoom, SofaScore, foto do sortitoutsi)
      vêm pela extensão BFR Relatório Jogadores 1.5.0. Desenho copiado de Analises Especiais/Lista de Observacao/_molde.html. -->
+<script>
+/* O armazenamento do navegador deste endereço (github.io do Henrique) é dividido com o Scout System e o Ranking e costuma
+   estar cheio (cache dos Indicados). O Firebase grava uma marquinha lá e, se falhar, não conecta. Aqui a falha é ignorada. */
+(function(){ const o=Storage.prototype.setItem; Storage.prototype.setItem=function(k,v){ try{ return o.call(this,k,v); }catch(e){ if(String(k).startsWith('firebase:')) return; throw e; } }; })();
+</script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
