@@ -1,0 +1,775 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lista de Observação</title>
+<!-- Lista de Observação (Scout System) — 19/10/2026.
+     Carrega o print do Squad View do TransferRoom, lê os nomes de cada caixa no navegador (OCR), casa com a base de
+     jogadores e monta o documento no desenho do Pedro (capa + campograma + cards). Textos de avaliação editáveis e
+     salvos no Firebase do Scout System (lista_obs/...). Dados novos (TransferRoom, SofaScore, foto do sortitoutsi)
+     vêm pela extensão BFR Relatório Jogadores 1.5.0. Desenho copiado de Analises Especiais/Lista de Observacao/_molde.html. -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
+<style>
+@font-face{font-family:"BFR";font-weight:400;src:url("assets/fonts/BFRManga-Regular.otf")}
+@font-face{font-family:"BFR";font-weight:700;src:url("assets/fonts/BFRManga-Bold.otf")}
+@font-face{font-family:"BFRC";font-weight:300;src:url("assets/fonts/BFRManga-CompressedLight.otf")}
+@font-face{font-family:"BFRC";font-weight:700;src:url("assets/fonts/BFRManga-CompressedBold.otf")}
+@font-face{font-family:"BFRC";font-weight:400;src:url("assets/fonts/BFRManga-Compressed.otf")}
+@font-face{font-family:"BFRCond";font-weight:700;src:url("assets/fonts/BFRManga-CondensedBold.otf")}
+@font-face{font-family:"BFRNarrow";font-weight:600;src:url("assets/fonts/BFRManga-NarrowSemibold.otf")}
+@page{size:1920px 1080px;margin:0}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#d9d9d9}
+body{font-family:"BFR",sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+
+/* ---------- barra do app (não sai no PDF) ---------- */
+.app{position:sticky;top:0;z-index:20;background:#1f1e1b;color:#eee;font:13px system-ui,sans-serif;display:flex;align-items:center;gap:8px;padding:8px 14px;flex-wrap:wrap;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.app .tit{font-weight:700;font-size:14px;margin-right:6px}
+.app button,.btn{font:600 12px system-ui,sans-serif;padding:7px 12px;border-radius:7px;border:1px solid #4a4843;background:#33312c;color:#eee;cursor:pointer}
+.app button.on{background:#e8c84a;color:#1f1e1b;border-color:#e8c84a}
+.app .acao{background:#1a6e3a;border-color:#1a6e3a}
+.app .pdf{background:#8B1A2E;border-color:#8B1A2E;color:#e8c84a}
+.app .info{color:#a9a69c;font-size:12px}
+.app .dir{margin-left:auto;display:flex;gap:8px;align-items:center}
+.aviso{font:13px system-ui,sans-serif;background:#fff6d6;border-bottom:1px solid #e6d48a;color:#5b4a00;padding:8px 14px}
+.aviso a{color:#374df5}
+#doc{padding:20px 0}
+.vazio-doc{font:15px system-ui;color:#555;text-align:center;padding:80px 20px}
+
+/* ---------- folhas 1920 x 1080 (desenho do Pedro) ---------- */
+.folha{width:1920px;height:1080px;position:relative;overflow:hidden;page-break-after:always;break-after:page;background:#eee}
+.folha:last-child{page-break-after:auto;break-after:auto}
+@media screen{.folha{margin:0 auto 20px;box-shadow:0 2px 12px rgba(0,0,0,.25)}}
+.capa{background:url("assets/fundo_capa.jpg") center/cover}
+.capa .saf{position:absolute;top:53px;left:0;right:0;text-align:center;font-size:44px;line-height:1}
+.saf b{font-family:"BFRC";font-weight:700}.saf i{font-family:"BFRC";font-weight:300;font-style:normal;margin-right:4px}
+.capa .escudo{position:absolute;left:718px;top:161px;width:484px;height:553px;object-fit:contain}
+.capa h1{position:absolute;top:770px;left:0;right:0;text-align:center;font-weight:700;font-size:90px;line-height:1;letter-spacing:-1.5px}
+.capa h2{position:absolute;top:866px;left:0;right:0;text-align:center;font-weight:400;font-size:56px;line-height:1.05;letter-spacing:-1.1px}
+.fundo{background:url("assets/fundo_folha.jpg") center/cover}
+.cab-escudo{position:absolute;left:89px;top:31px;width:80px;height:90px;object-fit:contain;filter:drop-shadow(0 3px 4px rgba(0,0,0,.35))}
+.cab-tit{position:absolute;left:186px;top:29px;font-weight:700;font-size:48px;line-height:1.1;white-space:nowrap}
+.cab-sub{position:absolute;left:188px;top:86px;font-family:"BFRNarrow";font-weight:600;font-size:28px;line-height:1.2;white-space:nowrap}
+.cab-marca{position:absolute;right:49px;top:34px;display:flex;align-items:center;gap:9px}
+.cab-marca .rel{font-weight:700;font-size:21px;line-height:.98;text-align:right}
+.cab-marca .saf{font-size:48px;line-height:1}
+.rodape{position:absolute;left:0;right:0;bottom:0;height:41px;background:#000;color:#fff;font-size:12px;display:flex;align-items:center;justify-content:flex-end;padding-right:106px}
+.campo{position:absolute;left:82px;top:132px;width:1756px;height:885px;border:5px solid rgba(255,255,255,.75)}
+.campo:before{content:"";position:absolute;inset:0;background:url("assets/campo.webp") center/100% 100%;opacity:.62}
+.caixa{position:absolute;width:269.2px;background:#000;border-radius:12px;padding:35.9px 5.9px 0}
+.caixa h3{position:absolute;left:14px;top:8px;color:#fff;font-weight:700;font-size:23px;line-height:1.1;white-space:nowrap}
+.lin{height:32.9px;margin-bottom:0.87px;border-radius:5px;display:flex;align-items:center;padding:0 0 0 6px}
+.lin .n{width:152px;font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;line-height:1;padding-top:2px}
+.lin .i{width:30px;text-align:center;font-weight:700;font-size:15px;padding-top:2px}
+.lin .e{width:36px;height:27px;display:flex;align-items:center;justify-content:center}
+.lin .e img{max-width:27px;max-height:27px}
+.lin .s{width:30px;text-align:right;font-weight:700;font-size:15px;padding-top:2px;white-space:nowrap}
+.col-preta{position:absolute;left:58.3px;top:155.2px;width:398.3px;bottom:0;background:#000}
+.sep{position:absolute;left:91.5px;width:325.7px;top:-2px;border-top:2px solid #fff}
+.nm{position:absolute;left:72px;top:16px;width:384px;color:#fff;font-family:"BFRCond";font-weight:700;font-size:60px;line-height:1;white-space:nowrap;text-transform:uppercase}
+.cl{position:absolute;left:72px;top:73px;color:#fff;font-size:20px;line-height:1.1;text-transform:uppercase;white-space:nowrap}
+.fesc{position:absolute;left:227px;top:107px;width:152px;height:152px;object-fit:contain}
+.foto{position:absolute;left:109px;top:95px;width:162px;height:162px;object-fit:contain;object-position:bottom}
+.semfoto{position:absolute;left:115px;top:105px;width:150px;height:150px;border-radius:50%;background:#333;color:#bbb;font-family:"BFRC";font-weight:700;font-size:56px;display:flex;align-items:center;justify-content:center}
+.bar{position:absolute;height:30.2px;background:#000;color:#fff;font-size:20px;line-height:30px;padding-left:12px;white-space:nowrap}
+.rot{position:absolute;font-weight:700;font-size:18px;line-height:1.1;white-space:nowrap}
+.pill{position:absolute;width:264px;height:32.5px;background:#525252;border-radius:16px;color:#fff;font:18px Helvetica,Arial,sans-serif;display:flex;align-items:center;padding:0 12px;white-space:nowrap;overflow:hidden}
+.cmp{position:absolute;width:141px;height:207px}
+.cmp img{width:100%;height:100%;display:block}
+.cmp .pt{position:absolute;border-radius:50%;transform:translate(-50%,-50%);border:2px solid #fff}
+.cmp .pt.p{width:25px;height:25px;background:#000}
+.cmp .pt.s{width:21px;height:21px;background:#929292}
+.poslab{position:absolute;width:141px;text-align:center;font-weight:700;font-size:18px}
+.camp{position:absolute;font-weight:700;font-size:18px;white-space:nowrap}
+.kp{position:absolute;text-align:center;width:100px;margin-left:-50px}
+.kp small{display:block;font-size:14px;line-height:16px;height:32px;display:flex;align-items:flex-end;justify-content:center}
+.kp b{display:block;font-family:"BFRCond";font-weight:700;font-size:50px;line-height:1;margin-top:3px}
+.graf{position:absolute;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.18);display:flex;padding:6px 26px 6px 22px}
+.graf .seta{position:absolute;top:8px;color:#2c6fdb;font:700 18px sans-serif}
+.graf .col{flex:1;display:flex;flex-direction:column;align-items:center;position:relative}
+.graf .dt{font-size:11px;color:#8a8a8a;font-family:Helvetica,Arial,sans-serif}
+.graf .ad{width:22px;height:22px;object-fit:contain;margin-top:4px}
+.graf .area{position:relative;flex:1;width:100%;margin:6px 0 4px}
+.graf .nota{position:absolute;left:50%;transform:translate(-50%,50%);color:#fff;font:700 11px Helvetica,Arial,sans-serif;padding:2px 3px;border-radius:2px;z-index:2}
+.graf .media{position:absolute;left:-10px;right:-10px;border-top:2px solid #21b36b}
+.graf .esc{position:absolute;right:8px;top:50px;bottom:10px;width:4px;background:linear-gradient(#1f76d3,#21b36b 35%,#e3c51a 60%,#ef7e1c 80%,#dc2626)}
+.graf .vazio{font-size:13px;color:#888;margin:auto}
+.ed{position:absolute;font-size:30px;line-height:28.8px;color:#000;outline:none;overflow:hidden;white-space:pre-wrap}
+.ed:empty:before{content:attr(data-ph);color:#999}
+@media screen{.ed{background:rgba(255,253,230,.55);cursor:text}.ed:focus{background:rgba(255,253,200,.85);box-shadow:0 0 0 2px #e8c84a}}
+.ed.salvo{box-shadow:0 0 0 2px #21b36b}
+@media print{
+  html,body{background:#fff}
+  .app,.aviso,#modal,.nao-imprime{display:none!important}
+  #doc{padding:0;zoom:1!important}
+  .ed{background:none!important;box-shadow:none!important}
+  .ed:empty:before{content:""}
+}
+
+/* ---------- janela "Atualizar pelo print" ---------- */
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:40;display:none;align-items:flex-start;justify-content:center;overflow:auto;padding:30px 12px;font:13px system-ui,sans-serif}
+#modal.on{display:flex}
+.jan{background:#fff;border-radius:12px;width:min(1180px,100%);padding:18px 20px;box-shadow:0 10px 40px rgba(0,0,0,.4)}
+.jan h2{font:700 18px system-ui;margin-bottom:4px}
+.jan .sub{color:#666;margin-bottom:12px}
+.drop{border:2px dashed #b9b6ab;border-radius:10px;padding:22px;text-align:center;color:#555;background:#faf9f5;cursor:pointer}
+.drop.sobre{background:#fff6d6;border-color:#e8c84a}
+.prints{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.prints img{height:90px;border:1px solid #ccc;border-radius:6px}
+.log{margin-top:10px;background:#1f1e1b;color:#cfe8d4;font:12px ui-monospace,monospace;border-radius:8px;padding:8px 10px;max-height:160px;overflow:auto;white-space:pre-wrap}
+.grade{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:10px;margin-top:12px}
+.cx{border:1px solid #e0ded4;border-radius:9px;padding:8px;background:#fbfaf6}
+.cx h4{font:700 13px system-ui;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.cx h4 small{font-weight:400;color:#888}
+.lr{display:flex;align-items:center;gap:5px;margin-bottom:5px}
+.lr input{flex:1;min-width:0;font:12px system-ui;padding:4px 6px;border:1px solid #d6d3c8;border-radius:5px}
+.lr .st{font-size:11px;width:118px;flex:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lr .st.ok{color:#1a6e3a}.lr .st.novo{color:#b8860b}.lr .st.erro{color:#b91c1c}
+.lr select{font:11px system-ui;width:118px;flex:none}
+.lr button,.cx .mais{font:12px system-ui;border:1px solid #d6d3c8;background:#fff;border-radius:5px;cursor:pointer;padding:2px 6px}
+.cx .mais{width:100%;margin-top:2px;color:#555}
+.rodape-jan{display:flex;gap:10px;justify-content:flex-end;align-items:center;margin-top:14px;flex-wrap:wrap}
+.rodape-jan .btn{background:#33312c;color:#fff;border-color:#33312c}
+.rodape-jan .btn.ver{background:#1a6e3a;border-color:#1a6e3a}
+.rodape-jan .btn.cinza{background:#fff;color:#333;border-color:#ccc}
+.rodape-jan label{color:#444}
+</style>
+</head>
+<body>
+<div class="app">
+  <span class="tit">📋 Lista de Observação</span>
+  <span id="abas"></span>
+  <span class="info" id="infoLista"></span>
+  <span class="dir">
+    <button class="acao" onclick="abrirModal()" title="Carregar o print do Squad View do TransferRoom e gerar a lista de novo">📷 Atualizar pelo print</button>
+    <button class="pdf" onclick="baixarPDF()" title="Abre a impressão: escolha 'Salvar como PDF'">⬇ PDF</button>
+    <span class="info" id="infoBanco">conectando…</span>
+  </span>
+</div>
+<div id="avisos"></div>
+<div id="doc"><div class="vazio-doc">Carregando…</div></div>
+
+<div id="modal">
+  <div class="jan">
+    <h2>Atualizar a <span id="mLista"></span> pelo print do TransferRoom</h2>
+    <div class="sub">Abra o <b>Squad View</b> no TransferRoom Scout com a lista certa (modo <b>Full</b>) e tire o print do campo. Pode colar (Ctrl/⌘+V), arrastar ou escolher o arquivo. Se o campo não couber numa tela, mande mais de um print.</div>
+    <div class="drop" id="drop" onclick="document.getElementById('arq').click()">Arraste o(s) print(s) aqui, cole com Ctrl/⌘+V ou clique para escolher<input type="file" id="arq" accept="image/*" multiple style="display:none"></div>
+    <div class="prints" id="prints"></div>
+    <div class="log" id="log" style="display:none"></div>
+    <div id="revisao"></div>
+    <div class="rodape-jan">
+      <label title="Lê valor de mercado, clube, idade e posição de todos os jogadores no TransferRoom (precisa estar logado no TransferRoom Scout neste Chrome)"><input type="checkbox" id="optTR" checked> Atualizar dados do TransferRoom</label>
+      <label title="Temporada e últimos jogos no SofaScore de todos os jogadores da lista"><input type="checkbox" id="optSS" checked> Atualizar SofaScore</label>
+      <button class="btn cinza" onclick="fecharModal()">Cancelar</button>
+      <button class="btn ver" id="btnGerar" onclick="gerarLista()" disabled>Gerar lista atualizada</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═════════════ configuração ═════════════ */
+const FIREBASE_CONFIG={apiKey:"AIzaSyBi4pOl1hkP8t-NcIMAhYuTGWtMcm290HE",authDomain:"scout-system-2026.firebaseapp.com",databaseURL:"https://scout-system-2026-default-rtdb.firebaseio.com",projectId:"scout-system-2026",storageBucket:"scout-system-2026.firebasestorage.app",messagingSenderId:"152294931768",appId:"1:152294931768:web:91362c2bb38ad25acd55cd"};
+const RJ_EXT_ID='ohjijihiclegbdhbpphaofkjicenplla';
+const EXT_ZIP='extensao-bfr-relatorio-jogadores-1.5.0.zip';
+const RAIZ='lista_obs';
+const LISTAS={
+  MAIN:{nome:'Lista Principal',titulo:'LISTA PRINCIPAL',sub:'PRINCIPAIS ALVOS POR POSIÇÃO',tr:'MAIN LIST'},
+  BACKUP:{nome:'Lista Backup',titulo:'LISTA BACKUP',sub:'ALTERNATIVAS POR POSIÇÃO',tr:'BACKUP LIST'},
+  YOUTH:{nome:'Lista Youth',titulo:'LISTA YOUTH',sub:'JOVENS ALVOS POR POSIÇÃO',tr:'YOUTH LIST'}};
+const POSICOES={GOL:"GOLEIRO",LE:"LATERAL ESQUERDO",ZC:"ZAGUEIRO CANHOTO",ZD:"ZAGUEIRO DESTRO",LD:"LATERAL DIREITO",MED:"MÉDIO",VOL:"VOLANTE",EE:"EXTREMO ESQUERDO",MEI:"MEIA",ED:"EXTREMO DIREITO",ATA:"ATACANTE"};
+const MAX_POR_POSICAO=5;
+// caixa do Squad View (rótulo no print / código na API do TR) -> caixa do documento
+const ROTULO_CAIXA={GK:'GOL',LB:'LE',CB1:'ZC',CB2:'ZD',RB:'LD',DM1:'MED',DM2:'VOL',LM:'EE',CAM:'MEI',RM:'ED',ST:'ATA'};
+const CODIGO_CAIXA={gk:'GOL',lb:'LE',lcb:'ZC',rcb:'ZD',rb:'LD',ldmf:'MED',rdmf:'VOL',lamf:'EE',amf:'MEI',ramf:'ED',cf:'ATA'};
+// posições do TR que fazem sentido em cada caixa (para desempatar nomes iguais: Igor Gomes ZAG x Igor Gomes MEI)
+const POS_OK={GOL:['GK'],LE:['LB','CB','W'],LD:['RB','CB','W'],ZC:['CB','DM','LB','RB'],ZD:['CB','DM','LB','RB'],MED:['DM','CM','CB','AM'],VOL:['DM','CM','CB','AM'],MEI:['AM','CM','W','F'],EE:['W','AM','F','LB','RB'],ED:['W','AM','F','LB','RB'],ATA:['F','W','AM']};
+
+/* ═════════════ estado ═════════════ */
+let db=null, storage=null, BASE=null, LISTA_ATUAL='MAIN';
+const J={}, L={}, T={MAIN:{},BACKUP:{},YOUTH:{}};   // jogadores, listas, textos (vêm do Firebase)
+let SIGLAS={};
+try{ const a=new URLSearchParams(location.search).get('lista'); if(a&&LISTAS[a.toUpperCase()]) LISTA_ATUAL=a.toUpperCase(); else { const s=localStorage.getItem('lo_lista'); if(s&&LISTAS[s]) LISTA_ATUAL=s; } }catch(e){}
+
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const sem=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+const dorme=ms=>new Promise(r=>setTimeout(r,ms));
+const hojeISO=()=>new Date().toISOString().slice(0,10);
+const chaveFB=s=>String(s).replace(/[.#$\[\]\/]/g,'_');
+
+/* ═════════════ Firebase ═════════════ */
+async function iniciarBanco(){
+  BASE=await (await fetch('base_inicial.json?v=1')).json();
+  try{
+    firebase.initializeApp(FIREBASE_CONFIG);
+    await firebase.auth().signInAnonymously();
+    db=firebase.database(); storage=firebase.storage();
+    const ref=db.ref(RAIZ);
+    const snapJ=await ref.child('jogadores').once('value');
+    if(!snapJ.exists()){   // primeira vez: sobe a base montada no Mac em 19/10 (listas de 16/10 + fotos conferidas)
+      await ref.update({jogadores:BASE.jogadores,listas:BASE.listas,siglas:BASE.siglas,criado:new Date().toISOString()});
+    }
+    ref.child('jogadores').on('value',s=>{ Object.keys(J).forEach(k=>delete J[k]); Object.assign(J,s.val()||{}); agendarRender(); });
+    ref.child('listas').on('value',s=>{ Object.keys(L).forEach(k=>delete L[k]); Object.assign(L,s.val()||{}); agendarRender(); });
+    ref.child('siglas').on('value',s=>{ SIGLAS=s.val()||{}; });
+    for(const k of Object.keys(LISTAS)) ref.child('textos/'+k).on('value',s=>{ T[k]=s.val()||{}; atualizarTextosNaTela(k); });
+    document.getElementById('infoBanco').textContent='● salvo para a equipe';
+  }catch(e){
+    console.error(e);
+    Object.assign(J,BASE.jogadores); Object.assign(L,BASE.listas); SIGLAS=BASE.siglas||{};
+    document.getElementById('infoBanco').textContent='⚠ sem conexão com o banco (só leitura)';
+    agendarRender();
+  }
+}
+
+/* ═════════════ extensão BFR Relatório Jogadores ═════════════ */
+let EXT_VERSAO=null;
+function extPedido(msg,limite=90000,aoLog){
+  return new Promise((res,rej)=>{
+    if(!(window.chrome&&chrome.runtime&&chrome.runtime.connect)) return rej(new Error('sem extensão'));
+    let port; try{ port=chrome.runtime.connect(RJ_EXT_ID,{name:'listaobs'}); }catch(e){ return rej(new Error('sem extensão')); }
+    const id=Date.now()+Math.random(); let fim=false;
+    const t=setTimeout(()=>{ if(!fim){fim=true;try{port.disconnect()}catch(e){} rej(new Error('a extensão não respondeu'));} },limite);
+    port.onMessage.addListener(m=>{ if(m.id!==id) return; if(m.log){ aoLog&&aoLog(m.log); return; } fim=true; clearTimeout(t); try{port.disconnect()}catch(e){} m.erro?rej(Object.assign(new Error(m.erro),{code:m.code})):res(m); });
+    port.onDisconnect.addListener(()=>{ void chrome.runtime.lastError; if(!fim){fim=true;clearTimeout(t);rej(new Error('sem extensão'));} });
+    port.postMessage({id,...msg});
+  });
+}
+async function checarExtensao(){
+  try{ const r=await extPedido({tipo:'ping'},4000); EXT_VERSAO=r.versao; }catch(e){ EXT_VERSAO=null; }
+  const av=document.getElementById('avisos');
+  const v=EXT_VERSAO&&EXT_VERSAO.split('.').map(Number);
+  const ok=v&&(v[0]>1||(v[0]===1&&v[1]>=5));
+  av.innerHTML=ok?'':`<div class="aviso">Para atualizar a lista pelo print, este Chrome precisa da extensão <b>BFR Relatório Jogadores 1.5</b> (ela busca TransferRoom, SofaScore e as fotos)${EXT_VERSAO?` — a instalada é a ${esc(EXT_VERSAO)}`:''}. <a href="${EXT_ZIP}">Baixe aqui</a>, troque os arquivos na pasta da extensão e clique ↻ em chrome://extensions. Ver, escrever as avaliações e baixar o PDF funcionam sem ela.</div>`;
+  return ok;
+}
+const sofa=async caminho=>JSON.parse((await extPedido({tipo:'baixar',url:'https://www.sofascore.com/api/v1'+caminho,como:'json'},30000)).texto);
+
+/* ═════════════ documento (desenho do Pedro, 19/10) ═════════════ */
+const marca='<span class="saf"><i>SAF</i><b>BOTAFOGO</b></span>';
+const CAIXA_X={GOL:110.8,LE:441.8,ZC:416.7,ZD:416.7,LD:441.8,MED:782.8,VOL:782.8,EE:1165.8,MEI:1165.8,ED:1165.8,ATA:1522.8};
+const CAIXA_CY={GOL:560.7,LE:248.7,ZC:461.3,ZD:673.7,LD:899.9,MED:431.9,VOL:683.7,EE:278.3,MEI:543.7,ED:826.1,ATA:560.7};
+const CINZAS=["#fff","#f7f7f7","#f0f0f0","#e8e8e8","#e0e0e0"];
+const ORDEM_CARDS=["GOL","LE","ZC","ZD","LD","VOL","MED","MEI","EE","ED","ATA"];
+const POR_FOLHA=3;
+const PAIS={Brazil:"Brasil",Colombia:"Colômbia",Uruguay:"Uruguai",Paraguay:"Paraguai",Mexico:"México",Ecuador:"Equador",Spain:"Espanha",Venezuela:"Venezuela",Peru:"Peru",Chile:"Chile",Argentina:"Argentina",Bolivia:"Bolívia",France:"França",Italy:"Itália",Germany:"Alemanha",England:"Inglaterra",Portugal:"Portugal","United States":"Estados Unidos",USA:"Estados Unidos",Canada:"Canadá",Belgium:"Bélgica",Netherlands:"Holanda",Japan:"Japão",Ghana:"Gana",Nigeria:"Nigéria",Senegal:"Senegal","Ivory Coast":"Costa do Marfim","Côte d'Ivoire":"Costa do Marfim","Burkina Faso":"Burkina Faso",Guinea:"Guiné",Mali:"Mali",Morocco:"Marrocos","Korea Republic":"Coreia do Sul","South Korea":"Coreia do Sul",Greece:"Grécia",Croatia:"Croácia",Serbia:"Sérvia",Panama:"Panamá","Costa Rica":"Costa Rica",Honduras:"Honduras",Angola:"Angola","Guinea-Bissau":"Guiné-Bissau","Cape Verde":"Cabo Verde",Cameroon:"Camarões",Australia:"Austrália",Jamaica:"Jamaica"};
+const GENTILICO={Brazil:"BRASILEIRO",Argentina:"ARGENTINO",Uruguay:"URUGUAIO",Colombia:"COLOMBIANO",Paraguay:"PARAGUAIO",Chile:"CHILENO",Ecuador:"EQUATORIANO",Peru:"PERUANO",Venezuela:"VENEZUELANO",Bolivia:"BOLIVIANO",Mexico:"MEXICANO",Spain:"ESPANHOL",Portugal:"PORTUGUÊS",France:"FRANCÊS",Italy:"ITALIANO",Germany:"ALEMÃO",England:"INGLÊS",Netherlands:"HOLANDÊS",Belgium:"BELGA","United States":"AMERICANO",USA:"AMERICANO",Canada:"CANADENSE",Japan:"JAPONÊS",Ghana:"GANÊS",Nigeria:"NIGERIANO",Senegal:"SENEGALÊS","Ivory Coast":"MARFINENSE","Côte d'Ivoire":"MARFINENSE",Cameroon:"CAMARONÊS",Morocco:"MARROQUINO",Croatia:"CROATA",Serbia:"SÉRVIO",Greece:"GREGO",Panama:"PANAMENHO","Costa Rica":"COSTA-RIQUENHO",Honduras:"HONDURENHO",Angola:"ANGOLANO","Cape Verde":"CABO-VERDIANO",Australia:"AUSTRALIANO",Jamaica:"JAMAICANO","South Korea":"SUL-COREANO","Korea Republic":"SUL-COREANO",Guinea:"GUINEANO"};
+const POS_ROT={GOL:"GOLEIRO",LE:"LATERAL",LD:"LATERAL",ZC:"ZAGUEIRO",ZD:"ZAGUEIRO",VOL:"VOLANTE",MED:"MÉDIO",MEI:"MEIA",EE:"EXTREMO",ED:"EXTREMO",ATA:"ATACANTE"};
+const PONTO={GOL:[.5,.917],LD:[.86,.78],LE:[.14,.78],ZD:[.64,.79],ZC:[.366,.796],VOL:[.506,.645],MED:[.5,.5],MEI:[.505,.30],ED:[.86,.29],EE:[.14,.29],ATA:[.505,.123],
+  GK:[.5,.917],RB:[.86,.78],LB:[.14,.78],CB:[.5,.79],DM:[.506,.645],CM:[.5,.5],AM:[.505,.30],F:[.505,.123]};
+const fmt=n=>n==null?"–":Number(n).toLocaleString("pt-BR");
+const corNota=n=>n>=8?"#1f76d3":n>=7?"#21b36b":n>=6.5?"#9fbe1c":n>=6?"#ef7e1c":"#dc2626";
+const escSS=id=>`https://img.sofascore.com/api/v1/team/${id}/image`;
+const dataSS=ts=>{const d=new Date(ts*1000);return d.getDate()+" "+["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"][d.getMonth()];};
+function campCurto(c){
+  c=c||"";
+  if(/friendly/i.test(c)) return "Amistoso";
+  if(/qualif/i.test(c)) return "Eliminatórias";
+  if(/world cup/i.test(c)) return "Copa do Mundo";
+  if(/libertadores/i.test(c)) return "Libertadores";
+  if(/sudamericana/i.test(c)) return "Sul-Americana";
+  if(/s[ée]rie b/i.test(c)) return "Série B";
+  if(/s[ée]rie c/i.test(c)) return "Série C";
+  if(/u20/i.test(c)) return c;
+  if(/brasileir/i.test(c)) return "Brasileirão";
+  return c.replace(/,.*$/,"").replace(/^Liga Profesional de Fútbol$/,"Liga Profesional");
+}
+const PREFIXOS=new Set(["CA","CF","FC","CD","SC","AC","CS","SE","EC","GD","AA","CR","SS","SV","TSG","KRC","LOSC","AMSD","CLUB","CLUBE","DEPORTIVO","SPORT","ESPORTE","UNAM","RED","BULL","RB","1899","AL","INDEP."]);
+function siglaClube(c){
+  if(!c) return "";
+  const s=SIGLAS[String(c.id)]; if(s) return s;
+  let p=String(c.curto||c.nome||"").replace(/\(.*?\)/g,"").split(/[\s\-]+/).filter(Boolean);
+  while(p.length>1&&PREFIXOS.has(p[0].toUpperCase())) p=p.slice(1);
+  return (p[0]||"").normalize("NFD").replace(/[̀-ͯ]/g,"").slice(0,3).toUpperCase();
+}
+const escudoDe=j=>j.clube&&(j.clube.escudo||j.clube.escudoSS||j.clube.escudoTR)||"";
+
+function cfgDaLista(k){
+  const l=L[k]||{caixas:{}}; const caixas={};
+  for(const c of Object.keys(POSICOES)) caixas[c]=((l.caixas||{})[c]||[]).map(id=>J[id]?{...J[id],caixa:c}:null).filter(Boolean).slice(0,MAX_POR_POSICAO);
+  const at=l.atualizado?l.atualizado.split('-').reverse().join('.'):'';
+  return {lista:k,...LISTAS[k],caixas,atualizado:at};
+}
+function capa(){
+  return `<section class="folha capa"><div class="saf">${marca}</div><img class="escudo" src="assets/escudo_botafogo.png" alt="">
+    <h1>LISTA DE OBSERVAÇÃO</h1><h2>SAF BOTAFOGO | MERCADO E RECRUTAMENTO</h2></section>`;
+}
+const cabecalho=(C,rel)=>`<img class="cab-escudo" src="assets/escudo_botafogo.png" alt="">
+  <div class="cab-tit">${esc(C.titulo)}</div><div class="cab-sub">${esc(C.sub)}</div>
+  <div class="cab-marca">${rel?'<div class="rel">RELATÓRIO<br>DE SCOUT</div>':''}${marca}</div>`;
+function folhaCampo(C){
+  const caixas=Object.keys(CAIXA_X).map(k=>{
+    const js=C.caixas[k]||[]; if(!js.length) return "";
+    const h=42.3+33.77*js.length, top=CAIXA_CY[k]-h/2;
+    const linhas=js.map((j,i)=>{ const e=escudoDe(j); return `<div class="lin" style="background:${CINZAS[Math.min(i,4)]}"><span class="n">${esc(String(j.nome||'').toUpperCase())}</span><span class="i">${j.idade??"–"}</span><span class="e">${e?`<img src="${esc(e)}" alt="">`:""}</span><span class="s">${esc(siglaClube(j.clube))}</span></div>`; }).join("");
+    return `<div class="caixa" style="left:${CAIXA_X[k]}px;top:${top.toFixed(1)}px;height:${h.toFixed(1)}px"><h3>${esc(POSICOES[k])}</h3>${linhas}</div>`;
+  }).join("");
+  return `<section class="folha fundo">${cabecalho(C,true)}<div class="campo"></div>${caixas}<div class="rodape">Última atualização: ${esc(C.atualizado)}</div></section>`;
+}
+function campinho(j,x,y){
+  const princ=j.caixa; let sec=j.pos2||null;
+  if(sec==="W") sec=j.pe===1?"ED":"EE";
+  if(sec&&String(PONTO[sec])===String(PONTO[princ])) sec=null;
+  const pt=(k,c)=>{const p=PONTO[k];return p?`<span class="pt ${c}" style="left:${p[0]*141}px;top:${p[1]*207}px"></span>`:"";};
+  return `<div class="cmp" style="left:${x}px;top:${y}px"><img src="assets/campinho.png" alt="">${sec?pt(sec,"s"):""}${pt(princ,"p")}</div>
+    <div class="poslab" style="left:${x}px;top:${y+215}px">${esc(POS_ROT[princ]||"")}</div>`;
+}
+function grafico(j,x,y,w,h){
+  const js=((j.ss||{}).jogos||[]).slice(-5);
+  const caixa=`left:${x}px;top:${y}px;width:${w}px;height:${h}px`;
+  if(!js.length) return `<div class="graf" style="${caixa}"><span class="vazio">Sem jogos recentes no SofaScore</span></div>`;
+  const yy=n=>Math.max(0,Math.min(100,(n-5)/4*100));
+  const media=js.reduce((a,g)=>a+g.nota,0)/js.length;
+  const cols=js.map(g=>`<div class="col"><span class="dt">${dataSS(g.ts)}</span><img class="ad" src="${escSS(g.advId)}" alt="">
+    <div class="area"><span class="media" style="bottom:${yy(media)}%"></span><span class="nota" style="bottom:${yy(g.nota)}%;background:${corNota(g.nota)}">${String(g.nota).replace(".",",")}</span></div></div>`).join("");
+  return `<div class="graf" style="${caixa}"><span class="seta" style="left:6px">‹</span><span class="seta" style="right:6px">›</span>${cols}<span class="esc"></span></div>`;
+}
+function cartao(C,j,i){
+  const s=j.ss||{}, t=s.temp, y0=155.2+i*308;
+  const v=j.valor?"€"+Math.round(j.valor).toLocaleString("pt-BR"):"–";
+  const ctr=s.contrato||(j.contrato?Date.parse(j.contrato)/1000:null);
+  const contrato=ctr?new Date(ctr*1000).toLocaleDateString("pt-BR"):"–";
+  const nac=s.nac?(GENTILICO[s.nac]||(PAIS[s.nac]||s.nac).toUpperCase()):"–";
+  const ini=esc(String(j.nome||'').split(" ").map(p=>p[0]).slice(0,2).join(""));
+  const gol=j.pos1==="GK"||j.caixa==="GOL";
+  const camp=t?`${campCurto(t.camp).toUpperCase()} ${t.temporada||""}`:"SEM DADOS NO SOFASCORE";
+  const K=[["Jogos",t?t.jogos:null],["Minutos",t?t.min:null],gol?["GOLS SOF.",t?t.gs:null]:["GOLS",t?t.gols:null],gol?["JOGOS S/ GOL",t?t.sg:null]:["ASSIST.",t?t.assist:null],["RATING SOFASCORE",t&&t.nota?Number(t.nota).toFixed(2):null]];
+  const CX=[966,1052,1140,1225,1310], dx=i*-3.4;
+  const cp=(rot,val,k)=>`<div class="rot" style="left:${486+dx}px;top:${y0+50+k*62}px">${rot}</div><div class="pill" style="left:${474+dx}px;top:${y0+73+k*62}px">${val}</div>`;
+  const e=escudoDe(j);
+  const texto=((T[C.lista]||{})[j.id]||{}).perfil||"";
+  return `${i?`<div class="sep" style="top:${y0-3}px"></div>`:""}
+    <div class="nm" style="top:${y0+16}px">${esc(j.nome)}</div><div class="cl" style="top:${y0+73}px">${esc(j.clube&&j.clube.nome||"")}</div>
+    ${e?`<img class="fesc" style="top:${y0+107}px" src="${esc(e)}" alt="">`:""}
+    ${j.foto?`<img class="foto" style="top:${y0+95}px" src="${esc(j.foto)}" alt="" onerror="this.outerHTML='<div class=&quot;semfoto&quot; style=&quot;top:${y0+105}px&quot;>${ini}</div>'">`:`<div class="semfoto" style="top:${y0+105}px">${ini}</div>`}
+    <div class="bar" style="left:${473.7+dx}px;top:${y0+10.5}px;width:430px">INFORMAÇÕES DO JOGADOR</div>
+    ${cp("NACIONALIDADE",esc(nac),0)}${cp("IDADE",j.idade!=null?`${j.idade} ANOS`:"–",1)}${cp("VALOR DE MERCADO",v,2)}${cp("CONTRATO",contrato,3)}
+    ${campinho(j,764+dx,y0+54)}
+    <div class="bar" style="left:${930.9+dx}px;top:${y0+10.5}px;width:432px">PERFORMANCE RECENTE</div>
+    <div class="camp" style="left:${943.6+dx}px;top:${y0+51}px">${esc(camp)}</div>
+    ${K.map(([r,val],k)=>`<div class="kp" style="left:${CX[k]+dx}px;top:${y0+63.5}px"><small>${r==="RATING SOFASCORE"?"RATING<br>SOFASCORE":r}</small><b>${val==null?"–":r==="RATING SOFASCORE"?val:fmt(val).replace(/\./g,"")}</b></div>`).join("")}
+    ${grafico(j,930.9+dx,y0+165,432,133)}
+    <div class="bar" style="left:${1393.7+dx}px;top:${y0+10.4}px;width:432px">AVALIAÇÃO</div>
+    <div class="ed" style="left:${1399.5+dx}px;top:${y0+51}px;width:420px;height:245px" contenteditable="true" spellcheck="true" data-lista="${C.lista}" data-id="${j.id}" data-ph="Texto livre: características do jogador e os motivos que o tornam um alvo.">${esc(texto)}</div>`;
+}
+function folhasCards(C){
+  const out=[];
+  for(const k of ORDEM_CARDS){
+    const js=C.caixas[k]; if(!js||!js.length) continue;
+    for(let f=0;f<js.length;f+=POR_FOLHA) out.push(`<section class="folha fundo">${cabecalho(C,false)}<div class="col-preta"></div>${js.slice(f,f+POR_FOLHA).map((j,i)=>cartao(C,j,i)).join("")}</section>`);
+  }
+  return out.join("");
+}
+function ajustarNomes(){
+  const passa=el=>el.scrollWidth>el.clientWidth+0.5;
+  document.querySelectorAll(".lin .n").forEach(el=>{
+    const fs0=parseFloat(getComputedStyle(el).fontSize); let fs=fs0;
+    while(passa(el)&&fs>fs0*0.8){fs-=0.5;el.style.fontSize=fs+"px";}
+    if(!passa(el)) return;
+    el.style.fontSize=fs0+"px";
+    const p=el.textContent.split(" ");
+    for(let i=0;i<p.length-1&&passa(el);i++){p[i]=p[i][0]+".";el.textContent=p.join(" ");}
+    fs=fs0; while(passa(el)&&fs>10){fs-=0.5;el.style.fontSize=fs+"px";}
+  });
+  document.querySelectorAll(".nm").forEach(el=>{let fs=60;while(el.scrollWidth>el.clientWidth+1&&fs>34){fs-=2;el.style.fontSize=fs+"px";}});
+}
+let _rt=null;
+function agendarRender(){ clearTimeout(_rt); _rt=setTimeout(render,120); }
+function render(){
+  document.getElementById('abas').innerHTML=Object.entries(LISTAS).map(([k,v])=>`<button class="${k===LISTA_ATUAL?'on':''}" onclick="trocarLista('${k}')">${v.nome}</button>`).join(' ');
+  const ativo=document.activeElement&&document.activeElement.classList.contains('ed')?document.activeElement.dataset.id:null;
+  if(ativo) return;   // não redesenha embaixo de quem está digitando; o texto já está salvo
+  const C=cfgDaLista(LISTA_ATUAL);
+  const tot=Object.values(C.caixas).reduce((a,v)=>a+v.length,0);
+  const l=L[LISTA_ATUAL]||{};
+  document.getElementById('infoLista').textContent=tot?`${tot} jogadores · atualizada em ${C.atualizado||'—'}${l.por?` · ${l.por}`:''}`:'';
+  const doc=document.getElementById('doc');
+  if(!tot){ doc.innerHTML=`<div class="vazio-doc">Esta lista ainda não foi gerada. Clique em <b>📷 Atualizar pelo print</b>.</div>`; return; }
+  const sy=window.scrollY;
+  doc.innerHTML=capa()+folhaCampo(C)+folhasCards(C);
+  ajustarZoom();
+  (document.fonts?document.fonts.ready:Promise.resolve()).then(ajustarNomes);
+  window.scrollTo(0,sy);
+}
+function ajustarZoom(){ const z=Math.min(1,(window.innerWidth-30)/1920); document.getElementById('doc').style.zoom=z; }
+window.addEventListener('resize',ajustarZoom);
+function trocarLista(k){ LISTA_ATUAL=k; try{localStorage.setItem('lo_lista',k);}catch(e){} render(); window.scrollTo(0,0); }
+
+/* textos de avaliação: salvos no Firebase enquanto digita (para todo mundo) */
+const _salvar={};
+document.addEventListener('input',ev=>{
+  const el=ev.target; if(!el.classList||!el.classList.contains('ed')) return;
+  const {lista,id}=el.dataset; clearTimeout(_salvar[lista+id]);
+  _salvar[lista+id]=setTimeout(async()=>{
+    const txt=el.innerText.replace(/\n{3,}/g,'\n\n').trim();
+    ((T[lista]=T[lista]||{})[id]=T[lista][id]||{}).perfil=txt;
+    if(db){ try{ await db.ref(`${RAIZ}/textos/${lista}/${id}`).update({perfil:txt,em:new Date().toISOString()}); el.classList.add('salvo'); setTimeout(()=>el.classList.remove('salvo'),700); }catch(e){ alert('Não deu para salvar o texto: '+e.message); } }
+  },700);
+});
+document.addEventListener('focusout',ev=>{ if(ev.target.classList&&ev.target.classList.contains('ed')) setTimeout(()=>{ if(!document.activeElement||!document.activeElement.classList.contains('ed')) agendarRender(); },900); });
+function atualizarTextosNaTela(k){
+  if(k!==LISTA_ATUAL) return;
+  document.querySelectorAll('.ed').forEach(el=>{ if(el===document.activeElement) return; const t=((T[k]||{})[el.dataset.id]||{}).perfil||''; if(el.innerText.trim()!==t) el.innerText=t; });
+}
+function baixarPDF(){
+  const at=document.activeElement; if(at&&at.blur) at.blur();
+  const t=document.title; document.title=`Lista de Observacao - ${LISTAS[LISTA_ATUAL].nome}`;
+  setTimeout(()=>{ window.print(); document.title=t; },200);
+}
+
+/* ═════════════ leitura do print (OCR no navegador) ═════════════
+   As linhas dos jogadores são retângulos bege (#E9E7DA) dentro das caixas escuras; o rótulo da caixa (GK, LB, CB1…)
+   fica logo acima da primeira linha. Acha as linhas pela cor, junta em caixas pela coluna e lê cada uma sozinha
+   (Tesseract, uma linha por vez) — testado em 19/10 com o print do MAIN LIST: 44 de 44 linhas certas, 1 letra trocada. */
+let PRINTS=[], LIDO=null, OCR=null;
+async function workerOCR(){
+  if(OCR) return OCR;
+  OCR=await Tesseract.createWorker('eng');
+  return OCR;
+}
+function carregarImagem(arq){ return new Promise((ok,erro)=>{ const im=new Image(); im.onload=()=>ok(im); im.onerror=erro; im.src=URL.createObjectURL(arq); }); }
+function linhasBege(im){
+  const W=im.naturalWidth,H=im.naturalHeight, cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+  const cx=cv.getContext('2d',{willReadFrequently:true}); cx.drawImage(im,0,0);
+  const d=cx.getImageData(0,0,W,H).data;
+  const bege=new Uint8Array(W*H);
+  for(let i=0,p=0;p<W*H;p++,i+=4){ const r=d[i],g=d[i+1],b=d[i+2]; if(Math.abs(r-233)<18&&Math.abs(g-231)<18&&Math.abs(b-218)<20&&r-b>6) bege[p]=1; }
+  // componentes ligados (4 vizinhos) por varredura com união
+  const lab=new Int32Array(W*H), pai=[0];
+  const acha=x=>{ while(pai[x]!==x){ pai[x]=pai[pai[x]]; x=pai[x]; } return x; };
+  let n=0;
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+    const p=y*W+x; if(!bege[p]) continue;
+    const a=x>0?lab[p-1]:0, c=y>0?lab[p-W]:0;
+    if(!a&&!c){ n++; pai[n]=n; lab[p]=n; }
+    else if(a&&c){ const ra=acha(a), rc=acha(c); lab[p]=Math.min(ra,rc); if(ra!==rc) pai[Math.max(ra,rc)]=Math.min(ra,rc); }
+    else lab[p]=a||c;
+  }
+  const bb={};
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++){ const l=lab[y*W+x]; if(!l) continue; const r=acha(l); const b=bb[r]||(bb[r]={x0:x,y0:y,x1:x,y1:y,n:0}); if(x<b.x0)b.x0=x; if(x>b.x1)b.x1=x; if(y<b.y0)b.y0=y; if(y>b.y1)b.y1=y; b.n++; }
+  const esc=W/1500;   // print normal ≈ 1500 px de largura; retina ≈ 3000
+  const rows=Object.values(bb).map(b=>({x:b.x0,y:b.y0,w:b.x1-b.x0+1,h:b.y1-b.y0+1,n:b.n}))
+    .filter(b=>b.w>80*Math.max(.5,esc*.6)&&b.h>12&&b.h<b.w/3&&b.n>b.w*b.h*.55);
+  // linha típica = altura mais comum; descarta o que foge muito (barra do "Full", campos de busca)
+  const hs=rows.map(r=>r.h).sort((a,b)=>a-b), hm=hs[Math.floor(hs.length/2)]||30;
+  return {cv,rows:rows.filter(r=>r.h>hm*.7&&r.h<hm*1.35)};
+}
+function recorte(cv,x,y,w,h,escala,inverter,limiar){
+  const c=document.createElement('canvas'); c.width=Math.max(1,Math.round(w*escala)); c.height=Math.max(1,Math.round(h*escala));
+  const k=c.getContext('2d',{willReadFrequently:true}); k.imageSmoothingQuality='high'; k.drawImage(cv,x,y,w,h,0,0,c.width,c.height);
+  const im=k.getImageData(0,0,c.width,c.height), d=im.data;
+  for(let i=0;i<d.length;i+=4){ let v=.299*d[i]+.587*d[i+1]+.114*d[i+2]; if(inverter) v=255-v; v=v<limiar?0:255; d[i]=d[i+1]=d[i+2]=v; }
+  k.putImageData(im,0,0); return c;
+}
+function rotuloCaixa(t){
+  t=String(t||'').toUpperCase().replace(/\s/g,'').replace(/[|!]/g,'1').replace(/[OQ]/g,'0');
+  if(/^G[KX]/.test(t)) return 'GK';
+  if(/^CB/.test(t)||/^C8/.test(t)) return /2/.test(t)?'CB2':'CB1';
+  if(/^[DO]M/.test(t)) return /2/.test(t)?'DM2':'DM1';
+  if(/^CA/.test(t)) return 'CAM';
+  if(/^L[BS8]/.test(t)) return 'LB';
+  if(/^R[BS8]/.test(t)) return 'RB';
+  if(/^LM/.test(t)) return 'LM';
+  if(/^RM/.test(t)) return 'RM';
+  if(/^S[TI]/.test(t)) return 'ST';
+  return null;
+}
+async function lerPrint(im,log){
+  const {cv,rows}=linhasBege(im);
+  log(`  ${rows.length} linhas de jogador achadas no print`);
+  // junta as linhas em caixas: mesma coluna (x parecido) e coladas uma embaixo da outra
+  rows.sort((a,b)=>a.x-b.x||a.y-b.y);
+  const grupos=[];
+  for(const r of rows.sort((a,b)=>a.y-b.y)){
+    const g=grupos.find(g=>Math.abs(g.x-r.x)<r.h*.6&&r.y-g.fim<r.h*.6&&r.y>=g.fim-2);
+    if(g){ g.linhas.push(r); g.fim=r.y+r.h; } else grupos.push({x:r.x,w:r.w,ini:r.y,fim:r.y+r.h,linhas:[r]});
+  }
+  const w=await workerOCR();
+  const caixas={};
+  for(const g of grupos){
+    const h=g.linhas[0].h;
+    await w.setParameters({tessedit_pageseg_mode:'7',tessedit_char_whitelist:'GKLBCRDMSTA12'});
+    const cab=recorte(cv,g.x,Math.max(0,g.ini-h*1.3),g.w*.45,h*1.15,3*Math.max(1,30/h),true,140);
+    const rot=rotuloCaixa((await w.recognize(cab)).data.text);
+    await w.setParameters({tessedit_pageseg_mode:'7',tessedit_char_whitelist:''});
+    const nomes=[];
+    for(const r of g.linhas){
+      const c=recorte(cv,r.x+2,r.y+2,r.w*.84,r.h-4,3*Math.max(1,30/h),false,170);
+      const t=(await w.recognize(c)).data.text.replace(/[^\p{L}\p{N} .'\-]/gu,' ').replace(/\s+/g,' ').trim();
+      if(t) nomes.push(t);
+    }
+    log(`  ${rot||'??'}: ${nomes.join(', ')}`);
+    if(!rot){ continue; }
+    const k=ROTULO_CAIXA[rot];
+    caixas[k]=[...(caixas[k]||[]),...nomes.filter(n=>!(caixas[k]||[]).some(x=>sem(x)===sem(n)))];
+  }
+  return caixas;
+}
+
+/* ═════════════ casar os nomes com a base ═════════════ */
+function lev(a,b){ const m=a.length,n=b.length; if(!m||!n) return Math.max(m,n); let p=Array.from({length:n+1},(_,i)=>i); for(let i=1;i<=m;i++){ const c=[i]; for(let j=1;j<=n;j++) c[j]=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]===b[j-1]?0:1)); p=c; } return p[n]; }
+const parecido=(a,b)=>{ a=sem(a); b=sem(b); if(!a||!b) return 0; if(a===b) return 1; return 1-lev(a,b)/Math.max(a.length,b.length); };
+function casarBase(nome,caixa){
+  let melhor=null;
+  for(const j of Object.values(J)){
+    const s=Math.max(parecido(nome,j.nomeTR||''),parecido(nome,j.nome||''),j.nomeCompleto?parecido(nome,j.nomeCompleto)*.95:0);
+    if(s<.8) continue;
+    const pos=(POS_OK[caixa]||[]).includes(j.pos1)?.06:0;
+    const naLista=Object.values(L).some(l=>((l.caixas||{})[caixa]||[]).includes(j.id))?.04:0;
+    const sc=s+pos+naLista;
+    if(!melhor||sc>melhor.sc) melhor={sc,j};
+  }
+  return melhor&&melhor.sc>=.86?melhor.j:null;
+}
+
+/* ═════════════ janela de atualização ═════════════ */
+let REV=null;   // {caixa: [{texto, id|null, cand:[...], status}]}
+function abrirModal(){
+  PRINTS=[]; REV=null;
+  document.getElementById('mLista').textContent=LISTAS[LISTA_ATUAL].nome;
+  document.getElementById('prints').innerHTML=''; document.getElementById('revisao').innerHTML='';
+  const lg=document.getElementById('log'); lg.style.display='none'; lg.textContent='';
+  document.getElementById('btnGerar').disabled=true;
+  document.getElementById('modal').classList.add('on');
+  checarExtensao();
+}
+function fecharModal(){ document.getElementById('modal').classList.remove('on'); }
+function log(t){ const lg=document.getElementById('log'); lg.style.display='block'; lg.textContent+=t+'\n'; lg.scrollTop=lg.scrollHeight; }
+async function receberArquivos(arqs){
+  arqs=[...arqs].filter(f=>/^image\//.test(f.type)); if(!arqs.length) return;
+  for(const f of arqs){ PRINTS.push(f); const im=document.createElement('img'); im.src=URL.createObjectURL(f); document.getElementById('prints').appendChild(im); }
+  await processarPrints();
+}
+async function processarPrints(){
+  document.getElementById('btnGerar').disabled=true;
+  log('Lendo o(s) print(s)… (a primeira leitura baixa o leitor de texto, leva uns segundos)');
+  const juntas={};
+  try{
+    for(const f of PRINTS){
+      const im=await carregarImagem(f);
+      const cx=await lerPrint(im,log);
+      for(const [k,ns] of Object.entries(cx)) juntas[k]=[...(juntas[k]||[]),...ns.filter(n=>!(juntas[k]||[]).some(x=>sem(x)===sem(n)))];
+    }
+  }catch(e){ log('Erro na leitura: '+e.message); console.error(e); return; }
+  const faltam=Object.keys(POSICOES).filter(k=>!juntas[k]);
+  if(faltam.length) log(`Atenção: não achei as caixas ${faltam.map(k=>POSICOES[k]).join(', ')} — se estiverem fora do print, mande outro print ou digite os nomes abaixo.`);
+  REV={};
+  for(const k of Object.keys(POSICOES)) REV[k]=(juntas[k]||[]).slice(0,MAX_POR_POSICAO).map(t=>linhaNova(t,k));
+  desenharRevisao();
+  buscarCandidatosNovos();
+}
+function linhaNova(texto,caixa){
+  const j=casarBase(texto,caixa);
+  return j?{texto,id:j.id,status:'base'}:{texto,id:null,status:'novo',cand:null};
+}
+function desenharRevisao(){
+  const caixa=k=>{
+    const ls=REV[k]||[];
+    return `<div class="cx"><h4>${POSICOES[k]} <small>${ls.length}/${MAX_POR_POSICAO}</small></h4>
+      ${ls.map((l,i)=>`<div class="lr"><input value="${esc(l.texto)}" onchange="mudarNome('${k}',${i},this.value)" title="Nome lido no print — corrija se precisar">
+        ${l.status==='base'&&J[l.id]?`<span class="st ok" title="${esc(J[l.id].nome)} · ${esc(J[l.id].clube&&J[l.id].clube.nome||'')} · ${J[l.id].idade??''} anos">✓ ${esc(J[l.id].clube&&J[l.id].clube.nome||'')}</span>`
+        :l.cand&&l.cand.length?`<select onchange="escolherCand('${k}',${i},this.value)" title="Jogador novo: confira qual é no TransferRoom">${l.cand.map((c,ci)=>`<option value="${ci}"${ci===(l.esc||0)?' selected':''}>${esc(c.nome)} · ${esc(c.clube&&c.clube.curto||c.clube&&c.clube.nome||'')} · ${c.idade??'?'}a · ${esc(c.pos1||'')}</option>`).join('')}<option value="-1"${l.esc===-1?' selected':''}>nenhum destes</option></select>`
+        :`<span class="st ${l.status==='erro'?'erro':'novo'}">${l.status==='buscando'?'buscando no TR…':l.status==='erro'?'não achei no TR':'novo'}</span>`}
+        <button onclick="moverLinha('${k}',${i},-1)" title="Subir">↑</button><button onclick="tirarLinha('${k}',${i})" title="Tirar">✕</button></div>`).join('')}
+      ${ls.length<MAX_POR_POSICAO?`<button class="mais" onclick="maisLinha('${k}')">+ jogador</button>`:''}</div>`;
+  };
+  document.getElementById('revisao').innerHTML=`<div style="margin-top:12px;font-weight:600">Confira o que foi lido (na ordem do Squad View). ✓ = já está na base; jogador novo: escolha qual é no TransferRoom.</div><div class="grade">${ORDEM_CARDS.map(caixa).join('')}</div>`;
+  document.getElementById('btnGerar').disabled=!Object.values(REV).some(v=>v.length);
+}
+function mudarNome(k,i,v){ REV[k][i]=linhaNova(v.trim(),k); desenharRevisao(); buscarCandidatosNovos(); }
+function escolherCand(k,i,v){ REV[k][i].esc=+v; }
+function moverLinha(k,i,d){ const a=REV[k]; if(i+d<0) return; [a[i],a[i+d]]=[a[i+d],a[i]]; desenharRevisao(); }
+function tirarLinha(k,i){ REV[k].splice(i,1); desenharRevisao(); }
+function maisLinha(k){ const n=prompt('Nome do jogador (como está no TransferRoom):'); if(!n) return; REV[k].push(linhaNova(n.trim(),k)); desenharRevisao(); buscarCandidatosNovos(); }
+async function buscarCandidatosNovos(){
+  if(!EXT_VERSAO) return;
+  for(const [k,ls] of Object.entries(REV)) for(const l of ls){
+    if(l.status!=='novo'||l.cand) continue;
+    l.status='buscando'; desenharRevisao();
+    try{
+      const r=await extPedido({tipo:'tr_busca',nome:l.texto},60000,t=>log('  '+t));
+      let c=(r.dados||[]);
+      c.sort((a,b)=>((POS_OK[k]||[]).includes(b.pos1)-(POS_OK[k]||[]).includes(a.pos1))||(parecido(l.texto,b.nome)-parecido(l.texto,a.nome)));
+      l.cand=c.slice(0,8); l.esc=c.length?0:-1; l.status=c.length?'novo':'erro';
+      // já está na base com outro nome? (TR id igual)
+      if(c.length&&J[c[0].id]&&parecido(l.texto,c[0].nome)>.85){ l.id=c[0].id; l.status='base'; }
+    }catch(e){ l.status='erro'; log(`  ${l.texto}: ${e.message}`); }
+    desenharRevisao();
+  }
+}
+['dragover','dragenter'].forEach(ev=>document.addEventListener(ev,e=>{ if(!document.getElementById('modal').classList.contains('on')) return; e.preventDefault(); document.getElementById('drop').classList.add('sobre'); }));
+document.addEventListener('dragleave',()=>document.getElementById('drop').classList.remove('sobre'));
+document.addEventListener('drop',e=>{ if(!document.getElementById('modal').classList.contains('on')) return; e.preventDefault(); document.getElementById('drop').classList.remove('sobre'); receberArquivos(e.dataTransfer.files); });
+document.addEventListener('paste',e=>{ if(!document.getElementById('modal').classList.contains('on')) return; const fs=[...(e.clipboardData&&e.clipboardData.items||[])].filter(i=>i.kind==='file').map(i=>i.getAsFile()); if(fs.length){ e.preventDefault(); receberArquivos(fs); } });
+document.getElementById('arq').addEventListener('change',e=>receberArquivos(e.target.files));
+
+/* ═════════════ dados de cada jogador ═════════════ */
+function idadeDe(nasc){ if(!nasc) return null; const b=new Date(nasc), n=new Date(); let a=n.getFullYear()-b.getFullYear(); if(n<new Date(n.getFullYear(),b.getMonth(),b.getDate())) a--; return a; }
+const STOP=new Set('fc ca cf sc ac cd club clube de del la el esporte futebol sport sociedade esportiva associacao atletico athletic u20 u19 u23 b fk sfc tc aa cr ec mt pr go the y sl cs real foot ball regatas'.split(' '));
+const toks=s=>sem(s).split(' ').filter(t=>t.length>2&&!STOP.has(t));
+const clubeBate=(a,b)=>{ const ta=toks(a), tb=toks(b); return ta.some(t=>tb.includes(t)); };
+function deTR(p){   // jogador do TransferRoom -> formato da base
+  return {id:p.id,nomeTR:p.nome,nomeCompleto:p.nomeCompleto||null,idade:p.idade??idadeDe(p.nasc),nasc:p.nasc||null,pos1:p.pos1||null,pos2:p.pos2||null,pe:p.pe??null,altura:p.altura||null,
+    valor:p.valor||null,contrato:p.contrato||null,nota:p.nota||null,potencial:p.potencial||null,
+    clube:p.clube?{id:p.clube.id,nome:p.clube.nome,curto:p.clube.curto,escudoTR:p.clube.escudo}:null,
+    origem:p.origem&&p.clube&&p.origem.id!==p.clube.id?{id:p.origem.id,nome:p.origem.nome,escudoTR:p.origem.escudo}:null};
+}
+// SofaScore: acha o jogador (nome + clube + idade), temporada da liga do clube e as 5 últimas notas
+async function sofaAchar(j){
+  const nomes=[...new Set([j.nomeTR,j.nome,j.nomeCompleto].filter(Boolean))];
+  for(const n of nomes){
+    let ps=[]; try{ ps=((await sofa('/search/all?q='+encodeURIComponent(n))).results||[]).filter(x=>x.type==='player').map(x=>x.entity); }catch(e){ continue; }
+    ps.sort((a,b)=>(clubeBate(j.clube&&j.clube.nome,b.team&&b.team.name)-clubeBate(j.clube&&j.clube.nome,a.team&&a.team.name)));
+    for(const e of ps.slice(0,4)){
+      let p; try{ p=(await sofa('/player/'+e.id)).player; }catch(er){ continue; }
+      const a=p.dateOfBirthTimestamp?idadeDe(p.dateOfBirthTimestamp*1000):null;
+      const okIdade=a==null||j.idade==null||Math.abs(a-j.idade)<=1;
+      const okClube=clubeBate(j.clube&&j.clube.nome,p.team&&p.team.name)||clubeBate(j.origem&&j.origem.nome,p.team&&p.team.name);
+      if(okIdade&&(okClube||ps.length===1)) return p;
+    }
+  }
+  return null;
+}
+async function sofaDados(sid){
+  const p=(await sofa('/player/'+sid)).player;
+  const out={sid:+sid,time:p.team&&p.team.name||'',timeId:p.team&&p.team.id||null,nac:p.country&&p.country.name||'',contrato:p.contractUntilTimestamp||null,valor:p.proposedMarketValue||null,nasc:p.dateOfBirthTimestamp||null};
+  // temporada: liga principal do clube (copas e seleção fora), a mais recente
+  try{
+    const ut=p.team&&(p.team.primaryUniqueTournament&&p.team.primaryUniqueTournament.id||p.team.tournament&&p.team.tournament.uniqueTournament&&p.team.tournament.uniqueTournament.id);
+    const ss=(await sofa(`/player/${sid}/statistics/seasons`)).uniqueTournamentSeasons||[];
+    const alvo=ss.find(x=>x.uniqueTournament&&x.uniqueTournament.id===ut)||ss.find(x=>x.uniqueTournament&&!/cup|copa|friendly|libertadores|sudamericana|qualif|world|nations|u20|u17/i.test(x.uniqueTournament.name));
+    if(alvo&&alvo.seasons&&alvo.seasons.length){
+      const se=alvo.seasons[0];
+      const st=((await sofa(`/player/${sid}/unique-tournament/${alvo.uniqueTournament.id}/season/${se.id}/statistics/overall`)).statistics)||{};
+      out.temp={camp:alvo.uniqueTournament.name,temporada:se.year||'',jogos:st.appearances||0,titular:st.matchesStarted||0,min:st.minutesPlayed||0,gols:st.goals||0,assist:st.assists||0,
+        nota:st.rating!=null?Math.round(st.rating*100)/100:null,gs:st.goalsConceded||0,def:st.saves||0,sg:st.cleanSheet||0};
+    }
+  }catch(e){}
+  // últimos jogos com nota (clube e seleção, como o gráfico do SofaScore)
+  try{
+    const ev=await sofa(`/player/${sid}/events/last/0`);
+    const sm=ev.statisticsMap||{}, pf=ev.playedForTeamMap||{};
+    out.jogos=(ev.events||[]).filter(e=>sm[e.id]&&sm[e.id].rating).sort((a,b)=>a.startTimestamp-b.startTimestamp).slice(-5).map(e=>{
+      const meu=pf[e.id], casa=e.homeTeam&&e.homeTeam.id===meu, adv=casa?e.awayTeam:e.homeTeam;
+      return {ts:e.startTimestamp,nota:sm[e.id].rating,adv:adv&&adv.name,advId:adv&&adv.id,meu:(casa?e.homeTeam:e.awayTeam||{}).name,casa,camp:e.tournament&&e.tournament.name};
+    });
+  }catch(e){ out.jogos=[]; }
+  return out;
+}
+// foto recortada no sortitoutsi: só aceita quando idade, nacionalidade e clube batem (regra do Henrique: não errar o jogador)
+async function fotoSorti(j,lg){
+  const nac=j.ss&&j.ss.nac||'', tentativa=async(nome,extras)=>{
+    const r=await extPedido({tipo:'sorti_busca',nome,max:10,extras},120000,t=>lg&&lg('    '+t));
+    return (r.dados||[]).map(c=>{ const a=idadeDe(c.nasc);
+      const okA=a!=null&&j.idade!=null&&Math.abs(a-j.idade)<=1, okN=!nac||!c.nac||sem(c.nac).includes(sem(nac));
+      const okC=clubeBate(j.clube&&j.clube.nome,(c.clube||'')+' '+(c.emprestado||''))||clubeBate(j.origem&&j.origem.nome,(c.clube||'')+' '+(c.emprestado||''))||clubeBate(j.ss&&j.ss.time,(c.clube||'')+' '+(c.emprestado||''));
+      return {...c,okA,okN,okC}; }).filter(c=>c.versao&&c.okA&&c.okN);
+  };
+  let ok=[];
+  for(const n of [...new Set([j.nomeTR,j.nome,j.nomeCompleto].filter(Boolean))]){ ok=await tentativa(n); if(ok.length) break; }
+  if(!ok.length&&j.clube){   // nome comum: procura no elenco do clube
+    try{ const el=(await extPedido({tipo:'sorti_elenco',clube:j.clube.nome,nome:j.nomeTR||j.nome},120000)).dados||[]; if(el.length) ok=await tentativa(j.nomeTR||j.nome,el.slice(0,4)); }catch(e){}
+  }
+  const c=ok.find(c=>c.okC)||(ok.length===1?ok[0]:null);
+  if(!c) return null;
+  const url=`https://sortitoutsidospaces.b-cdn.net/megapacks/cutoutfaces/originals/${c.versao}/${c.fmid}.png`;
+  const r=await extPedido({tipo:'baixar',url,como:'bytes'},60000);
+  return {fmid:c.fmid,versao:c.versao,dataurl:r.dataurl,conferido:c.okC?'idade, nacionalidade e clube':'idade e nacionalidade (único)'};
+}
+async function guardarFoto(id,dataurl){
+  if(!storage) return dataurl;
+  const blob=await (await fetch(dataurl)).blob();
+  const ref=storage.ref(`${RAIZ}/fotos/${id}.png`);
+  await ref.put(blob,{contentType:'image/png',cacheControl:'public,max-age=31536000'});
+  return await ref.getDownloadURL();
+}
+
+/* ═════════════ gerar a lista ═════════════ */
+async function gerarLista(){
+  const btn=document.getElementById('btnGerar'); btn.disabled=true;
+  const lista=LISTA_ATUAL, temExt=!!EXT_VERSAO;
+  try{
+    log(`\nGerando a ${LISTAS[lista].nome}…`);
+    // 1) quem entra em cada caixa
+    const caixas={}, novos=[];
+    for(const k of Object.keys(POSICOES)){
+      caixas[k]=[];
+      for(const l of (REV[k]||[])){
+        if(l.status==='base'&&l.id){ caixas[k].push(l.id); continue; }
+        const c=l.cand&&l.esc!==-1?l.cand[l.esc||0]:null;
+        if(c){ caixas[k].push(c.id); if(!J[c.id]) novos.push({...deTR(c),nome:c.nome}); continue; }
+        // sem TransferRoom: entra com o nome lido e um código provisório
+        const pid='n_'+chaveFB(sem(l.texto).replace(/ /g,'_'));
+        caixas[k].push(pid); if(!J[pid]) novos.push({id:pid,nome:l.texto,nomeTR:l.texto,idade:null,pos1:null,clube:null});
+      }
+    }
+    const ids=[...new Set(Object.values(caixas).flat())];
+    const upd={};
+    // 2) TransferRoom: dados frescos de todos (valor, clube, idade, posição)
+    let trAtual={};
+    if(temExt&&document.getElementById('optTR').checked){
+      try{
+        log('Lendo o TransferRoom (valor, clube, idade)…');
+        const r=await extPedido({tipo:'tr_listas',nomes:['MAIN','BACKUP','YOUTH']},90000,t=>log('  '+t));
+        for(const pos of Object.values(r.dados||{})) for(const p of pos) for(const x of p.jogadores) trAtual[x.id]=x;
+        log(`  ${Object.keys(trAtual).length} jogadores lidos no TransferRoom`);
+      }catch(e){ log('  TransferRoom: '+e.message+' — sigo com os dados guardados'); }
+    }
+    for(const n of novos) J[n.id]={...n};
+    for(const id of ids){
+      const base=J[id]||{}; const t=trAtual[id]?deTR(trAtual[id]):{};
+      const novo={...base,...Object.fromEntries(Object.entries(t).filter(([k,v])=>v!=null))};
+      if(!novo.nome) novo.nome=novo.nomeTR;
+      if(base.clube&&novo.clube&&base.clube.id===novo.clube.id) novo.clube={...base.clube,...novo.clube};   // mantém o escudo sem fundo já guardado
+      J[id]=novo;
+    }
+    // 3) SofaScore (temporada + últimas notas) e foto para os novos
+    if(temExt&&(document.getElementById('optSS').checked||novos.length)){
+      let i=0;
+      for(const id of ids){
+        i++; const j=J[id]; const ehNovo=novos.some(n=>n.id===id);
+        if(!ehNovo&&!document.getElementById('optSS').checked) continue;
+        try{
+          let sid=j.ss&&j.ss.sid;
+          if(!sid){ log(`  [${i}/${ids.length}] ${j.nome}: procurando no SofaScore…`); const p=await sofaAchar(j); sid=p&&p.id; if(!sid) log(`    não achei ${j.nome} no SofaScore com o mesmo clube e idade`); }
+          if(sid){
+            const d=await sofaDados(sid);
+            j.ss={...(j.ss||{}),...d};
+            if(!j.valor&&d.valor) j.valor=d.valor;
+            if(j.idade==null&&d.nasc) j.idade=idadeDe(d.nasc*1000);
+            if(j.clube&&!j.clube.escudo&&d.timeId&&clubeBate(j.clube.nome,d.time)) j.clube.escudoSS=escSS(d.timeId);
+            if(!j.clube&&d.time) j.clube={id:'ss'+d.timeId,nome:d.time,curto:d.time,escudoSS:escSS(d.timeId)};
+            log(`  [${i}/${ids.length}] ${j.nome}: ${d.temp?`${campCurto(d.temp.camp)} ${d.temp.temporada} — ${d.temp.jogos} jogos`:'sem temporada'}, ${(d.jogos||[]).length} notas recentes`);
+          }
+        }catch(e){ log(`  [${i}/${ids.length}] ${j.nome}: SofaScore — ${e.message}`); }
+        if(ehNovo&&!j.foto){
+          try{
+            log(`    procurando a foto recortada no sortitoutsi…`);
+            const f=await fotoSorti(j,log);
+            if(f){ j.foto=await guardarFoto(id,f.dataurl); j.fotoFonte='sortitoutsi'; j.fmid=f.fmid; log(`    foto ok (conferido: ${f.conferido})`); }
+            else if(j.ss&&j.ss.sid){ j.foto=`https://img.sofascore.com/api/v1/player/${j.ss.sid}/image`; j.fotoFonte='sofascore'; log('    sem foto recortada que bata — ficou a do SofaScore'); }
+          }catch(e){ log('    foto: '+e.message); }
+        }
+      }
+    }
+    // 4) grava
+    for(const id of ids) upd[`jogadores/${chaveFB(id)}`]=limpar(J[id]);
+    upd[`listas/${lista}`]={atualizado:hojeISO(),fonte:'print do Squad View',caixas,em:new Date().toISOString()};
+    if(db) await db.ref(RAIZ).update(upd); else { L[lista]=upd[`listas/${lista}`]; }
+    log('Pronto. Lista atualizada para todo mundo.');
+    setTimeout(()=>{ fecharModal(); render(); window.scrollTo(0,0); },900);
+  }catch(e){ log('Erro: '+e.message); console.error(e); btn.disabled=false; }
+}
+function limpar(o){ return JSON.parse(JSON.stringify(o,(k,v)=>v===undefined?null:v)); }
+
+/* ═════════════ início ═════════════ */
+render();
+iniciarBanco();
+checarExtensao();
+</script>
+</body>
+</html>
