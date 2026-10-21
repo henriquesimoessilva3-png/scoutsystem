@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="app-versao" content="2026-10-19 16:00"><!-- AO PUBLICAR MUDANÇA, TROQUE ESTA DATA-HORA: as abas abertas mostram o aviso de versão nova -->
+<meta name="app-versao" content="2026-10-21 15:40"><!-- AO PUBLICAR MUDANÇA, TROQUE ESTA DATA-HORA: as abas abertas mostram o aviso de versão nova -->
 <title>Scout System 2026</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
@@ -4003,73 +4003,71 @@ function importIndicadosSomenteNovos(input){
 }
 
 
-/* ══ OGOL AUTO-FILL ══ */
+/* ══ OGOL AUTO-FILL ══
+   21/10/2026 (pedido do Pedro): antes isto NÃO lia o ogol — tirava o nome do link e procurava na API gratuita
+   TheSportsDB, que caiu ("API indisponível"). Agora lê a própria página do jogador no ogol (bloco DADOS PESSOAIS)
+   pela extensão BFR Relatório Jogadores (pedido 'baixar', a mesma do SofaScore). Aceita link com ?search=1 etc.
+   Só preenche campo vazio (não apaga o que já foi digitado), menos o nome quando ele veio do próprio link. */
+function ogolLinkBase(url){
+  const m=String(url||'').trim().match(/^(?:https?:\/\/)?(?:www\.)?ogol\.com\.br\/jogador\/([^/?#]+)\/(\d+)/i);
+  return m?{url:'https://www.ogol.com.br/jogador/'+m[1]+'/'+m[2],slug:m[1]}:null;
+}
+async function ogolDadosPessoais(url){
+  const r=await extPedido({tipo:'baixar',url,como:'texto'});
+  const html=String(r.texto||'');
+  const ta=document.createElement('textarea'); const un=x=>{ ta.innerHTML=x; return ta.value; };
+  const t=html.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/g,'').split(/<[^>]+>/)
+    .map(x=>un(x.replace(/\s+/g,' ')).trim()).filter(Boolean);
+  const k=t.indexOf('DADOS PESSOAIS'); if(k<0) throw new Error('página do ogol sem "Dados pessoais"');
+  const fim=t.indexOf('Histórico',k); const b=t.slice(k,fim>k?fim:k+60);
+  const ROT=['Nome','Data de Nascimento','Nacionalidade','País de Nascimento','Posição','Pé preferencial','Altura / Peso','Situação','Jogos pela seleção','Jogos por seleções de base','Clube atual','Ligações','Parentescos'];
+  const campo=rot=>{ const i=b.indexOf(rot); if(i<0) return []; const v=[]; for(let j=i+1;j<b.length&&!ROT.includes(b[j]);j++) v.push(b[j]); return v; };
+  const tit=(html.match(/<title>([^<]*)/)||[])[1]||'';
+  const nasc=(campo('Data de Nascimento')[0]||'').match(/(\d{4})-\d{2}-\d{2}/);
+  return {
+    nome:un(tit).split(/ :: | - Informa/)[0].trim(),
+    nomeCompleto:campo('Nome')[0]||'',
+    ano:nasc?nasc[1]:'',
+    pais:campo('Nacionalidade')[0]||campo('País de Nascimento')[0]||'',
+    posicao:campo('Posição')[0]||'',
+    clube:/^sem clube$/i.test(campo('Clube atual')[0]||'')?'':(campo('Clube atual')[0]||'')
+  };
+}
+function ogolPosCode(txt){
+  const t=slugInd(txt||''); if(!t) return '';
+  if(/meia_central|medio_centro|meio_campista|meio_campo/.test(t)) return '6 - CM';
+  if(/meia_atacante|meia_ofensiv|medio_ofensiv/.test(t)) return '7 - AM';
+  if(/volante|medio_defensiv/.test(t)) return '5 - DM';
+  if(/guarda_redes|goleir/.test(t)) return '1 - GK';
+  if(/defesa_central|defensor_central/.test(t)) return '4 - RCB/LCB';
+  return indPosCode({posicao:txt});
+}
 async function buscarOgol(){
-  const url = document.getElementById('iOgolLink')?.value?.trim();
-  if(!url){ alert('Cole o link do Ogol primeiro.'); return; }
-
-  const btn = document.getElementById('btnOgolBuscar');
-  btn.textContent='⟳ Buscando…';
-  btn.disabled=true;
-
-  // Extract slug from Ogol URL → player name for search
-  // e.g. /jogador/vinicius-junior/547737 → "vinicius junior"
-  const slugMatch = url.match(/ogol\.com\.br\/jogador\/([^/]+)/);
-  const slug = slugMatch ? slugMatch[1].replace(/-/g,' ') : '';
-  if(!slug){ alert('URL do Ogol não reconhecida.'); btn.textContent='🔍 Buscar Ogol'; btn.disabled=false; return; }
-
+  const btn=document.getElementById('btnOgolBuscar');
+  const fimBtn=(txt,cor,ms)=>{ btn.textContent=txt; btn.style.background=cor; setTimeout(()=>{ btn.textContent='🔍 Buscar Ogol'; btn.style.background=''; btn.disabled=false; },ms); };
+  const inp=document.getElementById('iOgolLink');
+  const L=ogolLinkBase(inp?.value);
+  if(!inp||!inp.value.trim()){ alert('Cole o link do Ogol primeiro.'); return; }
+  if(!L){ alert('Link do ogol não reconhecido (precisa ser https://www.ogol.com.br/jogador/<nome>/<número>).'); return; }
+  inp.value=L.url;   // guarda o link limpo, sem ?search=1
+  btn.textContent='⟳ Buscando…'; btn.disabled=true;
+  const nomeEl=document.getElementById('iNome');
+  const nomeDoLink=L.slug.replace(/-/g,' ').toUpperCase();
+  const por=(id,v)=>{ const el=document.getElementById(id); if(!el||!v||el.value) return 0;
+    if(el.tagName==='SELECT'&&![...el.options].some(o=>o.value===String(v))) return 0;
+    el.value=v; el.dispatchEvent(new Event('change',{bubbles:true})); return 1; };
   try{
-    // TheSportsDB — free, no key, CORS enabled
-    const searchName = encodeURIComponent(slug);
-    const apiUrl = 'https://www.thesportsdb.com/api/v1/json/3/searchplayers.php?p='+searchName;
-    const res = await fetch(apiUrl);
-    const data = await res.json();
-    const p = data?.player?.[0];
-
-    if(p){
-      // Map TheSportsDB position to our codes
-      const posMap={
-        'Goalkeeper':'1 - GK','Defender':'4 - RCB/LCB',
-        'Right Back':'2 - RB','Left Back':'3 - LB',
-        'Midfielder':'6 - CM','Defensive Midfielder':'5 - DM',
-        'Attacking Midfielder':'7 - AM','Forward':'9 - CF',
-        'Winger':'8 - RW/LW','Centre-Forward':'9 - CF',
-        'Striker':'9 - CF'
-      };
-      const posCode = posMap[p.strPosition] || '';
-
-      if(p.strPlayer)    document.getElementById('iNome').value = p.strPlayer.toUpperCase();
-      if(p.dateBorn)     document.getElementById('iGeracao').value = p.dateBorn.slice(0,4);
-      if(p.strNationality) document.getElementById('iPais').value = p.strNationality;
-      if(p.strTeam)      document.getElementById('iClube').value = p.strTeam;
-      if(p.strHeight)    {} // optional
-      if(posCode){
-        const sel = document.getElementById('iPosicao');
-        if(sel) sel.value = posCode;
-      }
-
-      btn.textContent='✓ Preenchido!';
-      btn.style.background='#1a8040';
-      setTimeout(()=>{ btn.textContent='🔍 Buscar Ogol'; btn.style.background=''; btn.disabled=false; }, 3000);
-    } else {
-      // Fallback: pre-fill name from URL slug at minimum
-      const nameFmt = slug.split(' ').map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
-      document.getElementById('iNome').value = nameFmt.toUpperCase();
-
-      btn.textContent='⚠ Não encontrado — nome preenchido';
-      btn.style.background='#b8860b';
-      setTimeout(()=>{ btn.textContent='🔍 Buscar Ogol'; btn.style.background=''; btn.disabled=false; }, 3500);
-    }
-  } catch(err){
-    console.error('buscarOgol error:', err);
-    // Fallback: at least fill the name from the URL
-    try{
-      const nameFmt = slug.split(' ').map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
-      document.getElementById('iNome').value = nameFmt.toUpperCase();
-    }catch(e){}
-    btn.textContent='⚠ API indisponível — nome preenchido';
-    btn.style.background='#b8860b';
-    setTimeout(()=>{ btn.textContent='🔍 Buscar Ogol'; btn.style.background=''; btn.disabled=false; }, 3500);
+    const d=await ogolDadosPessoais(L.url);
+    let n=0;
+    if(d.nome&&(!nomeEl.value||nomeEl.value===nomeDoLink)){ nomeEl.value=d.nome.toUpperCase(); nomeEl.dispatchEvent(new Event('input',{bubbles:true})); n++; }
+    n+=por('iGeracao',d.ano)+por('iPais',d.pais)+por('iClube',d.clube)+por('iPosicao',ogolPosCode(d.posicao));
+    fimBtn(n?`✓ ${n} campo${n>1?'s':''} preenchido${n>1?'s':''}`:'✓ Nada vazio para preencher','#1a8040',3500);
+  }catch(err){
+    console.error('buscarOgol:',err);
+    if(!nomeEl.value){ nomeEl.value=nomeDoLink; nomeEl.dispatchEvent(new Event('input',{bubbles:true})); }
+    const semExt=/sem extensão|não respondeu/.test(err.message);
+    fimBtn(semExt?'⚠ Precisa da extensão BFR — nome preenchido':'⚠ ogol não respondeu — nome preenchido','#b8860b',5000);
+    if(semExt&&confirm('Para ler o ogol, o Scout System usa a extensão "BFR Relatório Jogadores" (a mesma da nota do SofaScore). Baixar a extensão agora?')) window.open(RJ_EXT_ZIP,'_blank');
   }
 }
 
