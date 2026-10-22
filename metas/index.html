@@ -152,6 +152,7 @@ async function iniciar(){
     const ref=db.ref(RAIZ+'/itens');
     const s=await db.ref(RAIZ+'/criado').once('value');
     if(!s.exists()) await db.ref(RAIZ).update({criado:new Date().toISOString(),...Object.fromEntries(Object.entries(SEMENTES).map(([k,v])=>['itens/'+k,{...v,criadoEm:new Date().toISOString()}]))});
+    Object.assign(M,(await ref.once('value')).val()||{}); render();
     ref.on('value',x=>{ Object.keys(M).forEach(k=>delete M[k]); Object.assign(M,x.val()||{}); render(); });
     document.getElementById('infoBanco').textContent='● salvo para a equipe';
   }catch(e){
