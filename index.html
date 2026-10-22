@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="app-versao" content="2026-10-22 14:50"><!-- AO PUBLICAR MUDANÇA, TROQUE ESTA DATA-HORA: as abas abertas mostram o aviso de versão nova -->
+<meta name="app-versao" content="2026-10-22 16:15"><!-- AO PUBLICAR MUDANÇA, TROQUE ESTA DATA-HORA: as abas abertas mostram o aviso de versão nova -->
 <title>Scout System 2026</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
@@ -1178,7 +1178,7 @@ function loShow(on){
   let w=document.getElementById('loWrap');
   if(on&&!w){
     w=document.createElement('div'); w.id='loWrap';
-    w.innerHTML=`<iframe id="loFrame" src="lista-observacao/" title="Lista de Observação" allow="clipboard-read; clipboard-write; fullscreen" style="border:0;width:100%;height:100%;display:block;background:#d9d9d9"></iframe>
+    w.innerHTML=`<iframe id="loFrame" src="lista-observacao/?v=${encodeURIComponent((document.querySelector('meta[name="app-versao"]')||{}).content||Date.now())}" title="Lista de Observação" allow="clipboard-read; clipboard-write; fullscreen" style="border:0;width:100%;height:100%;display:block;background:#d9d9d9"></iframe>
       <a href="lista-observacao/" target="_blank" rel="noopener" style="position:absolute;right:10px;bottom:8px;font-size:10px;color:#888780;background:rgba(255,255,255,.85);padding:2px 8px;border-radius:4px;text-decoration:none">abrir em nova aba ↗</a>`;
     document.body.appendChild(w);
   }
@@ -1192,7 +1192,7 @@ function mtShow(on){
   let w=document.getElementById('mtWrap');
   if(on&&!w){
     w=document.createElement('div'); w.id='mtWrap';
-    w.innerHTML=`<iframe id="mtFrame" src="metas/" title="Controle de Metas" style="border:0;width:100%;height:100%;display:block;background:#ecebe6"></iframe>
+    w.innerHTML=`<iframe id="mtFrame" src="metas/?v=${encodeURIComponent((document.querySelector('meta[name="app-versao"]')||{}).content||Date.now())}" title="Controle de Metas" style="border:0;width:100%;height:100%;display:block;background:#ecebe6"></iframe>
       <a href="metas/" target="_blank" rel="noopener" style="position:absolute;right:10px;bottom:8px;font-size:10px;color:#888780;background:rgba(255,255,255,.85);padding:2px 8px;border-radius:4px;text-decoration:none">abrir em nova aba ↗</a>`;
     document.body.appendChild(w);
   }
