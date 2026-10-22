@@ -86,6 +86,35 @@ textarea{resize:vertical;min-height:54px}
 .check{display:flex;gap:6px;align-items:center;font-size:13px}
 .check input{width:auto}
 @media (max-width:520px){#lista{grid-template-columns:1fr;padding:10px}.nums{grid-template-columns:repeat(2,1fr)}.grade{grid-template-columns:1fr}.grade .s2{grid-column:auto}}
+
+/* ── card compacto (22/10): tudo cabe na tela sem rolar ── */
+#lista{grid-template-columns:repeat(auto-fill,minmax(600px,1fr));gap:12px;padding:10px 12px 30px}
+#log{min-height:0;padding:2px 14px}
+.topo{padding:9px 14px;gap:12px}
+.fotos,.foto{width:54px;height:54px}
+.escudo{width:24px;height:24px;right:-5px;bottom:-3px;padding:2px}
+.nome{font-size:24px}
+.sub{font-size:11.5px;margin-top:2px}
+.prazo{margin-left:auto;text-align:right;font-size:11px;color:#cfcbbf;line-height:1.35;white-space:nowrap}
+.prazo b{color:#fff;font-size:13px}
+.corpo{display:grid;grid-template-columns:1.05fr 1fr}
+.col{min-width:0;padding-bottom:8px}
+.col.lado{background:#f6f4ec;border-left:1px solid #e6e2d4}
+.regra{padding:8px 12px;background:none;border-bottom:1px solid #e6e2d4;font-size:11.5px;line-height:1.35}
+.regra:last-of-type{border-bottom:0}
+.regra .t{font-size:10px;margin-bottom:1px}
+.nums{padding:10px 12px 2px;gap:4px}
+.num .v{font-size:32px}
+.num .r{font-size:9.5px}
+.barra{margin:6px 12px 2px;height:10px}
+.status{margin:6px 12px 0;padding:6px 9px;font-size:12px}
+.status b{font-size:13.5px}
+.nota{margin:5px 12px 0;font-size:11px}
+details{margin:5px 12px 0}
+summary{font-size:11.5px}
+.rodape{padding:7px 12px 9px;border-top:1px solid #eeebe1}
+.rodape .btn{padding:5px 10px;font-size:11.5px}
+@media (max-width:700px){#lista{grid-template-columns:1fr}.corpo{grid-template-columns:1fr}.col.lado{border-left:0;border-top:1px solid #e6e2d4}}
 </style>
 </head>
 <body>
@@ -288,9 +317,9 @@ function card(k,m){
   let st;
   if(c.atual>=c.alvo&&c.alvo) st=`<div class="status ok"><b>✓ Meta atingida</b>: <b>${fmt(c.atual)}</b> ${un} de <b>${fmt(c.alvo)}</b>.</div>`;
   else if(!m.atualizadoEm) st=`<div class="status vai">Ainda não atualizado pelo SofaScore. Clique em <b>↻ Atualizar</b>.</div>`;
-  else if(c.faltam<=c.marcados.length) st=`<div class="status vai">Faltam <b>${fmt(c.faltam)}</b> ${un}. O ${clube} tem <b>${c.marcados.length}</b> jogos já marcados até ${dataBR(m.ate)} nas competições que contam${part?' (cada jogo vale no máximo 1)':''}.</div>`;
-  else st=`<div class="status vai">Faltam <b>${fmt(c.faltam)}</b> ${un}. Por enquanto o ${clube} tem <b>${c.marcados.length}</b> jogos marcados até ${dataBR(m.ate)} nas competições que contam${m.ate>hoje().slice(0,4)+'-12-31'?' (a tabela do ano que vem ainda não saiu)':''}.</div>`;
-  const aproveit=c.clubeJogos.length?`Entrou em campo em <b>${c.nJogou}</b> de <b>${c.clubeJogos.length}</b> jogos em que esteve na súmula, nas competições que contam (<b>${Math.round(c.nJogou/c.clubeJogos.length*100)}%</b>).`:'';
+  else if(c.faltam<=c.marcados.length) st=`<div class="status vai">Faltam <b>${fmt(c.faltam)}</b> ${un}. O ${clube} tem <b>${c.marcados.length}</b> jogos marcados até o prazo que contam.</div>`;
+  else st=`<div class="status vai">Faltam <b>${fmt(c.faltam)}</b> ${un}. Por enquanto o ${clube} tem <b>${c.marcados.length}</b> jogos marcados que contam${m.ate>hoje().slice(0,4)+'-12-31'?' (tabela do ano que vem ainda não saiu)':''}.</div>`;
+  const aproveit=c.clubeJogos.length?`Entrou em campo em <b>${c.nJogou}</b> de <b>${c.clubeJogos.length}</b> jogos em que esteve na súmula (<b>${Math.round(c.nJogou/c.clubeJogos.length*100)}%</b>).`:'';
   const jogosP=(m.jogos||[]).filter(j=>j.d>=(m.desde||'0000'));
   const linhas=jogosP.map(j=>{ const a=avaliar(m,j), mn=minutosDe(m,j);
     const minTxt=j.min?(m.regulamentar&&j.reg!=null&&j.reg!==j.min?`${j.reg}' <span style="color:#a19d92;font-weight:400" title="minutos no SofaScore, com acréscimos">(${j.min}')</span>`:`${mn}'`):'—';
@@ -303,9 +332,10 @@ function card(k,m){
       <div class="fotos">${m.foto?`<img class="foto" src="${m.foto}" alt="">`:'<div class="foto"></div>'}${m.escudo?`<img class="escudo" src="${m.escudo}" alt="">`:''}</div>
       <div><div class="nome">${esc(m.atleta)}</div>
         <div class="sub">${[POS[m.posicao]||'',nasc,m.timeAtual?'<b>'+esc(m.timeAtual)+'</b>':''].filter(Boolean).join(' · ')}</div>
-        <div class="sub">Conta: ${esc(compsTexto(m))}${m.soClube?' · só pelo '+clube:''} · ${dataBR(m.desde)} a ${dataBR(m.ate)}${regraMin}${m.regulamentar?' · tempo regulamentar':''}</div></div>
+        ${m.regra?'':`<div class="sub">Conta: ${esc(compsTexto(m))}${m.soClube?' · só pelo '+clube:''}${regraMin}${m.regulamentar?' · tempo regulamentar':''}</div>`}</div>
+      <div class="prazo">${dataBR(m.desde)}<br>a <b>${dataBR(m.ate)}</b></div>
     </div>
-    ${m.regra?`<div class="regra"><div class="t">${esc(m.titulo||'Regra da meta')}</div>${esc(m.regra)}</div>`:''}
+    <div class="corpo"><div class="col">
     <div class="nums">
       <div class="num atual"><div class="v">${fmt(c.atual)}</div><div class="r">${Un}</div></div>
       <div class="num"><div class="v">${fmt(c.alvo)}</div><div class="r">Meta</div></div>
@@ -315,11 +345,14 @@ function card(k,m){
     <div class="barra"><i class="ajuste" style="width:${pTot}%"></i><i style="width:${Math.min(pSofa,pTot)}%"></i></div>
     ${c.aj?`<div class="nota">SofaScore: <b>${fmt(c.sofaN)}</b> · ajuste manual: <b>${c.aj>0?'+':''}${fmt(c.aj)}</b>${m.ajusteObs?' — '+esc(m.ajusteObs):''} (amarelo na barra)</div>`:''}
     ${st}
-    ${m.consequencia?`<div class="regra" style="margin-top:8px;border-top:1px solid #e6e2d4"><div class="t">Se atingir a meta</div>${esc(m.consequencia)}</div>`:''}
     ${aproveit?`<div class="nota">${aproveit}</div>`:''}
-    ${m.obs?`<div class="nota">📝 ${esc(m.obs)}</div>`:''}
     ${linhas?`<details><summary>Jogo a jogo (${jogosP.length})</summary><table><thead><tr><th>Data</th><th>Competição</th><th>Adversário</th><th>Placar</th><th>Min</th><th>Vale</th></tr></thead><tbody>${linhas}</tbody></table>${m.regulamentar?'<div class="nota" style="margin:4px 0 0">Minutos no tempo regulamentar, pela entrada e saída do jogo no SofaScore. Entre parênteses, os minutos com acréscimos.</div>':''}</details>`:''}
     ${c.marcados.length?`<details><summary>Próximos jogos que podem contar (${c.marcados.length})</summary><table><tbody>${c.marcados.map(x=>`<tr><td>${dataBR(x.d)}</td><td>${esc(x.comp)}</td><td>${esc(x.jogo)}</td></tr>`).join('')}</tbody></table></details>`:''}
+    </div><div class="col lado">
+    ${m.regra?`<div class="regra"><div class="t">${esc(m.titulo||'Regra da meta')}</div>${esc(m.regra)}</div>`:''}
+    ${m.consequencia?`<div class="regra"><div class="t">Se atingir a meta</div>${esc(m.consequencia)}</div>`:''}
+    ${m.obs?`<div class="nota">📝 ${esc(m.obs)}</div>`:''}
+    </div></div>
     <div class="rodape"><span class="quando">${m.atualizadoEm?'SofaScore em '+new Date(m.atualizadoEm).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'não atualizado'}</span>
       <button class="btn" onclick="atualizarUma('${k}')">↻ Atualizar</button>
       <button class="btn" onclick="abrirEdicao('${k}')">✎ Editar</button>
