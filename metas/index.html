@@ -106,16 +106,23 @@ const RJ_EXT_ID='ohjijihiclegbdhbpphaofkjicenplla';
 const EXT_ZIP='../lista-observacao/extensao-bfr-relatorio-jogadores-1.5.1.zip';
 const RAIZ='metas';
 const BRASILEIRAO=325;
+// códigos do SofaScore (uniqueTournament), conferidos em 22/10/2026
+const COMPS_CONHECIDAS={325:'Brasileirão Série A',373:'Copa do Brasil',384:'Libertadores',480:'Sudamericana',490:'Recopa Sul-Americana',357:'Mundial de Clubes FIFA',23674:'Copa Intercontinental FIFA'};
 /* Primeiras metas (áudio do Brunno, 22/10): só JOGOS contam ("a meta master é de jogos"). A regra fina (período,
    competições, minutos mínimos) ele ainda vai passar — está marcada "a confirmar" e se muda no ✎ Editar. */
 const SEMENTES={
   danilo_pereira:{atleta:'Danilo Pereira',sofaId:940647,clubeId:1958,clubeNome:'Botafogo',alvo:22,comps:[BRASILEIRAO],compsNome:{[BRASILEIRAO]:'Brasileirão Série A'},
     desde:'2026-01-01',ate:'2026-12-31',minMinutos:1,soClube:true,ajuste:0,regra:'22 jogos no Brasileirão (regra exata a confirmar com o Brunno).'},
-  arthur_chaves:{atleta:'Arthur Chaves',sofaId:1122806,clubeId:1958,clubeNome:'Botafogo',alvo:29,comps:[],compsNome:{},
-    desde:'2026-01-01',ate:'2026-12-31',minMinutos:1,soClube:true,ajuste:0,regra:'29 jogos no total, todas as competições (regra exata a confirmar com o Brunno).'}
+  arthur_chaves:ARTHUR_REGRA()
 };
 
+function ARTHUR_REGRA(){ return {atleta:'Arthur Chaves',sofaId:1122806,clubeId:1958,clubeNome:'Botafogo',alvo:30,
+  comps:[325,373,384,480,490,357,23674],compsNome:{...COMPS_CONHECIDAS},desde:'2026-07-01',ate:'2027-07-31',
+  minMinutos:45,pesoParcial:0.5,regulamentar:true,soClube:true,ajuste:0,titulo:'Obrigação de compra',
+  regra:'Mais de 29 Participações Qualificantes (30 ou mais) durante o empréstimo, até 31/07/2027. Só time principal em Brasileirão Série A, Copa do Brasil, Libertadores, Sudamericana, Recopa e competições de clubes da FIFA (Carioca, amistosos e pré-temporada não contam). 45 min ou mais em campo no tempo regulamentar (sem acréscimos nem prorrogação) = 1 participação. Menos de 45 min = 0,5.',
+  consequencia:'Compra obrigatória por EUR 6 milhões líquidos, em 3 parcelas: EUR 2,5 milhões em 30/11/2027, EUR 2,5 milhões em 30/11/2028 e EUR 1 milhão em 30/11/2029.'}; }
 let db=null; const M={};
+const fmt=n=>(Math.round(n*10)/10).toLocaleString('pt-BR');
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const dataBR=iso=>iso?iso.slice(8,10)+'/'+iso.slice(5,7)+'/'+iso.slice(0,4):'—';
 const hoje=()=>new Date().toISOString().slice(0,10);
@@ -183,6 +190,19 @@ async function jogosDoAtleta(pid,desde){
   const vistos=new Set();
   return L.filter(x=>x.d>=desde&&!vistos.has(x.id)&&vistos.add(x.id)).sort((a,b)=>b.d.localeCompare(a.d));
 }
+/* Minutos no TEMPO REGULAMENTAR (sem acréscimos e sem prorrogação), pelos lances do jogo no SofaScore:
+   entrou aos 46' (intervalo) ou nos acréscimos do 1º tempo = minuto 45; saiu nos acréscimos = minuto 45 ou 90;
+   expulso = sai no minuto do cartão. Titular sem saída = 90. */
+async function minutosRegulamentar(eventId,pid,minSofa){
+  const inc=(await sofa(`/event/${eventId}/incidents`)).incidents||[];
+  const minuto=i=>{ let t=+i.time||0; if(t===46&&!i.addedTime) t=45; return Math.min(90,Math.max(0,t)); };
+  let ent=0,sai=90;
+  const e=inc.find(i=>i.incidentType==='substitution'&&i.playerIn?.id===pid); if(e) ent=minuto(e);
+  const s=inc.find(i=>i.incidentType==='substitution'&&i.playerOut?.id===pid); if(s) sai=minuto(s);
+  const v=inc.find(i=>i.incidentType==='card'&&/red/i.test(i.incidentClass||'')&&i.player?.id===pid); if(v) sai=Math.min(sai,minuto(v));
+  if(!e&&!s&&!v&&!minSofa) return 0;
+  return Math.max(0,sai-ent);
+}
 async function marcadosDoClube(tid){
   const L=[];
   for(let p=0;p<4;p++){
@@ -197,6 +217,15 @@ async function atualizar(k,quieto){
   log(`SofaScore: ${m.atleta}…`);
   try{
     const [jogos,marc,pj]=await Promise.all([jogosDoAtleta(m.sofaId,m.desde||'2026-01-01'),m.clubeId?marcadosDoClube(m.clubeId):[],sofa(`/player/${m.sofaId}`).catch(()=>null)]);
+    if(m.regulamentar){   // só nos jogos que passam nos outros filtros; o que já foi calculado fica guardado
+      const antes=Object.fromEntries((m.jogos||[]).filter(j=>j.reg!=null).map(j=>[j.id,j.reg]));
+      for(const j of jogos){
+        if(!j.min||!j.fim||motivoFora(m,j)) continue;
+        if(antes[j.id]!=null){ j.reg=antes[j.id]; continue; }
+        log(`SofaScore: ${m.atleta} — minutos do jogo de ${dataBR(j.d)}…`);
+        try{ j.reg=await minutosRegulamentar(j.id,m.sofaId,j.min); }catch(e){ /* fica com os minutos do SofaScore */ }
+      }
+    }
     const dados={jogos,marcados:marc,atualizadoEm:new Date().toISOString()};
     const compsNome={...(m.compsNome||{})}; jogos.forEach(j=>{ if(j.ut) compsNome[j.ut]=j.comp; }); dados.compsNome=compsNome;
     const p=pj&&pj.player;
@@ -216,22 +245,31 @@ async function atualizarTodas(){
 }
 
 /* ═══ regra de contagem ═══ */
-function conta(m,j){
+function motivoFora(m,j){
   if(!j.fim) return 'não terminou';
   if(j.d<(m.desde||'0000')||j.d>(m.ate||'9999')) return 'fora do período';
   if(m.soClube&&m.clubeId&&j.time!==m.clubeId) return 'outro clube';
   const comps=m.comps||[]; if(comps.length&&!comps.includes(j.ut)) return 'outra competição';
-  if(!j.min) return j.banco?'banco, não entrou':'não jogou';
-  if(j.min<(m.minMinutos||1)) return `menos de ${m.minMinutos} min`;
   return '';
 }
+const minutosDe=(m,j)=>m.regulamentar&&j.reg!=null?j.reg:j.min;
+// quanto o jogo vale: 1, a parte parcial (ex.: 0,5) ou 0 — e o motivo quando não vale 1
+function avaliar(m,j){
+  const f=motivoFora(m,j); if(f) return {v:0,motivo:f};
+  if(!j.min) return {v:0,motivo:j.banco?'banco, não entrou':'não jogou'};
+  const mn=minutosDe(m,j), lim=m.minMinutos||1;
+  if(mn>=lim) return {v:1,motivo:''};
+  const pp=+m.pesoParcial||0;
+  return pp?{v:pp,motivo:`menos de ${lim} min`}:{v:0,motivo:`menos de ${lim} min`};
+}
 function calcular(m){
-  const jogos=m.jogos||[], validos=jogos.filter(j=>!conta(m,j));
-  const sofaN=validos.length, aj=+m.ajuste||0, atual=sofaN+aj, alvo=+m.alvo||0;
+  const jogos=m.jogos||[], validos=jogos.filter(j=>avaliar(m,j).v>0);
+  const sofaN=validos.reduce((t,j)=>t+avaliar(m,j).v,0), aj=+m.ajuste||0, atual=sofaN+aj, alvo=+m.alvo||0;
+  const nJogou=validos.length;
   const comps=m.comps||[];
   const marcados=(m.marcados||[]).filter(x=>x.d>=hoje()&&x.d<=(m.ate||'9999')&&(!comps.length||comps.includes(x.ut)));
   const clubeJogos=jogos.filter(j=>j.fim&&j.d>=(m.desde||'0000')&&j.d<=(m.ate||'9999')&&(!m.soClube||!m.clubeId||j.time===m.clubeId)&&(!comps.length||comps.includes(j.ut)));
-  return {validos,sofaN,aj,atual,alvo,faltam:Math.max(0,alvo-atual),pct:alvo?Math.min(100,Math.round(atual/alvo*100)):0,marcados,clubeJogos};
+  return {validos,nJogou,aj,atual,alvo,faltam:Math.max(0,alvo-atual),pct:alvo?Math.min(100,Math.round(atual/alvo*100)):0,marcados,clubeJogos};
 }
 
 /* ═══ tela ═══ */
@@ -244,36 +282,43 @@ function compsTexto(m){ const c=m.comps||[]; return c.length?c.map(u=>(m.compsNo
 function idade(n){ if(!n) return ''; const d=new Date(n),h=new Date(); let a=h.getFullYear()-d.getFullYear(); if(h<new Date(h.getFullYear(),d.getMonth(),d.getDate())) a--; return a; }
 const POS={G:'Goleiro',D:'Defensor',M:'Meio-campo',F:'Atacante'};
 function card(k,m){
-  const c=calcular(m);
+  const c=calcular(m), part=(+m.pesoParcial||0)>0, un=part?'participações':'jogos', Un=part?'Participações':'Jogos';
   const pSofa=c.alvo?Math.min(100,c.sofaN/c.alvo*100):0, pTot=c.pct;
+  const clube=esc(m.clubeNome||'clube');
   let st;
-  if(c.atual>=c.alvo&&c.alvo) st=`<div class="status ok"><b>✓ Meta batida</b> — ${c.atual} jogos de ${c.alvo}.</div>`;
+  if(c.atual>=c.alvo&&c.alvo) st=`<div class="status ok"><b>✓ Meta atingida</b>: <b>${fmt(c.atual)}</b> ${un} de <b>${fmt(c.alvo)}</b>.</div>`;
   else if(!m.atualizadoEm) st=`<div class="status vai">Ainda não atualizado pelo SofaScore. Clique em <b>↻ Atualizar</b>.</div>`;
-  else if(c.faltam<=c.marcados.length) st=`<div class="status vai">Faltam <b>${c.faltam}</b> jogos. O ${esc(m.clubeNome||'clube')} tem <b>${c.marcados.length}</b> jogos já marcados até ${dataBR(m.ate)} nessa contagem: precisa jogar <b>${c.faltam}</b> deles (<b>${Math.round(c.faltam/Math.max(1,c.marcados.length)*100)}%</b>).</div>`;
-  else st=`<div class="status risco">Faltam <b>${c.faltam}</b> jogos e o ${esc(m.clubeNome||'clube')} tem só <b>${c.marcados.length}</b> jogos marcados até ${dataBR(m.ate)} nessa contagem. Conferir o prazo da meta.</div>`;
-  const aproveit=c.clubeJogos.length?`Jogou <b>${c.sofaN}</b> de <b>${c.clubeJogos.length}</b> jogos em que esteve na súmula no período, pelo SofaScore (${Math.round(c.sofaN/c.clubeJogos.length*100)}%).`:'';
-  const linhas=(m.jogos||[]).filter(j=>j.d>=(m.desde||'0000')).map(j=>{ const r=conta(m,j); return `<tr class="${r?'nao':''}"><td>${dataBR(j.d)}</td><td>${esc(j.comp)}</td><td>${esc(j.adv)} (${j.local})</td><td>${esc(j.placar)}</td><td class="c">${j.min?j.min+"'":'—'}</td><td>${r?esc(r):'<b style="color:#1a6e3a">✓ conta</b>'}</td></tr>`; }).join('');
+  else if(c.faltam<=c.marcados.length) st=`<div class="status vai">Faltam <b>${fmt(c.faltam)}</b> ${un}. O ${clube} tem <b>${c.marcados.length}</b> jogos já marcados até ${dataBR(m.ate)} nas competições que contam${part?' (cada jogo vale no máximo 1)':''}.</div>`;
+  else st=`<div class="status vai">Faltam <b>${fmt(c.faltam)}</b> ${un}. Por enquanto o ${clube} tem <b>${c.marcados.length}</b> jogos marcados até ${dataBR(m.ate)} nas competições que contam${m.ate>hoje().slice(0,4)+'-12-31'?' (a tabela do ano que vem ainda não saiu)':''}.</div>`;
+  const aproveit=c.clubeJogos.length?`Entrou em campo em <b>${c.nJogou}</b> de <b>${c.clubeJogos.length}</b> jogos em que esteve na súmula, nas competições que contam (<b>${Math.round(c.nJogou/c.clubeJogos.length*100)}%</b>).`:'';
+  const jogosP=(m.jogos||[]).filter(j=>j.d>=(m.desde||'0000'));
+  const linhas=jogosP.map(j=>{ const a=avaliar(m,j), mn=minutosDe(m,j);
+    const minTxt=j.min?(m.regulamentar&&j.reg!=null&&j.reg!==j.min?`${j.reg}' <span style="color:#a19d92;font-weight:400" title="minutos no SofaScore, com acréscimos">(${j.min}')</span>`:`${mn}'`):'—';
+    const val=a.v?`<b style="color:#1a6e3a">${a.v===1?'✓ 1':'½ '+fmt(a.v)}</b>${a.motivo?' <span style="color:#77736a">'+esc(a.motivo)+'</span>':''}`:esc(a.motivo);
+    return `<tr class="${a.v?'':'nao'}"><td>${dataBR(j.d)}</td><td>${esc(j.comp)}</td><td>${esc(j.adv)} (${j.local})</td><td>${esc(j.placar)}</td><td class="c">${minTxt}</td><td>${val}</td></tr>`; }).join('');
   const nasc=m.nasc?`<b>${idade(m.nasc)} anos</b> (${dataBR(m.nasc)})`:'';
+  const regraMin=part?` · ≥ ${m.minMinutos} min = 1, menos = ${fmt(m.pesoParcial)}`:((m.minMinutos||1)>1?` · mínimo ${m.minMinutos} min`:'');
   return `<div class="card">
     <div class="topo">
       <div class="fotos">${m.foto?`<img class="foto" src="${m.foto}" alt="">`:'<div class="foto"></div>'}${m.escudo?`<img class="escudo" src="${m.escudo}" alt="">`:''}</div>
       <div><div class="nome">${esc(m.atleta)}</div>
         <div class="sub">${[POS[m.posicao]||'',nasc,m.timeAtual?'<b>'+esc(m.timeAtual)+'</b>':''].filter(Boolean).join(' · ')}</div>
-        <div class="sub">Conta: ${esc(compsTexto(m))}${m.soClube?' · só pelo '+esc(m.clubeNome||'clube'):''} · ${dataBR(m.desde)} a ${dataBR(m.ate)}${(m.minMinutos||1)>1?` · mínimo ${m.minMinutos} min`:''}</div></div>
+        <div class="sub">Conta: ${esc(compsTexto(m))}${m.soClube?' · só pelo '+clube:''} · ${dataBR(m.desde)} a ${dataBR(m.ate)}${regraMin}${m.regulamentar?' · tempo regulamentar':''}</div></div>
     </div>
-    ${m.regra?`<div class="regra"><div class="t">Regra da meta</div>${esc(m.regra)}</div>`:''}
+    ${m.regra?`<div class="regra"><div class="t">${esc(m.titulo||'Regra da meta')}</div>${esc(m.regra)}</div>`:''}
     <div class="nums">
-      <div class="num atual"><div class="v">${c.atual}</div><div class="r">Jogos</div></div>
-      <div class="num"><div class="v">${c.alvo}</div><div class="r">Meta</div></div>
+      <div class="num atual"><div class="v">${fmt(c.atual)}</div><div class="r">${Un}</div></div>
+      <div class="num"><div class="v">${fmt(c.alvo)}</div><div class="r">Meta</div></div>
       <div class="num pct"><div class="v">${c.pct}%</div><div class="r">Cumprido</div></div>
-      <div class="num"><div class="v">${c.faltam}</div><div class="r">Faltam</div></div>
+      <div class="num"><div class="v">${fmt(c.faltam)}</div><div class="r">Faltam</div></div>
     </div>
     <div class="barra"><i class="ajuste" style="width:${pTot}%"></i><i style="width:${Math.min(pSofa,pTot)}%"></i></div>
-    ${c.aj?`<div class="nota">SofaScore: <b>${c.sofaN}</b> · ajuste manual: <b>${c.aj>0?'+':''}${c.aj}</b>${m.ajusteObs?' — '+esc(m.ajusteObs):''} (amarelo na barra)</div>`:''}
+    ${c.aj?`<div class="nota">SofaScore: <b>${fmt(c.sofaN)}</b> · ajuste manual: <b>${c.aj>0?'+':''}${fmt(c.aj)}</b>${m.ajusteObs?' — '+esc(m.ajusteObs):''} (amarelo na barra)</div>`:''}
     ${st}
+    ${m.consequencia?`<div class="regra" style="margin-top:8px;border-top:1px solid #e6e2d4"><div class="t">Se atingir a meta</div>${esc(m.consequencia)}</div>`:''}
     ${aproveit?`<div class="nota">${aproveit}</div>`:''}
     ${m.obs?`<div class="nota">📝 ${esc(m.obs)}</div>`:''}
-    ${linhas?`<details><summary>Jogo a jogo (${(m.jogos||[]).filter(j=>j.d>=(m.desde||'0000')).length})</summary><table><thead><tr><th>Data</th><th>Competição</th><th>Adversário</th><th>Placar</th><th>Min</th><th></th></tr></thead><tbody>${linhas}</tbody></table></details>`:''}
+    ${linhas?`<details><summary>Jogo a jogo (${jogosP.length})</summary><table><thead><tr><th>Data</th><th>Competição</th><th>Adversário</th><th>Placar</th><th>Min</th><th>Vale</th></tr></thead><tbody>${linhas}</tbody></table>${m.regulamentar?'<div class="nota" style="margin:4px 0 0">Minutos no tempo regulamentar, pela entrada e saída do jogo no SofaScore. Entre parênteses, os minutos com acréscimos.</div>':''}</details>`:''}
     ${c.marcados.length?`<details><summary>Próximos jogos que podem contar (${c.marcados.length})</summary><table><tbody>${c.marcados.map(x=>`<tr><td>${dataBR(x.d)}</td><td>${esc(x.comp)}</td><td>${esc(x.jogo)}</td></tr>`).join('')}</tbody></table></details>`:''}
     <div class="rodape"><span class="quando">${m.atualizadoEm?'SofaScore em '+new Date(m.atualizadoEm).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'não atualizado'}</span>
       <button class="btn" onclick="atualizarUma('${k}')">↻ Atualizar</button>
@@ -292,7 +337,7 @@ let ED=null;
 function abrirEdicao(k){
   const m=k?{...M[k]}:{atleta:'',sofaId:0,clubeId:0,clubeNome:'',alvo:'',comps:[],compsNome:{},desde:hoje().slice(0,4)+'-01-01',ate:hoje().slice(0,4)+'-12-31',minMinutos:1,soClube:true,ajuste:0,regra:'',obs:''};
   ED={k,m};
-  const compsConhecidas={[BRASILEIRAO]:'Brasileirão Série A',...(m.compsNome||{})};
+  const compsConhecidas={...COMPS_CONHECIDAS,...(m.compsNome||{})};
   document.getElementById('janela').innerHTML=`<div class="fundo" onclick="if(event.target===this)fechar()"><div class="jan">
     <h3>${k?'Editar meta':'Nova meta'}</h3>
     <div class="grade">
@@ -300,15 +345,19 @@ function abrirEdicao(k){
         <div style="display:flex;gap:6px"><input id="eNome" value="${esc(m.atleta)}" placeholder="nome do jogador" onkeydown="if(event.key==='Enter')buscarAtleta()"><button class="btn" onclick="buscarAtleta()">Buscar</button></div>
         <div id="eSel" class="nota" style="margin:4px 0 0">${m.sofaId?`Escolhido: <b>${esc(m.atleta)}</b> (SofaScore ${m.sofaId})${m.clubeNome?' · clube da meta: <b>'+esc(m.clubeNome)+'</b>':''}`:'Busque e clique no jogador certo (confira clube, posição e idade).'}</div>
         <div id="eAchados" class="achados"></div></div>
-      <div><label>Meta (nº de jogos)</label><input id="eAlvo" type="number" min="1" value="${esc(m.alvo)}"></div>
-      <div><label>Minutos mínimos para contar</label><input id="eMin" type="number" min="1" value="${esc(m.minMinutos||1)}"></div>
+      <div><label>Meta (nº de jogos)</label><input id="eAlvo" type="number" min="0.5" step="0.5" value="${esc(m.alvo)}"></div>
+      <div><label>Minutos para valer 1</label><input id="eMin" type="number" min="1" value="${esc(m.minMinutos||1)}"></div>
+      <div><label>Abaixo disso o jogo vale</label><select id="ePeso"><option value="0" ${!(+m.pesoParcial)?'selected':''}>não conta</option><option value="0.5" ${+m.pesoParcial===0.5?'selected':''}>meia participação (0,5)</option></select></div>
+      <div class="check" style="align-self:end"><input type="checkbox" id="eReg" ${m.regulamentar?'checked':''}><span>Minutos só do tempo regulamentar (sem acréscimos nem prorrogação)</span></div>
+      <div class="s2"><label>Título</label><input id="eTit" value="${esc(m.titulo||'')}" placeholder="ex: Obrigação de compra"></div>
       <div><label>Conta a partir de</label><input id="eDesde" type="date" value="${esc(m.desde)}"></div>
       <div><label>Prazo da meta</label><input id="eAte" type="date" value="${esc(m.ate)}"></div>
       <div class="s2"><label>Competições que contam (nenhuma marcada = todas)</label>
         <div class="comps" id="eComps">${Object.entries(compsConhecidas).map(([u,n])=>`<label><input type="checkbox" value="${u}" ${(m.comps||[]).includes(+u)?'checked':''}> ${esc(n)}</label>`).join('')}</div></div>
       <div class="s2 check"><input type="checkbox" id="eSoClube" ${m.soClube?'checked':''}><span>Só jogos pelo clube da meta${m.clubeNome?' (<b>'+esc(m.clubeNome)+'</b>)':''}</span></div>
       <div class="s2"><label>Regra da meta (texto do contrato / do Brunno)</label><textarea id="eRegra">${esc(m.regra||'')}</textarea></div>
-      <div><label>Ajuste manual (+/− jogos)</label><input id="eAj" type="number" value="${esc(m.ajuste||0)}"></div>
+      <div class="s2"><label>Se atingir a meta</label><textarea id="eCons">${esc(m.consequencia||'')}</textarea></div>
+      <div><label>Ajuste manual (+/−)</label><input id="eAj" type="number" step="0.5" value="${esc(m.ajuste||0)}"></div>
       <div><label>Motivo do ajuste</label><input id="eAjObs" value="${esc(m.ajusteObs||'')}" placeholder="ex: jogo que o SofaScore não tem"></div>
       <div class="s2"><label>Observação</label><input id="eObs" value="${esc(m.obs||'')}"></div>
     </div>
@@ -338,12 +387,12 @@ function escolher(i){
 async function gravar(){
   const m=ED.m, g=id=>document.getElementById(id);
   if(!m.sofaId){ alert('Busque e escolha o atleta no SofaScore.'); return; }
-  const alvo=+g('eAlvo').value; if(!alvo){ alert('Informe a meta (nº de jogos).'); return; }
-  const novo={...m,alvo,minMinutos:Math.max(1,+g('eMin').value||1),desde:g('eDesde').value,ate:g('eAte').value,
+  const alvo=+String(g('eAlvo').value).replace(',','.'); if(!alvo){ alert('Informe a meta (nº de jogos).'); return; }
+  const novo={...m,alvo:+alvo,minMinutos:Math.max(1,+g('eMin').value||1),desde:g('eDesde').value,ate:g('eAte').value,
     comps:[...g('eComps').querySelectorAll('input:checked')].map(x=>+x.value),soClube:g('eSoClube').checked,
-    regra:g('eRegra').value.trim(),ajuste:+g('eAj').value||0,ajusteObs:g('eAjObs').value.trim(),obs:g('eObs').value.trim()};
+    regra:g('eRegra').value.trim(),pesoParcial:+g('ePeso').value||0,regulamentar:g('eReg').checked,titulo:g('eTit').value.trim(),consequencia:g('eCons').value.trim(),ajuste:+g('eAj').value||0,ajusteObs:g('eAjObs').value.trim(),obs:g('eObs').value.trim()};
   const k=ED.k||chave(m.atleta);
-  const mudouAtleta=!ED.k||M[ED.k]?.sofaId!==m.sofaId||M[ED.k]?.desde!==novo.desde;
+  const mudouAtleta=!ED.k||M[ED.k]?.sofaId!==m.sofaId||M[ED.k]?.desde!==novo.desde||(novo.regulamentar&&!M[ED.k]?.regulamentar);
   if(mudouAtleta){ novo.jogos=[]; novo.marcados=[]; novo.atualizadoEm=''; }
   if(!ED.k) novo.criadoEm=new Date().toISOString();
   if(db) await db.ref(`${RAIZ}/itens/${k}`).set(novo); else { M[k]=novo; render(); }
