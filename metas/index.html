@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Controle de Metas</title>
+<!-- Controle de Metas (Scout System) — 22/10/2026, pedido do Brunno.
+     Meta de JOGOS por atleta (ex.: Danilo Pereira 22 jogos no Brasileirão, Arthur Chaves 29 jogos no total).
+     A contagem vem do SofaScore, jogo a jogo (/player/{id}/events/last/N: minutos, competição e por qual time jogou),
+     buscada pela extensão BFR Relatório Jogadores (pedido 'baixar'). Jogos marcados do clube: /team/{id}/events/next/N.
+     Metas salvas no Firebase do Scout System (metas/itens). Ajuste manual (+/-) vale por cima do SofaScore. -->
+<script>
+(function(){ const o=Storage.prototype.setItem; Storage.prototype.setItem=function(k,v){ try{ return o.call(this,k,v); }catch(e){ if(String(k).startsWith('firebase:')) return; throw e; } }; })();
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<style>
+@font-face{font-family:"BFRC";font-weight:700;src:url("../lista-observacao/assets/fonts/BFRManga-CompressedBold.otf")}
+@font-face{font-family:"BFRCond";font-weight:700;src:url("../lista-observacao/assets/fonts/BFRManga-CondensedBold.otf")}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#ecebe6;color:#1f1e1b;font:14px Arial,Helvetica,sans-serif}
+.app{position:sticky;top:0;z-index:20;background:#1f1e1b;color:#eee;display:flex;align-items:center;gap:8px;padding:8px 14px;flex-wrap:wrap;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+.app .tit{font-weight:700;font-size:15px;margin-right:6px}
+.btn{font:600 12px Arial,sans-serif;padding:7px 12px;border-radius:7px;border:1px solid #4a4843;background:#33312c;color:#eee;cursor:pointer}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.acao{background:#1a6e3a;border-color:#1a6e3a}
+.btn.ouro{background:#e8c84a;border-color:#e8c84a;color:#1f1e1b}
+.app .info{color:#a9a69c;font-size:12px}
+.app .dir{margin-left:auto;display:flex;gap:8px;align-items:center}
+.aviso{background:#fff6d6;border-bottom:1px solid #e6d48a;color:#5b4a00;padding:8px 14px;font-size:13px}
+.aviso a{color:#374df5}
+#log{font:12px ui-monospace,Menlo,monospace;color:#555;padding:4px 16px;min-height:18px}
+#lista{display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));gap:16px;padding:12px 16px 40px}
+.vazio{grid-column:1/-1;text-align:center;color:#666;padding:70px 20px;font-size:15px}
+.card{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.12);overflow:hidden;display:flex;flex-direction:column}
+.topo{display:flex;gap:14px;align-items:center;padding:14px 16px;background:#1f1e1b;color:#fff}
+.fotos{position:relative;width:74px;height:74px;flex:none}
+.foto{width:74px;height:74px;border-radius:50%;object-fit:cover;background:#3a3835;border:2px solid #e8c84a}
+.escudo{position:absolute;right:-6px;bottom:-4px;width:32px;height:32px;object-fit:contain;background:#fff;border-radius:50%;padding:3px}
+.nome{font-family:"BFRC",Arial,sans-serif;font-weight:700;font-size:30px;line-height:1;letter-spacing:.3px;text-transform:uppercase}
+.sub{color:#cfcbbf;font-size:12.5px;margin-top:4px;line-height:1.35}
+.sub b{color:#fff}
+.regra{padding:10px 16px;background:#f6f4ec;border-bottom:1px solid #e6e2d4;font-size:13px;line-height:1.4}
+.regra .t{font-weight:700;text-transform:uppercase;font-size:11px;letter-spacing:.06em;color:#8B1A2E;margin-bottom:2px}
+.nums{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:14px 16px 6px;text-align:center}
+.num .v{font-family:"BFRCond",Arial,sans-serif;font-weight:700;font-size:40px;line-height:1}
+.num .r{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#77736a;margin-top:3px;font-weight:700}
+.num.atual .v{color:#1a6e3a}.num.pct .v{color:#1f1e1b}
+.barra{margin:8px 16px 4px;height:14px;border-radius:7px;background:#e6e2d4;position:relative;overflow:hidden}
+.barra i{position:absolute;left:0;top:0;bottom:0;background:#1a6e3a;border-radius:7px}
+.barra i.ajuste{background:#e8c84a}
+.status{margin:8px 16px 0;padding:8px 10px;border-radius:8px;font-size:13px;line-height:1.35}
+.status.ok{background:#e3f3e8;color:#14532d}.status.vai{background:#eef2f8;color:#1e3a5f}.status.risco{background:#fdeceb;color:#7f1d1d}
+.status b{font-size:15px}
+.rodape{display:flex;gap:6px;align-items:center;padding:10px 16px 12px;margin-top:auto;flex-wrap:wrap}
+.rodape .quando{color:#8a867b;font-size:11.5px;margin-right:auto}
+.rodape .btn{background:#f1efe8;color:#1f1e1b;border-color:#d9d5c7}
+details{margin:8px 16px 0}
+summary{cursor:pointer;font-size:12.5px;font-weight:700;color:#1e3a5f}
+table{width:100%;border-collapse:collapse;margin-top:6px;font-size:12px}
+th{text-align:left;color:#77736a;font-weight:700;text-transform:uppercase;font-size:10.5px;letter-spacing:.05em;border-bottom:1px solid #e6e2d4;padding:4px 4px}
+td{padding:4px 4px;border-bottom:1px solid #f0eee6}
+tr.nao td{color:#a19d92}
+td.c{text-align:center;font-weight:700}
+.nota{color:#77736a;font-size:11.5px;margin:6px 16px 0;line-height:1.35}
+/* janela de edição */
+.fundo{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:50;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:30px 12px}
+.jan{background:#fff;border-radius:12px;width:min(640px,100%);padding:18px 20px}
+.jan h3{font-family:"BFRC",Arial,sans-serif;font-size:28px;margin-bottom:10px}
+.grade{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
+.grade .s2{grid-column:span 2}
+label{display:block;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#77736a;margin-bottom:3px}
+input,select,textarea{width:100%;font:14px Arial,sans-serif;padding:7px 9px;border:1px solid #d9d5c7;border-radius:7px;background:#faf9f5}
+textarea{resize:vertical;min-height:54px}
+.achados{margin-top:6px;display:flex;flex-direction:column;gap:4px;max-height:240px;overflow:auto}
+.achado{display:flex;gap:10px;align-items:center;padding:6px 8px;border:1px solid #e6e2d4;border-radius:8px;cursor:pointer;font-size:13px}
+.achado:hover,.achado.on{background:#eef2f8;border-color:#9fb3d1}
+.achado img{width:34px;height:34px;border-radius:50%;object-fit:cover;background:#ddd}
+.comps{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px}
+.comps label{display:flex;gap:5px;align-items:center;text-transform:none;letter-spacing:0;font-weight:400;color:#1f1e1b;font-size:13px;margin:0}
+.comps input{width:auto}
+.jan .acoes{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+.jan .btn{background:#f1efe8;color:#1f1e1b;border-color:#d9d5c7}
+.jan .btn.acao{background:#1a6e3a;color:#fff;border-color:#1a6e3a}
+.check{display:flex;gap:6px;align-items:center;font-size:13px}
+.check input{width:auto}
+@media (max-width:520px){#lista{grid-template-columns:1fr;padding:10px}.nums{grid-template-columns:repeat(2,1fr)}.grade{grid-template-columns:1fr}.grade .s2{grid-column:auto}}
+</style>
+</head>
+<body>
+<div class="app">
+  <span class="tit">🎯 Controle de Metas</span>
+  <button class="btn ouro" onclick="abrirEdicao()">+ Nova meta</button>
+  <button class="btn acao" id="btnTodas" onclick="atualizarTodas()">↻ Atualizar todas pelo SofaScore</button>
+  <div class="dir"><span class="info" id="infoBanco">conectando…</span></div>
+</div>
+<div id="avisos"></div>
+<div id="log"></div>
+<div id="lista"><div class="vazio">Carregando…</div></div>
+<div id="janela"></div>
+
+<script>
+const FIREBASE_CONFIG={apiKey:"AIzaSyBi4pOl1hkP8t-NcIMAhYuTGWtMcm290HE",authDomain:"scout-system-2026.firebaseapp.com",databaseURL:"https://scout-system-2026-default-rtdb.firebaseio.com",projectId:"scout-system-2026",storageBucket:"scout-system-2026.firebasestorage.app",messagingSenderId:"152294931768",appId:"1:152294931768:web:91362c2bb38ad25acd55cd"};
+const RJ_EXT_ID='ohjijihiclegbdhbpphaofkjicenplla';
+const EXT_ZIP='../lista-observacao/extensao-bfr-relatorio-jogadores-1.5.1.zip';
+const RAIZ='metas';
+const BRASILEIRAO=325;
+/* Primeiras metas (áudio do Brunno, 22/10): só JOGOS contam ("a meta master é de jogos"). A regra fina (período,
+   competições, minutos mínimos) ele ainda vai passar — está marcada "a confirmar" e se muda no ✎ Editar. */
+const SEMENTES={
+  danilo_pereira:{atleta:'Danilo Pereira',sofaId:940647,clubeId:1958,clubeNome:'Botafogo',alvo:22,comps:[BRASILEIRAO],compsNome:{[BRASILEIRAO]:'Brasileirão Série A'},
+    desde:'2026-01-01',ate:'2026-12-31',minMinutos:1,soClube:true,ajuste:0,regra:'22 jogos no Brasileirão (regra exata a confirmar com o Brunno).'},
+  arthur_chaves:{atleta:'Arthur Chaves',sofaId:1122806,clubeId:1958,clubeNome:'Botafogo',alvo:29,comps:[],compsNome:{},
+    desde:'2026-01-01',ate:'2026-12-31',minMinutos:1,soClube:true,ajuste:0,regra:'29 jogos no total, todas as competições (regra exata a confirmar com o Brunno).'}
+};
+
+let db=null; const M={};
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const dataBR=iso=>iso?iso.slice(8,10)+'/'+iso.slice(5,7)+'/'+iso.slice(0,4):'—';
+const hoje=()=>new Date().toISOString().slice(0,10);
+const isoTs=ts=>new Date(ts*1000).toISOString().slice(0,10);
+const log=t=>{ document.getElementById('log').textContent=t||''; };
+const chave=s=>String(s).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')||('m'+Date.now());
+
+/* ═══ extensão ═══ */
+function extPedido(msg,limite=40000){
+  return new Promise((res,rej)=>{
+    if(!(window.chrome&&chrome.runtime&&chrome.runtime.connect)) return rej(new Error('sem extensão'));
+    let port; try{ port=chrome.runtime.connect(RJ_EXT_ID,{name:'metas'}); }catch(e){ return rej(new Error('sem extensão')); }
+    const id=Date.now()+Math.random(); let fim=false;
+    const t=setTimeout(()=>{ if(!fim){fim=true;try{port.disconnect()}catch(e){} rej(new Error('a extensão não respondeu'));} },limite);
+    port.onMessage.addListener(m=>{ if(m.id!==id||m.log) return; fim=true; clearTimeout(t); try{port.disconnect()}catch(e){} m.erro?rej(new Error(m.erro)):res(m); });
+    port.onDisconnect.addListener(()=>{ void chrome.runtime.lastError; if(!fim){fim=true;clearTimeout(t);rej(new Error('sem extensão'));} });
+    port.postMessage({id,...msg});
+  });
+}
+const sofa=async c=>JSON.parse((await extPedido({tipo:'baixar',url:'https://www.sofascore.com/api/v1'+c,como:'json'})).texto);
+const imagem=async u=>{ try{ return (await extPedido({tipo:'baixar',url:u,como:'bytes'})).dataurl||''; }catch(e){ return ''; } };
+async function checarExtensao(){
+  let v=null; try{ v=(await extPedido({tipo:'ping'},4000)).versao; }catch(e){}
+  document.getElementById('avisos').innerHTML=v?'':`<div class="aviso">Para <b>atualizar</b> os jogos pelo SofaScore, este Chrome precisa da extensão <b>BFR Relatório Jogadores</b> (1.5.1). <a href="${EXT_ZIP}">Baixe aqui</a>. Ver as metas funciona sem ela.</div>`;
+  return !!v;
+}
+
+/* ═══ banco ═══ */
+async function iniciar(){
+  try{
+    firebase.initializeApp(FIREBASE_CONFIG);
+    await firebase.auth().signInAnonymously();
+    db=firebase.database();
+    const ref=db.ref(RAIZ+'/itens');
+    const s=await db.ref(RAIZ+'/criado').once('value');
+    if(!s.exists()) await db.ref(RAIZ).update({criado:new Date().toISOString(),...Object.fromEntries(Object.entries(SEMENTES).map(([k,v])=>['itens/'+k,{...v,criadoEm:new Date().toISOString()}]))});
+    ref.on('value',x=>{ Object.keys(M).forEach(k=>delete M[k]); Object.assign(M,x.val()||{}); render(); });
+    document.getElementById('infoBanco').textContent='● salvo para a equipe';
+  }catch(e){
+    console.error(e); Object.assign(M,SEMENTES); render();
+    document.getElementById('infoBanco').textContent='⚠ sem conexão com o banco';
+  }
+  if(await checarExtensao()){   // abriu a página: atualiza o que estiver com mais de 12 h
+    const velhas=Object.keys(M).filter(k=>!M[k].atualizadoEm||Date.now()-Date.parse(M[k].atualizadoEm)>12*3600e3);
+    for(const k of velhas) await atualizar(k,true);
+  }
+}
+const salvar=(k,dados)=>db?db.ref(`${RAIZ}/itens/${k}`).update(dados):(Object.assign(M[k]||(M[k]={}),dados),render(),Promise.resolve());
+
+/* ═══ SofaScore: jogos do atleta e jogos marcados do clube ═══ */
+async function jogosDoAtleta(pid,desde){
+  const L=[];
+  for(let p=0;p<15;p++){
+    const j=await sofa(`/player/${pid}/events/last/${p}`); const ev=j.events||[];
+    for(const e of ev){
+      const st=(j.statisticsMap||{})[e.id]||{}, time=(j.playedForTeamMap||{})[e.id];
+      const casa=e.homeTeam?.id===time;
+      L.push({id:e.id,d:isoTs(e.startTimestamp),ut:e.tournament?.uniqueTournament?.id||0,comp:e.tournament?.uniqueTournament?.name||e.tournament?.name||'',
+        time:time||0,adv:(casa?e.awayTeam?.name:e.homeTeam?.name)||'',local:casa?'C':'F',
+        placar:e.homeScore?.current!=null?`${e.homeScore.current}x${e.awayScore.current}`:'',min:st.minutesPlayed||0,banco:!!(j.onBenchMap||{})[e.id],fim:e.status?.type==='finished'});
+    }
+    if(!j.hasNextPage||!ev.length||isoTs(ev[0].startTimestamp)<desde) break;
+  }
+  const vistos=new Set();
+  return L.filter(x=>x.d>=desde&&!vistos.has(x.id)&&vistos.add(x.id)).sort((a,b)=>b.d.localeCompare(a.d));
+}
+async function marcadosDoClube(tid){
+  const L=[];
+  for(let p=0;p<4;p++){
+    let j; try{ j=await sofa(`/team/${tid}/events/next/${p}`); }catch(e){ break; }
+    (j.events||[]).forEach(e=>L.push({d:isoTs(e.startTimestamp),ut:e.tournament?.uniqueTournament?.id||0,comp:e.tournament?.uniqueTournament?.name||'',jogo:`${e.homeTeam?.name} x ${e.awayTeam?.name}`}));
+    if(!j.hasNextPage) break;
+  }
+  return L;
+}
+async function atualizar(k,quieto){
+  const m=M[k]; if(!m||!m.sofaId) return;
+  log(`SofaScore: ${m.atleta}…`);
+  try{
+    const [jogos,marc,pj]=await Promise.all([jogosDoAtleta(m.sofaId,m.desde||'2026-01-01'),m.clubeId?marcadosDoClube(m.clubeId):[],sofa(`/player/${m.sofaId}`).catch(()=>null)]);
+    const dados={jogos,marcados:marc,atualizadoEm:new Date().toISOString()};
+    const compsNome={...(m.compsNome||{})}; jogos.forEach(j=>{ if(j.ut) compsNome[j.ut]=j.comp; }); dados.compsNome=compsNome;
+    const p=pj&&pj.player;
+    if(p){ dados.posicao=p.position||''; dados.nasc=p.dateOfBirthTimestamp?isoTs(p.dateOfBirthTimestamp):''; dados.timeAtual=p.team?.name||''; dados.timeAtualId=p.team?.id||0; }
+    if(!m.foto) dados.foto=await imagem(`https://img.sofascore.com/api/v1/player/${m.sofaId}/image`);
+    const tid=m.clubeId||dados.timeAtualId;
+    if(tid&&(!m.escudo||m.escudoDe!==tid)){ dados.escudo=await imagem(`https://img.sofascore.com/api/v1/team/${tid}/image`); dados.escudoDe=tid; }
+    await salvar(k,dados);
+    log(quieto?'':`✓ ${m.atleta} atualizado`);
+  }catch(e){ log(`⚠ ${m.atleta}: ${e.message}`); if(!quieto) alert(`Não deu para atualizar ${m.atleta}: ${e.message}`); }
+}
+async function atualizarTodas(){
+  if(!await checarExtensao()){ alert('Instale a extensão BFR Relatório Jogadores (link no aviso amarelo).'); return; }
+  const b=document.getElementById('btnTodas'); b.disabled=true;
+  for(const k of Object.keys(M)) await atualizar(k,true);
+  b.disabled=false; log('✓ todas atualizadas');
+}
+
+/* ═══ regra de contagem ═══ */
+function conta(m,j){
+  if(!j.fim) return 'não terminou';
+  if(j.d<(m.desde||'0000')||j.d>(m.ate||'9999')) return 'fora do período';
+  if(m.soClube&&m.clubeId&&j.time!==m.clubeId) return 'outro clube';
+  const comps=m.comps||[]; if(comps.length&&!comps.includes(j.ut)) return 'outra competição';
+  if(!j.min) return j.banco?'banco, não entrou':'não jogou';
+  if(j.min<(m.minMinutos||1)) return `menos de ${m.minMinutos} min`;
+  return '';
+}
+function calcular(m){
+  const jogos=m.jogos||[], validos=jogos.filter(j=>!conta(m,j));
+  const sofaN=validos.length, aj=+m.ajuste||0, atual=sofaN+aj, alvo=+m.alvo||0;
+  const comps=m.comps||[];
+  const marcados=(m.marcados||[]).filter(x=>x.d>=hoje()&&x.d<=(m.ate||'9999')&&(!comps.length||comps.includes(x.ut)));
+  const clubeJogos=jogos.filter(j=>j.fim&&j.d>=(m.desde||'0000')&&j.d<=(m.ate||'9999')&&(!m.soClube||!m.clubeId||j.time===m.clubeId)&&(!comps.length||comps.includes(j.ut)));
+  return {validos,sofaN,aj,atual,alvo,faltam:Math.max(0,alvo-atual),pct:alvo?Math.min(100,Math.round(atual/alvo*100)):0,marcados,clubeJogos};
+}
+
+/* ═══ tela ═══ */
+function render(){
+  const el=document.getElementById('lista'), ks=Object.keys(M).sort((a,b)=>(M[a].atleta||'').localeCompare(M[b].atleta||''));
+  if(!ks.length){ el.innerHTML='<div class="vazio">Nenhuma meta ainda. Clique em <b>+ Nova meta</b>.</div>'; return; }
+  el.innerHTML=ks.map(k=>card(k,M[k])).join('');
+}
+function compsTexto(m){ const c=m.comps||[]; return c.length?c.map(u=>(m.compsNome||{})[u]||('competição '+u)).join(', '):'todas as competições'; }
+function idade(n){ if(!n) return ''; const d=new Date(n),h=new Date(); let a=h.getFullYear()-d.getFullYear(); if(h<new Date(h.getFullYear(),d.getMonth(),d.getDate())) a--; return a; }
+const POS={G:'Goleiro',D:'Defensor',M:'Meio-campo',F:'Atacante'};
+function card(k,m){
+  const c=calcular(m);
+  const pSofa=c.alvo?Math.min(100,c.sofaN/c.alvo*100):0, pTot=c.pct;
+  let st;
+  if(c.atual>=c.alvo&&c.alvo) st=`<div class="status ok"><b>✓ Meta batida</b> — ${c.atual} jogos de ${c.alvo}.</div>`;
+  else if(!m.atualizadoEm) st=`<div class="status vai">Ainda não atualizado pelo SofaScore. Clique em <b>↻ Atualizar</b>.</div>`;
+  else if(c.faltam<=c.marcados.length) st=`<div class="status vai">Faltam <b>${c.faltam}</b> jogos. O ${esc(m.clubeNome||'clube')} tem <b>${c.marcados.length}</b> jogos já marcados até ${dataBR(m.ate)} nessa contagem: precisa jogar <b>${c.faltam}</b> deles (<b>${Math.round(c.faltam/Math.max(1,c.marcados.length)*100)}%</b>).</div>`;
+  else st=`<div class="status risco">Faltam <b>${c.faltam}</b> jogos e o ${esc(m.clubeNome||'clube')} tem só <b>${c.marcados.length}</b> jogos marcados até ${dataBR(m.ate)} nessa contagem. Conferir o prazo da meta.</div>`;
+  const aproveit=c.clubeJogos.length?`Jogou <b>${c.sofaN}</b> de <b>${c.clubeJogos.length}</b> jogos em que esteve na súmula no período, pelo SofaScore (${Math.round(c.sofaN/c.clubeJogos.length*100)}%).`:'';
+  const linhas=(m.jogos||[]).filter(j=>j.d>=(m.desde||'0000')).map(j=>{ const r=conta(m,j); return `<tr class="${r?'nao':''}"><td>${dataBR(j.d)}</td><td>${esc(j.comp)}</td><td>${esc(j.adv)} (${j.local})</td><td>${esc(j.placar)}</td><td class="c">${j.min?j.min+"'":'—'}</td><td>${r?esc(r):'<b style="color:#1a6e3a">✓ conta</b>'}</td></tr>`; }).join('');
+  const nasc=m.nasc?`<b>${idade(m.nasc)} anos</b> (${dataBR(m.nasc)})`:'';
+  return `<div class="card">
+    <div class="topo">
+      <div class="fotos">${m.foto?`<img class="foto" src="${m.foto}" alt="">`:'<div class="foto"></div>'}${m.escudo?`<img class="escudo" src="${m.escudo}" alt="">`:''}</div>
+      <div><div class="nome">${esc(m.atleta)}</div>
+        <div class="sub">${[POS[m.posicao]||'',nasc,m.timeAtual?'<b>'+esc(m.timeAtual)+'</b>':''].filter(Boolean).join(' · ')}</div>
+        <div class="sub">Conta: ${esc(compsTexto(m))}${m.soClube?' · só pelo '+esc(m.clubeNome||'clube'):''} · ${dataBR(m.desde)} a ${dataBR(m.ate)}${(m.minMinutos||1)>1?` · mínimo ${m.minMinutos} min`:''}</div></div>
+    </div>
+    ${m.regra?`<div class="regra"><div class="t">Regra da meta</div>${esc(m.regra)}</div>`:''}
+    <div class="nums">
+      <div class="num atual"><div class="v">${c.atual}</div><div class="r">Jogos</div></div>
+      <div class="num"><div class="v">${c.alvo}</div><div class="r">Meta</div></div>
+      <div class="num pct"><div class="v">${c.pct}%</div><div class="r">Cumprido</div></div>
+      <div class="num"><div class="v">${c.faltam}</div><div class="r">Faltam</div></div>
+    </div>
+    <div class="barra"><i class="ajuste" style="width:${pTot}%"></i><i style="width:${Math.min(pSofa,pTot)}%"></i></div>
+    ${c.aj?`<div class="nota">SofaScore: <b>${c.sofaN}</b> · ajuste manual: <b>${c.aj>0?'+':''}${c.aj}</b>${m.ajusteObs?' — '+esc(m.ajusteObs):''} (amarelo na barra)</div>`:''}
+    ${st}
+    ${aproveit?`<div class="nota">${aproveit}</div>`:''}
+    ${m.obs?`<div class="nota">📝 ${esc(m.obs)}</div>`:''}
+    ${linhas?`<details><summary>Jogo a jogo (${(m.jogos||[]).filter(j=>j.d>=(m.desde||'0000')).length})</summary><table><thead><tr><th>Data</th><th>Competição</th><th>Adversário</th><th>Placar</th><th>Min</th><th></th></tr></thead><tbody>${linhas}</tbody></table></details>`:''}
+    ${c.marcados.length?`<details><summary>Próximos jogos que podem contar (${c.marcados.length})</summary><table><tbody>${c.marcados.map(x=>`<tr><td>${dataBR(x.d)}</td><td>${esc(x.comp)}</td><td>${esc(x.jogo)}</td></tr>`).join('')}</tbody></table></details>`:''}
+    <div class="rodape"><span class="quando">${m.atualizadoEm?'SofaScore em '+new Date(m.atualizadoEm).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'não atualizado'}</span>
+      <button class="btn" onclick="atualizarUma('${k}')">↻ Atualizar</button>
+      <button class="btn" onclick="abrirEdicao('${k}')">✎ Editar</button>
+      <button class="btn" onclick="excluir('${k}')">Excluir</button></div>
+  </div>`;
+}
+async function atualizarUma(k){ if(!await checarExtensao()){ alert('Instale a extensão BFR Relatório Jogadores (link no aviso amarelo).'); return; } await atualizar(k); }
+async function excluir(k){
+  if(!confirm(`Excluir a meta de ${M[k]?.atleta}? Isso apaga para toda a equipe.`)) return;
+  if(db) await db.ref(`${RAIZ}/itens/${k}`).remove(); else { delete M[k]; render(); }
+}
+
+/* ═══ nova / editar ═══ */
+let ED=null;
+function abrirEdicao(k){
+  const m=k?{...M[k]}:{atleta:'',sofaId:0,clubeId:0,clubeNome:'',alvo:'',comps:[],compsNome:{},desde:hoje().slice(0,4)+'-01-01',ate:hoje().slice(0,4)+'-12-31',minMinutos:1,soClube:true,ajuste:0,regra:'',obs:''};
+  ED={k,m};
+  const compsConhecidas={[BRASILEIRAO]:'Brasileirão Série A',...(m.compsNome||{})};
+  document.getElementById('janela').innerHTML=`<div class="fundo" onclick="if(event.target===this)fechar()"><div class="jan">
+    <h3>${k?'Editar meta':'Nova meta'}</h3>
+    <div class="grade">
+      <div class="s2"><label>Atleta (busca no SofaScore)</label>
+        <div style="display:flex;gap:6px"><input id="eNome" value="${esc(m.atleta)}" placeholder="nome do jogador" onkeydown="if(event.key==='Enter')buscarAtleta()"><button class="btn" onclick="buscarAtleta()">Buscar</button></div>
+        <div id="eSel" class="nota" style="margin:4px 0 0">${m.sofaId?`Escolhido: <b>${esc(m.atleta)}</b> (SofaScore ${m.sofaId})${m.clubeNome?' · clube da meta: <b>'+esc(m.clubeNome)+'</b>':''}`:'Busque e clique no jogador certo (confira clube, posição e idade).'}</div>
+        <div id="eAchados" class="achados"></div></div>
+      <div><label>Meta (nº de jogos)</label><input id="eAlvo" type="number" min="1" value="${esc(m.alvo)}"></div>
+      <div><label>Minutos mínimos para contar</label><input id="eMin" type="number" min="1" value="${esc(m.minMinutos||1)}"></div>
+      <div><label>Conta a partir de</label><input id="eDesde" type="date" value="${esc(m.desde)}"></div>
+      <div><label>Prazo da meta</label><input id="eAte" type="date" value="${esc(m.ate)}"></div>
+      <div class="s2"><label>Competições que contam (nenhuma marcada = todas)</label>
+        <div class="comps" id="eComps">${Object.entries(compsConhecidas).map(([u,n])=>`<label><input type="checkbox" value="${u}" ${(m.comps||[]).includes(+u)?'checked':''}> ${esc(n)}</label>`).join('')}</div></div>
+      <div class="s2 check"><input type="checkbox" id="eSoClube" ${m.soClube?'checked':''}><span>Só jogos pelo clube da meta${m.clubeNome?' (<b>'+esc(m.clubeNome)+'</b>)':''}</span></div>
+      <div class="s2"><label>Regra da meta (texto do contrato / do Brunno)</label><textarea id="eRegra">${esc(m.regra||'')}</textarea></div>
+      <div><label>Ajuste manual (+/− jogos)</label><input id="eAj" type="number" value="${esc(m.ajuste||0)}"></div>
+      <div><label>Motivo do ajuste</label><input id="eAjObs" value="${esc(m.ajusteObs||'')}" placeholder="ex: jogo que o SofaScore não tem"></div>
+      <div class="s2"><label>Observação</label><input id="eObs" value="${esc(m.obs||'')}"></div>
+    </div>
+    <div class="acoes"><button class="btn" onclick="fechar()">Cancelar</button><button class="btn acao" onclick="gravar()">Salvar ✓</button></div>
+  </div></div>`;
+}
+function fechar(){ document.getElementById('janela').innerHTML=''; ED=null; }
+async function buscarAtleta(){
+  const q=document.getElementById('eNome').value.trim(); if(!q) return;
+  const box=document.getElementById('eAchados'); box.innerHTML='<div class="nota">Buscando no SofaScore…</div>';
+  try{
+    const j=await sofa('/search/all?q='+encodeURIComponent(q));
+    const ps=(j.results||[]).filter(x=>x.type==='player').map(x=>x.entity).slice(0,8);
+    if(!ps.length){ box.innerHTML='<div class="nota">Nada encontrado.</div>'; return; }
+    window.__achados=ps;
+    box.innerHTML=ps.map((p,i)=>`<div class="achado" onclick="escolher(${i})"><img data-id="${p.id}" alt=""><div><b>${esc(p.name)}</b><br><span style="color:#666">${esc(p.team?.name||'sem clube')} · ${POS[p.position]||p.position||'—'}${p.dateOfBirthTimestamp?' · '+idade(isoTs(p.dateOfBirthTimestamp))+' anos ('+dataBR(isoTs(p.dateOfBirthTimestamp))+')':''}${p.country?.name?' · '+esc(p.country.name):''}</span></div></div>`).join('');
+    box.querySelectorAll('img[data-id]').forEach(async im=>{ im.src=await imagem(`https://img.sofascore.com/api/v1/player/${im.dataset.id}/image`); });
+  }catch(e){ box.innerHTML=`<div class="nota">⚠ ${esc(e.message)} — precisa da extensão BFR Relatório Jogadores.</div>`; }
+}
+function escolher(i){
+  const p=window.__achados[i]; const m=ED.m;
+  m.atleta=p.name; m.sofaId=p.id; m.clubeId=p.team?.id||0; m.clubeNome=p.team?.name||''; m.foto=''; m.escudo='';
+  document.getElementById('eNome').value=p.name;
+  document.getElementById('eSel').innerHTML=`Escolhido: <b>${esc(p.name)}</b> (SofaScore ${p.id}) · clube da meta: <b>${esc(m.clubeNome||'—')}</b>`;
+  document.querySelectorAll('.achado').forEach((d,j)=>d.classList.toggle('on',j===i));
+}
+async function gravar(){
+  const m=ED.m, g=id=>document.getElementById(id);
+  if(!m.sofaId){ alert('Busque e escolha o atleta no SofaScore.'); return; }
+  const alvo=+g('eAlvo').value; if(!alvo){ alert('Informe a meta (nº de jogos).'); return; }
+  const novo={...m,alvo,minMinutos:Math.max(1,+g('eMin').value||1),desde:g('eDesde').value,ate:g('eAte').value,
+    comps:[...g('eComps').querySelectorAll('input:checked')].map(x=>+x.value),soClube:g('eSoClube').checked,
+    regra:g('eRegra').value.trim(),ajuste:+g('eAj').value||0,ajusteObs:g('eAjObs').value.trim(),obs:g('eObs').value.trim()};
+  const k=ED.k||chave(m.atleta);
+  const mudouAtleta=!ED.k||M[ED.k]?.sofaId!==m.sofaId||M[ED.k]?.desde!==novo.desde;
+  if(mudouAtleta){ novo.jogos=[]; novo.marcados=[]; novo.atualizadoEm=''; }
+  if(!ED.k) novo.criadoEm=new Date().toISOString();
+  if(db) await db.ref(`${RAIZ}/itens/${k}`).set(novo); else { M[k]=novo; render(); }
+  fechar();
+  if(mudouAtleta&&await checarExtensao()) await atualizar(k);
+}
+iniciar();
+</script>
+</body>
+</html>
