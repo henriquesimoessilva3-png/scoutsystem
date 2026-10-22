@@ -246,7 +246,7 @@ async function atualizarTodas(){
 
 /* ═══ regra de contagem ═══ */
 function motivoFora(m,j){
-  if(!j.fim) return 'não terminou';
+  if(!j.fim) return j.d<hoje()?'não realizado (adiado ou cancelado)':'ainda não jogado';
   if(j.d<(m.desde||'0000')||j.d>(m.ate||'9999')) return 'fora do período';
   if(m.soClube&&m.clubeId&&j.time!==m.clubeId) return 'outro clube';
   const comps=m.comps||[]; if(comps.length&&!comps.includes(j.ut)) return 'outra competição';
