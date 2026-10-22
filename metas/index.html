@@ -269,7 +269,7 @@ function calcular(m){
   const comps=m.comps||[];
   const marcados=(m.marcados||[]).filter(x=>x.d>=hoje()&&x.d<=(m.ate||'9999')&&(!comps.length||comps.includes(x.ut)));
   const clubeJogos=jogos.filter(j=>j.fim&&j.d>=(m.desde||'0000')&&j.d<=(m.ate||'9999')&&(!m.soClube||!m.clubeId||j.time===m.clubeId)&&(!comps.length||comps.includes(j.ut)));
-  return {validos,nJogou,aj,atual,alvo,faltam:Math.max(0,alvo-atual),pct:alvo?Math.min(100,Math.round(atual/alvo*100)):0,marcados,clubeJogos};
+  return {validos,nJogou,sofaN,aj,atual,alvo,faltam:Math.max(0,alvo-atual),pct:alvo?Math.min(100,Math.round(atual/alvo*100)):0,marcados,clubeJogos};
 }
 
 /* ═══ tela ═══ */
