@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="app-versao" content="2026-10-22 16:15"><!-- AO PUBLICAR MUDANÇA, TROQUE ESTA DATA-HORA: as abas abertas mostram o aviso de versão nova -->
+<meta name="app-versao" content="2026-10-23 16:00"><!-- AO PUBLICAR MUDANÇA, TROQUE ESTA DATA-HORA: as abas abertas mostram o aviso de versão nova -->
 <title>Scout System 2026</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
@@ -602,6 +602,161 @@ table.ind-table tr:hover td{background:#f0eeea;cursor:pointer}
 .pr-hdr-close:hover{background:#e84a4a;border-color:#e84a4a;color:#fff}
 .pr-body{padding:1.2rem 1.4rem 1.4rem;max-height:82vh;overflow-y:auto}
 
+
+/* ═══════════════════ TEMA 2026-10 — visual moderno (camada por cima do original) ═══════════════════
+   Só aparência: cores, fontes, espaçamento, cantos. Nenhuma regra aqui muda lógica ou dado.
+   Paleta: preto/branco do Botafogo + dourado de destaque; cinzas neutros (frios). */
+:root{
+  --t-ink:#15161a; --t-ink2:#1f2127; --t-ink3:#2a2d35;
+  --t-bg:#f2f3f5; --t-surface:#ffffff; --t-line:#e5e7eb; --t-line2:#eef0f3;
+  --t-txt:#17181c; --t-txt2:#5b6070; --t-txt3:#8a8f9c;
+  --t-gold:#e8c84a; --t-gold2:#d4ad1f; --t-goldbg:#fbf4d6;
+  --t-radius:10px; --t-sh:0 1px 2px rgba(16,18,24,.06),0 2px 8px rgba(16,18,24,.04);
+  --t-font:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;
+}
+body{font-family:var(--t-font);background:var(--t-bg);color:var(--t-txt);-webkit-font-smoothing:antialiased}
+
+/* ── Cabeçalho / navegação ── */
+.nav{display:block;padding:0;background:var(--t-ink);position:relative;z-index:60;box-shadow:0 1px 0 rgba(255,255,255,.04),0 4px 14px rgba(0,0,0,.18)}
+.nv-top{display:flex;align-items:center;gap:18px;padding:0 18px;height:54px}
+.nv-brand{display:flex;align-items:center;gap:10px;cursor:pointer;flex-shrink:0;padding-right:16px;border-right:1px solid rgba(255,255,255,.08);height:30px}
+.nv-star{width:30px;height:30px;border-radius:8px;background:var(--t-gold);color:var(--t-ink);display:flex;align-items:center;justify-content:center;font-size:17px;line-height:1}
+.nv-brand-t{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:17px;letter-spacing:.06em;text-transform:uppercase;color:#fff;line-height:1;display:flex;flex-direction:column;gap:3px}
+.nv-brand-t small{font-family:var(--t-font);font-size:10px;font-weight:500;letter-spacing:.04em;text-transform:none;color:#8a8f9c}
+.nv-tabs{display:flex;align-items:stretch;gap:2px;height:100%}
+.nv-tab{position:relative;display:flex;align-items:center;gap:7px;background:transparent;border:none;color:#a9aebb;font-family:var(--t-font);font-size:13px;font-weight:500;padding:0 13px;cursor:pointer;transition:color .15s}
+.nv-tab:hover{color:#fff}
+.nv-tab.active{color:#fff;font-weight:600}
+.nv-tab.active::after{content:'';position:absolute;left:10px;right:10px;bottom:0;height:3px;border-radius:3px 3px 0 0;background:var(--t-gold)}
+.nv-ic{font-size:13px;line-height:1;filter:saturate(.85)}
+.nv-tools{margin-left:auto;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.nv-tool{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);color:#d5d8df;font-family:var(--t-font);font-size:12px;font-weight:500;padding:6px 11px;border-radius:8px;cursor:pointer;white-space:nowrap;transition:background .15s,border-color .15s,color .15s}
+.nv-tool:hover{background:rgba(255,255,255,.10);color:#fff}
+.nv-tool.active{background:var(--t-gold);border-color:var(--t-gold);color:var(--t-ink);font-weight:600}
+.nv-sep{width:1px;height:22px;background:rgba(255,255,255,.1);margin:0 4px}
+.nv-icon{width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid rgba(255,255,255,.09);color:#a9aebb;border-radius:8px;cursor:pointer;font-size:13px;transition:background .15s,color .15s}
+.nv-icon:hover{background:rgba(255,255,255,.08);color:#fff}
+.nv-scouts{display:flex;align-items:center;gap:6px;padding:7px 18px 8px;background:var(--t-ink2);border-top:1px solid rgba(255,255,255,.05);flex-wrap:wrap}
+.nv-lbl{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#6f7482;margin-right:6px}
+.nv-chip{display:inline-flex;align-items:center;gap:7px;background:transparent;border:1px solid rgba(255,255,255,.10);color:#c9ccd4;font-family:var(--t-font);font-size:12px;font-weight:500;padding:4px 11px 4px 9px;border-radius:999px;cursor:pointer;transition:background .15s,border-color .15s,color .15s}
+.nv-chip i{width:8px;height:8px;border-radius:50%;background:var(--sc);box-shadow:0 0 0 2px rgba(255,255,255,.06)}
+.nv-chip:hover{border-color:var(--sc);color:#fff}
+.nv-chip.active{background:var(--sc);border-color:var(--sc);color:#fff;font-weight:600}
+.nv-chip.active i{background:#fff}
+.nv-add{border-style:dashed;color:#8a8f9c;padding-left:11px}
+.nv-add:hover{border-color:var(--t-gold);color:var(--t-gold)}
+@media(max-width:1180px){.nv-top{height:auto;flex-wrap:wrap;padding:8px 14px;gap:8px}.nv-tabs{height:40px}.nv-tools{margin-left:0}}
+
+/* ── Barra de título de cada tela ── */
+.toolbar{padding:16px 20px 14px!important;background:var(--t-surface);border-bottom:1px solid var(--t-line);gap:14px}
+.toolbar h1{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;color:var(--t-txt);line-height:1.1}
+.toolbar p{font-size:12px;color:var(--t-txt3);margin-top:3px}
+.toolbar button{border-radius:8px!important;padding:8px 14px!important;font-family:var(--t-font)!important;font-size:12px!important;font-weight:600!important;transition:filter .15s,transform .05s}
+.toolbar button:hover{filter:brightness(1.07)}
+.toolbar button:active{transform:translateY(1px)}
+.leg{font-size:11px;color:var(--t-txt2)}
+.leg-dot{width:10px;height:10px;border-radius:3px}
+.save-badge{border-radius:999px;padding:4px 10px;font-weight:600}
+
+/* ── Abas internas (Indicados / Debatidos) ── */
+.ind-tabs{background:var(--t-surface);border-bottom:1px solid var(--t-line);padding:0 20px;gap:4px}
+.ind-tab{padding:11px 14px;font-size:13px;color:var(--t-txt3);border-bottom:3px solid transparent;font-family:var(--t-font)}
+.ind-tab.active{color:var(--t-txt);border-bottom-color:var(--t-gold);font-weight:600}
+.ind-controls-wrap{padding:12px 20px 4px;background:var(--t-bg);border-bottom:1px solid var(--t-line)}
+.ind-controls{gap:8px}
+.ind-filter-label{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--t-txt3)}
+.ind-select,.ind-search,.shortlist-search{height:32px;padding:0 10px;border:1px solid var(--t-line);border-radius:8px;font-size:12px;background:var(--t-surface);color:var(--t-txt);font-family:var(--t-font);transition:border-color .15s,box-shadow .15s}
+.ind-search{min-width:220px}
+.ind-select:hover,.ind-search:hover{border-color:#cfd3da}
+.ind-select:focus,.ind-search:focus,.shortlist-search:focus{outline:none;border-color:var(--t-gold2);box-shadow:0 0 0 3px rgba(232,200,74,.25)}
+.ind-add-btn{height:32px;display:inline-flex;align-items:center;gap:5px;padding:0 14px;background:var(--t-ink);border-radius:8px;font-size:12px;font-family:var(--t-font);transition:filter .15s}
+.ind-add-btn:hover{opacity:1;filter:brightness(1.25)}
+.ind-count{font-size:12px;color:var(--t-txt2);font-weight:500}
+
+.ind-btn-pri{background:var(--t-gold);color:var(--t-ink)}
+.ind-btn-sec{background:var(--t-surface);color:var(--t-txt);border:1px solid var(--t-line)}
+.ind-btn-sec:hover{filter:none;background:#f6f7f9;border-color:#cfd3da}
+.ind-btn-warn{background:#c0392b}
+/* ── Tabelas (Indicados, Debatidos, Shortlist, Relatórios) ── */
+table.ind-table,table.sl{font-size:12px;border-collapse:separate;border-spacing:0}
+table.ind-table th,table.ind-table td,table.sl th,table.sl td{border:none;border-bottom:1px solid var(--t-line2)}
+table.ind-table th,table.sl th{background:var(--t-ink);color:#c7cad2;font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:10px 10px}
+table.ind-table th:hover,table.sl th:hover{background:var(--t-ink3);color:#fff}
+table.ind-table th.sort-asc,table.ind-table th.sort-desc{background:var(--t-ink3);color:var(--t-gold)}
+table.ind-table td,table.sl td{padding:8px 10px;background:var(--t-surface)}
+table.ind-table tr:nth-child(even) td,table.sl tr:nth-child(even) td{background:#fafbfc}
+table.ind-table tbody tr:hover td,table.sl tbody tr:hover td{background:var(--t-goldbg)}
+.ind-pos,.sl-pos{background:var(--t-ink);color:#fff;border-radius:5px;padding:2px 7px;font-size:10px;letter-spacing:.03em}
+.ind-aval,.sl-rec{border-radius:999px;padding:3px 9px;font-size:10px}
+.ind-rel-btn{border-radius:7px;padding:2px 7px;border-color:var(--t-line);background:var(--t-surface)}
+.ind-rel-btn:hover{background:var(--t-gold);border-color:var(--t-gold)}
+.ind-vezes{border-radius:999px}
+.deb-group-row td{background:var(--t-ink2)!important;color:var(--t-gold);border-bottom:none}
+.shortlist-wrap{padding:16px 20px}
+.shortlist-filter{height:30px;padding:0 12px;border:1px solid var(--t-line);border-radius:999px;font-size:12px;font-family:var(--t-font)}
+.shortlist-filter.active{background:var(--t-ink);border-color:var(--t-ink)}
+.sl-photo,.sl-photo-ph{border-radius:6px}
+
+/* ── Calendário ── */
+.scroll-wrap{background:var(--t-surface)}
+table.cal{font-size:11.5px}
+.cal th,.cal td{border-color:var(--t-line2)}
+th.hdr-name,th.hdr-col{background:var(--t-ink)!important;color:#c7cad2;font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase}
+th.month-hdr,.sv-mhdr{background:#e9ebef;color:var(--t-txt);font-size:11px;font-weight:600}
+th.month-hdr:nth-child(even),.sv-mhdr:nth-child(even){background:#f1f2f5}
+th.period-hdr,.sv-phdr{background:#f6f7f9;color:var(--t-txt3)}
+th.period-hdr:nth-child(even),.sv-phdr:nth-child(even){background:#fbfbfc}
+.cal .col-name{font-weight:500;color:var(--t-txt)}
+.cal tr.data:nth-child(even) .col-name{background:#fafbfc}
+.cal tr.data:hover .col-name,.cal tr.data:hover td.col-s,.cal tr.data:hover td.col-start,.cal tr.data:hover td.col-end{background:var(--t-goldbg)}
+.cal .col-start,.cal .col-end{background:#f7f8fa;color:var(--t-txt2)}
+.cal .col-s select{color:var(--t-txt);font-family:var(--t-font)}
+.date-input{border:1px solid var(--t-line);border-radius:6px;padding:3px 5px;font-family:var(--t-font);background:#fff;color:var(--t-txt)}
+.date-input:focus{outline:none;border-color:var(--t-gold2);box-shadow:0 0 0 2px rgba(232,200,74,.25)}
+.row-group td{background:#eef6e4;color:#2f5a10;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:8px 12px;border-top:none!important;box-shadow:inset 4px 0 0 #7cb342}
+.row-group.g-brasil-base td{background:#e3f5ef;color:#0b5a45;box-shadow:inset 4px 0 0 #2bb38a}
+.row-group.g-sa-pro td{background:#e6f0fb;color:#0d4a85;box-shadow:inset 4px 0 0 #3a8ee0}
+.row-group.g-sa-base td{background:#efedfb;color:#3b2f8f;box-shadow:inset 4px 0 0 #7d6ee0}
+.row-group.g-mundo td{background:#fbe9ef;color:#8a1d45;box-shadow:inset 4px 0 0 #e0608a}
+.row-sg td{background:#fafbfc;color:var(--t-txt3);font-size:10.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+.btn-report{border-radius:6px;border-color:var(--t-line);color:var(--t-txt2);padding:2px 6px}
+.btn-report:hover,.btn-report.has-reports{background:var(--t-ink);border-color:var(--t-ink)}
+.level-pro,.level-base{border-radius:999px;padding:2px 8px;font-weight:600;font-size:10px}
+.sv-name,.sv-col{border-color:var(--t-line2)}
+.sv-dates{color:var(--t-txt2)}
+.resumo-wrap{padding:16px 20px}
+.resumo-table th,.resumo-table td{border-color:var(--t-line2)}
+.resumo-table .r-grand{background:var(--t-ink)}
+
+/* ── Agenda semanal do scout ── */
+.qts-wrap{padding:16px 20px;background:var(--t-bg);border-top:none}
+.qts-title{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.qts-grid{border:1px solid var(--t-line);border-radius:var(--t-radius);box-shadow:var(--t-sh)}
+.qts-day-hdr,.qts-day-num,.qts-corner{background:var(--t-ink)}
+.qts-nav-btn{background:var(--t-ink);border-radius:7px;padding:4px 11px}
+
+/* ── Relatórios (aba de Indicados) ── */
+.rel-wrap{background:var(--t-bg);padding:18px 20px 40px}
+.rel-kpi{border:1px solid var(--t-line);border-top:3px solid var(--t-gold);border-radius:var(--t-radius);box-shadow:var(--t-sh);padding:12px 14px}
+.rel-card{border:1px solid var(--t-line);border-radius:var(--t-radius);box-shadow:var(--t-sh);padding:14px 16px}
+.rel-tbl th{background:var(--t-ink);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+.rel-bar-track{background:var(--t-line2);border-radius:999px}
+.rel-col-bar{background:var(--t-ink)}
+
+/* ── Janelas (formulários claros) ── */
+.ind-modal-panel,.pr-panel{border-radius:14px;box-shadow:0 20px 60px rgba(10,12,18,.28)}
+.ind-modal-hdr{background:var(--t-surface);border-bottom:1px solid var(--t-line);padding:1rem 1.4rem}
+.ind-modal-title{font-size:1.15rem}
+.ind-modal-close,.pr-hdr-close{border-radius:7px}
+.pr-hdr{background:var(--t-ink)}
+#indModal,#prModal{background:rgba(12,14,20,.5)}
+
+#indModal input:not([type=file]):not([type=checkbox]):not([type=radio]),#indModal select,#indModal textarea{background:#f7f8fa!important;border:1px solid var(--t-line)!important;border-radius:8px!important;font-family:var(--t-font)!important;color:var(--t-txt)!important}
+#indModal input:focus,#indModal select:focus,#indModal textarea:focus{outline:none;background:#fff!important;border-color:var(--t-gold2)!important;box-shadow:0 0 0 3px rgba(232,200,74,.25)}
+/* ── Rolagem mais discreta ── */
+.scroll-wrap::-webkit-scrollbar,.ind-table-wrap::-webkit-scrollbar{width:10px;height:10px}
+.scroll-wrap::-webkit-scrollbar-thumb,.ind-table-wrap::-webkit-scrollbar-thumb{background:#c9cdd5;border-radius:10px;border:2px solid #fff}
+.scroll-wrap::-webkit-scrollbar-track,.ind-table-wrap::-webkit-scrollbar-track{background:transparent}
 </style>
 </head>
 <body>
@@ -660,7 +815,7 @@ const SCOUT_PALETTE=[
 ];
 let scoutPick=0;
 const MULTI_COLOR='#2c2c2a';
-const ALT=['#eeece9','#f4f3ec'];
+const ALT=['#eceef1','#f5f6f8'];
 const GROUP_CLASSES={'BRASIL':'','BRASIL BASE':'g-brasil-base','AMERICA DO SUL PRO':'g-sa-pro','AMERICA DO SUL BASE':'g-sa-base','AMERICAS MUNDO':'g-mundo'};
 const GROUP_LABELS={'BRASIL':'Brasil','BRASIL BASE':'Brasil — Base','AMERICA DO SUL PRO':'América do Sul — Pro','AMERICA DO SUL BASE':'América do Sul — Base','AMERICAS MUNDO':'Américas / Mundo'};
 
@@ -1128,17 +1283,30 @@ function removeScout(name){
 }
 function renderNav(){
   const nav=document.getElementById('nav');
-  const views=[{id:'cal',label:'Calendar'},{id:'shortlist',label:'⭐ Shortlist',color:'#6b3fa0'},{id:'indicados',label:'📋 Indicados',color:'#1a6e3a'},{id:'debatidos',label:'🗣 Debatidos',color:'#1a4a6e'},...SCOUTS.map(s=>({id:'scout_'+s,label:s,color:SCOUT_COLORS[s].btn}))];
-  nav.innerHTML=views.map((v,i)=>(i===1?'<span style="width:8px;display:inline-block"></span>':'')+`<button class="nav-btn${currentView===v.id?' active':''}" style="background:${v.color||'#3a3835'};color:#fff" onclick="switchView('${v.id}')">${v.label}</button>`).join('')
-    +`<button class="nav-btn" style="background:#26241f;color:#9fe3b4;font-size:11px;border:1px dashed #5a7a60" onclick="openScoutModal()" title="Adicionar ou remover scouts">+ Scout</button>`
-    +`<div style="margin-left:auto;display:flex;gap:6px;align-items:center">
-        <button class="nav-btn${currentView==='metas'?' active':''}" style="background:#b8860b;color:#fff;font-size:11px;font-weight:600" onclick="switchView('metas')" title="Controle de Metas: jogos de cada atleta contra a meta do contrato (contagem pelo SofaScore)">🎯 Metas</button>
-        <button class="nav-btn${currentView==='listaobs'?' active':''}" style="background:#1a6e3a;color:#fff;font-size:11px;font-weight:600" onclick="switchView('listaobs')" title="Lista de Observação (Main, Backup, Youth): atualiza pelo print do Squad View do TransferRoom, avaliação de cada jogador e PDF">📋 Lista de Observação</button>
-        <button class="nav-btn${currentView==='relatorio'?' active':''}" style="background:#8B1A2E;color:#e8c84a;font-size:11px;font-weight:600" onclick="switchView('relatorio')" title="Relatório Jogadores (mesmo conteúdo do site RANKING/relatorio-jogadores)">📄 Player Report</button>
-        <button class="nav-btn" style="background:#1a3d2e;color:#8ed4a4;font-size:11px;font-weight:600;border:1px solid #2c6b4f" onclick="openSalaryGuide()" title="Salary Guide 2026 — mapa salarial da Série A por posição × nível">💰 Salary Guide</button>
-        <button class="nav-btn" style="background:#3a3835;color:#e8c84a;font-size:11px" onclick="exportData()">⬇ Export</button>
-        <label class="nav-btn" style="background:#3a3835;color:#8ed4a4;font-size:11px;cursor:pointer">⬆ Import<input type="file" accept=".json" style="display:none" onchange="importData(this)"></label>
-      </div>`;
+  const main=[{id:'cal',label:'Calendário',ic:'🗓'},{id:'shortlist',label:'Shortlist',ic:'⭐'},{id:'indicados',label:'Indicados',ic:'📋'},{id:'debatidos',label:'Debatidos',ic:'🗣'}];
+  const tools=[
+    {id:'metas',label:'Metas',ic:'🎯',t:'Controle de Metas: jogos de cada atleta contra a meta do contrato (contagem pelo SofaScore)'},
+    {id:'listaobs',label:'Lista de Observação',ic:'📋',t:'Lista de Observação (Main, Backup, Youth): atualiza pelo print do Squad View do TransferRoom, avaliação de cada jogador e PDF'},
+    {id:'relatorio',label:'Player Report',ic:'📄',t:'Relatório Jogadores (mesmo conteúdo do site RANKING/relatorio-jogadores)'}];
+  nav.innerHTML=`<div class="nv-top">
+      <div class="nv-brand" onclick="switchView('cal')" title="Início">
+        <span class="nv-star">★</span>
+        <span class="nv-brand-t">Scout System<small>2026 · Botafogo</small></span>
+      </div>
+      <div class="nv-tabs">${main.map(v=>`<button class="nv-tab${currentView===v.id?' active':''}" onclick="switchView('${v.id}')"><span class="nv-ic">${v.ic}</span>${v.label}</button>`).join('')}</div>
+      <div class="nv-tools">
+        ${tools.map(v=>`<button class="nv-tool${currentView===v.id?' active':''}" onclick="switchView('${v.id}')" title="${v.t}"><span class="nv-ic">${v.ic}</span>${v.label}</button>`).join('')}
+        <button class="nv-tool" onclick="openSalaryGuide()" title="Salary Guide 2026 — mapa salarial da Série A por posição × nível"><span class="nv-ic">💰</span>Salary Guide</button>
+        <span class="nv-sep"></span>
+        <button class="nv-icon" onclick="exportData()" title="Exportar dados (JSON)">⬇</button>
+        <label class="nv-icon" title="Importar dados (JSON)">⬆<input type="file" accept=".json" style="display:none" onchange="importData(this)"></label>
+      </div>
+    </div>
+    <div class="nv-scouts">
+      <span class="nv-lbl">Scouts</span>
+      ${SCOUTS.map(s=>{const c=SCOUT_COLORS[s]||{};const on=currentView==='scout_'+s;return `<button class="nv-chip${on?' active':''}" style="--sc:${c.btn||'#777'}" onclick="switchView('scout_${s.replace(/'/g,"\\'")}')"><i></i>${s}</button>`;}).join('')}
+      <button class="nv-chip nv-add" onclick="openScoutModal()" title="Adicionar ou remover scouts">＋ Scout</button>
+    </div>`;
 }
 
 function switchView(id){currentView=id;renderNav();renderViews();}
@@ -1299,7 +1467,7 @@ function renderCal(){
         <div><h1>Calendário de Cobertura 2026</h1>
         <p>Clique em 📋 ao lado de qualquer campeonato para adicionar relatórios de jogadores</p></div>
         <button onclick="openAddCompModal()" style="background:#e8c84a;color:#1a1a18;border:none;border-radius:6px;padding:6px 14px;font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap">+ Competição</button>
-        <button onclick="toggleLoadPanel()" title="Mostrar/ocultar carga mensal por scout" style="background:#2c2c2a;color:#e8c84a;border:none;border-radius:6px;padding:6px 12px;font-weight:600;font-size:12px;cursor:pointer;white-space:nowrap">📊 Carga mensal</button>
+        <button onclick="toggleLoadPanel()" title="Mostrar/ocultar carga mensal por scout" style="background:#fff;color:#17181c;border:1px solid #e5e7eb;border-radius:6px;padding:6px 12px;font-weight:600;font-size:12px;cursor:pointer;white-space:nowrap">📊 Carga mensal</button>
       </div>
       <div class="legend">
         ${SCOUTS.map(s=>`<span class="leg"><span class="leg-dot" style="background:${SCOUT_COLORS[s].soft}"></span>${s}</span>`).join('')}
@@ -1360,10 +1528,10 @@ function renderScoutView(scout){
         return `<td style="background:${act?color.soft:ALT[p.m%2]};width:18px;min-width:18px;height:26px;border:0.5px solid #e0ded4${isEnd?';border-right:1.5px solid #b4b2a9':''}"></td>`;
       }).join('');
       return `<tr style="background:${rowbg}">
-        <td class="sv-name" style="display:flex;align-items:center;gap:4px;max-width:240px">
+        <td class="sv-name" style="max-width:240px"><div style="display:flex;align-items:center;gap:4px">
           <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${comp.name}</span>
           <button class="btn-report${reps>0?' has-reports':''}" onclick="openModal(${comp.id})" style="flex-shrink:0">${reps>0?`📋 <span class='report-count'>${reps}</span>`:'📋'}</button>
-        </td>
+        </div></td>
         <td class="sv-col">${comp.country}</td>
         <td class="sv-col"><span class="level-${comp.level==='Base'?'base':'pro'}">${comp.level}</span></td>
         <td class="sv-col sv-dates">${comp.start?comp.start.slice(5).replace('-','/'):'?'} → ${comp.end?comp.end.slice(5).replace('-','/'):'?'}</td>
@@ -1623,12 +1791,12 @@ function renderIndJogTable(){
         </select>
       </div>
       <input class="ind-search" type="text" placeholder="Buscar atleta, clube, agente…" value="${indFilters.search}" oninput="indSetFilter('search',this.value)">
-      ${(()=>{const n=indNomesErrados().length;return n?`<button class="ind-add-btn" style="background:#c0392b" onclick="limparNomesErrados()" title="Registros em que o nome do atleta ficou com o texto da avaliação (importação com coluna errada)">⚠ ${n.toLocaleString('pt-BR')} com nome errado — remover</button>`:'';})()}
-      <button class="ind-add-btn" style="background:#374df5" onclick="sofaAtualizarLista(event)" title="Atualiza a nota SofaScore de quem tem link, na lista filtrada (precisa da extensão BFR Relatório Jogadores 1.4)">⭐ Atualizar notas</button>
+      ${(()=>{const n=indNomesErrados().length;return n?`<button class="ind-add-btn ind-btn-warn" onclick="limparNomesErrados()" title="Registros em que o nome do atleta ficou com o texto da avaliação (importação com coluna errada)">⚠ ${n.toLocaleString('pt-BR')} com nome errado — remover</button>`:'';})()}
+      <button class="ind-add-btn ind-btn-sec" onclick="sofaAtualizarLista(event)" title="Atualiza a nota SofaScore de quem tem link, na lista filtrada (precisa da extensão BFR Relatório Jogadores 1.4)">⭐ Atualizar notas</button>
       <span class="ind-count">${total} atleta${total!==1?'s':''}</span>
-      <button class="ind-add-btn" onclick="openIndForm('jog',null)">＋ Novo Atleta</button>
-      <label class="ind-add-btn" style="background:#1a4a6e;cursor:pointer" title="Importar histórico JSON (sobrescreve IDs existentes)">⬆ Histórico<input type="file" accept=".json" style="display:none" onchange="importIndicadosHistorico(this)"></label>
-      <label class="ind-add-btn" style="background:#1a5e2e;cursor:pointer" title="Importar JSON ou Excel — apenas registros novos (nome+ano+data+indicação)">⬆ Novos<input type="file" accept=".json,.xlsx,.xls" style="display:none" onchange="importIndicadosSomenteNovos(this)"></label>
+      <button class="ind-add-btn ind-btn-pri" onclick="openIndForm('jog',null)">＋ Novo Atleta</button>
+      <label class="ind-add-btn ind-btn-sec" style="cursor:pointer" title="Importar histórico JSON (sobrescreve IDs existentes)">⬆ Histórico<input type="file" accept=".json" style="display:none" onchange="importIndicadosHistorico(this)"></label>
+      <label class="ind-add-btn ind-btn-sec" style="cursor:pointer" title="Importar JSON ou Excel — apenas registros novos (nome+ano+data+indicação)">⬆ Novos<input type="file" accept=".json,.xlsx,.xls" style="display:none" onchange="importIndicadosSomenteNovos(this)"></label>
     </div>`;
 
   // Populate table
@@ -1644,7 +1812,7 @@ function renderIndJogTable(){
     ${total>rows.length?`<div style="padding:14px;text-align:center;font-size:12px;color:#5f5e5a;background:#fff">
       Mostrando <b>${rows.length.toLocaleString('pt-BR')}</b> de <b>${total.toLocaleString('pt-BR')}</b> — use os filtros/busca ou
       <button class="ind-add-btn" style="margin-left:6px" onclick="indLimite+=500;renderIndJogTable()">Mostrar mais 500</button>
-      <button class="ind-add-btn" style="background:#5f5e5a" onclick="indLimite=1e9;renderIndJogTable()">Mostrar todos (mais lento)</button></div>`:''}`;
+      <button class="ind-add-btn ind-btn-sec" onclick="indLimite=1e9;renderIndJogTable()">Mostrar todos (mais lento)</button></div>`:''}`;
 
   setTimeout(fixIndHeight, 0);
 }
@@ -1738,7 +1906,7 @@ function renderIndTreTable(){
       </div>
       <input class="ind-search" type="text" placeholder="Buscar treinador, país, clube…" value="${indFiltersTre.search}" oninput="indSetFilterTre('search',this.value)">
       <span class="ind-count">${total} treinador${total!==1?'es':''}</span>
-      <button class="ind-add-btn" onclick="openIndForm('tre',null)">＋ Novo Treinador</button>
+      <button class="ind-add-btn ind-btn-pri" onclick="openIndForm('tre',null)">＋ Novo Treinador</button>
     </div>`;
 
   const tblEl = document.getElementById('indTableContent');
@@ -2184,7 +2352,7 @@ function renderDebTable(){
       ${sel('Lista','lista',listasPresentes,'Todas')}
       <input class="ind-search" type="text" placeholder="Buscar atleta, clube, observação…" value="${debFilters.search}" oninput="debSetFilter('search',this.value)" onblur="debFlushRender()">
       <span class="ind-count">${total} atleta${total!==1?'s':''}</span>
-      <button class="ind-add-btn" onclick="openDebForm(null)">＋ Novo Atleta</button>
+      <button class="ind-add-btn ind-btn-pri" onclick="openDebForm(null)">＋ Novo Atleta</button>
     </div>`;
 
   const tblEl=document.getElementById('indTableContent');
