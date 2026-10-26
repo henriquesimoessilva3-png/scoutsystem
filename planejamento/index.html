@@ -133,13 +133,40 @@ main{padding:4px 16px 40px;max-width:1500px;margin:0 auto}
 .chk{display:flex;gap:6px;align-items:center;color:var(--txt2);font-size:12px;margin-bottom:6px}
 @media (max-width:900px){.esc{grid-template-columns:1fr}.conts{margin-left:0}}
 @media (max-width:520px){main{padding:4px 10px 30px}.card{width:calc(50% - 5px)}.slot{width:70px}.slot .fto{width:40px;height:40px}}
+
+/* campograma */
+.cg-barra{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:0 0 8px}
+.cg-leg{display:flex;align-items:center;gap:6px;color:var(--txt2);font-size:11.5px;flex-wrap:wrap}
+.cg-leg i{display:inline-block;width:12px;height:12px;border-radius:50%;border:3px solid;margin-left:6px}
+.cg-leg i.fica{border-color:#1f9d55}.cg-leg i.sai{border-color:#d64545;background:#f3c1bd}.cg-leg i.chega{border-color:#d4ad1f;background:#fbf0c4}.cg-leg i.def{border-color:#9aa0ab}
+.cg-leg i.vc{border-color:#2f6fd0;background:#3b7fe0}.cg-leg i.vb{border-color:#2f8a3a;background:#3a9a46}
+#cgWrap{overflow-x:auto}
+#cg{min-width:980px;background:#e9ede6;border-radius:12px;padding:12px 12px 8px}
+.cg-campo{position:relative;width:100%;aspect-ratio:16/9.4;border:2px solid #fff;border-radius:6px;background:linear-gradient(135deg,#dfe6dc,#eef1ea 40%,#dfe6dc);overflow:hidden}
+.cg-campo .l{position:absolute;border:2px solid rgba(255,255,255,.95)}
+.cg-j{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;width:96px;pointer-events:auto}
+.cg-f{position:relative;width:46px;height:46px;border-radius:50%;background:#fff;border:3px solid #9aa0ab;overflow:visible;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 5px rgba(0,0,0,.18)}
+.cg-f img{width:100%;height:100%;border-radius:50%;object-fit:cover;object-position:top}
+.cg-f span{font-family:var(--cond);font-weight:800;color:#6f7482;font-size:16px}
+.cg-j.fica .cg-f{border-color:#1f9d55}
+.cg-j.sai .cg-f{border-color:#d64545;background:#f3c1bd}.cg-j.sai .cg-f img{opacity:.75}
+.cg-j.chega .cg-f{border-color:#d4ad1f;background:#fbf0c4}
+.cg-f.vaga{border:0;cursor:pointer}.cg-f.contratacao{background:#3b7fe0}.cg-f.base{background:#3a9a46}
+.cg-b{position:absolute;right:-7px;top:-5px;font-style:normal;font-size:14px;line-height:1}
+.cg-n{margin-top:3px;font-family:var(--cond);font-weight:800;font-size:11.5px;letter-spacing:.2px;color:#17181c;text-transform:uppercase;white-space:nowrap;text-align:center;text-shadow:0 0 3px #fff,0 0 3px #fff}
+.cg-add{position:absolute;transform:translate(-50%,-50%);width:22px;height:22px;border-radius:50%;border:1.5px dashed #8a8f9c;background:rgba(255,255,255,.6);color:#6f7482;cursor:pointer;font-size:13px;line-height:1}
+.cg-add:hover{border-color:#15161a;color:#15161a}
+#cg.foto .cg-add{display:none}
+.cg-rod{display:flex;justify-content:space-between;align-items:center;margin-top:7px;color:#17181c;font-family:var(--cond);font-weight:800;letter-spacing:.4px;text-transform:uppercase;font-size:14px}
+.cg-rod img{width:22px;height:22px;object-fit:contain;vertical-align:middle;margin-right:6px}
+.cg-rod span:last-child{color:#6f7482;font-size:12px}
 </style>
 </head>
 <body>
 <div class="barra">
   <select id="selLiga" onchange="trocarLiga(this.value)"></select>
   <select id="selClube" onchange="trocarClube(this.value)"><option>carregando…</option></select>
-  <div class="seg"><button id="abaE" class="on" onclick="aba('elenco')">Elenco</button><button id="abaX" onclick="aba('esc')">Escalação</button></div>
+  <div class="seg"><button id="abaE" class="on" onclick="aba('elenco')">Elenco</button><button id="abaC" onclick="aba('campo')">Campograma</button><button id="abaX" onclick="aba('esc')">Escalação</button></div>
   <div class="dir">
     <span class="info" id="infoBanco">conectando…</span>
     <button class="btn" onclick="importarElenco(false)" title="Busca o elenco atual no SofaScore e acrescenta quem é novo. Não mexe nas decisões já marcadas.">↻ Elenco do SofaScore</button>
@@ -288,7 +315,7 @@ async function importarElenco(auto){
     const upd={}; let novos=0;
     for(const p of ps){
       const k=String(p.id), ant=(P.elenco||{})[k];
-      const base={id:p.id,nome:p.name,curto:p.shortName||'',posDet:p.positionsDetailed||[],pos:p.position||'',nasc:p.dateOfBirthTimestamp?isoTs(p.dateOfBirthTimestamp):'',
+      const base={id:p.id,nome:p.name,curto:p.shortName||'',nac:(p.country&&p.country.alpha2)||'',posDet:p.positionsDetailed||[],pos:p.position||'',nasc:p.dateOfBirthTimestamp?isoTs(p.dateOfBirthTimestamp):'',
         contrato:p.contractUntilTimestamp?isoTs(p.contractUntilTimestamp):'',valor:p.proposedMarketValue||0,origem:ant?.origem||'elenco'};
       if(!ant){ base.setor=setorDe(p.positionsDetailed,p.position); novos++; upd[`elenco/${k}`]=base; }
       else Object.entries(base).forEach(([c,v])=>upd[`elenco/${k}/${c}`]=v);
@@ -338,6 +365,8 @@ function menu(ev,k){
   const c=document.getElementById('camada'), r=ev.currentTarget.getBoundingClientRect();
   c.innerHTML=`<div class="pop" style="left:${Math.min(r.left,innerWidth-210)}px;top:${r.bottom+4}px" onclick="event.stopPropagation()">
     <button onclick="apelido('${k}')">✎ Apelido no planejamento</button>
+    <div class="t">Posição no campograma</div>
+    <div style="display:flex;flex-wrap:wrap;gap:3px;padding:2px 6px 4px">${ZONAS.map(([z,n])=>`<button style="width:auto;padding:3px 7px;border:1px solid #e3e5ea;${zonaDe(j)===z?'background:#15161a;color:#fff':''}" title="${n}" onclick="campoZona('${k}','${z}')">${z}</button>`).join('')}</div>
     <div class="t">Mover para</div>
     ${SETORES.filter(([s])=>s!==j.setor).map(([s,n])=>`<button onclick="mover('${k}','${s}')">${n}</button>`).join('')}
     <div class="t"></div>
@@ -352,7 +381,7 @@ function tirar(k){ fecharPop(); const j=P.elenco[k]; if(j.origem==='chegada'){ i
 const nomeDe=j=>j.apelido||j.nome;
 
 /* ═══ tela: elenco ═══ */
-function aba(a){ ABA=a; document.getElementById('abaE').classList.toggle('on',a==='elenco'); document.getElementById('abaX').classList.toggle('on',a==='esc'); render(); }
+function aba(a){ ABA=a; [['abaE','elenco'],['abaC','campo'],['abaX','esc']].forEach(([i,v])=>document.getElementById(i).classList.toggle('on',a===v)); render(); }
 function contagem(){
   const js=jogadores(), c={fica:0,sai:0,chega:0,def:0,total:0};
   js.forEach(j=>{ const s=status(j); if(s==='fica')c.fica++; else if(s==='sai')c.sai++; else if(s==='chega')c.chega++; else c.def++; });
@@ -531,6 +560,82 @@ function ctMao(){
   fecharPop();
 }
 
+/* ═══ campograma (pedido do Brunno, 26/10): o elenco inteiro no campo deitado, por posição ═══
+   Ataque para a direita: lado esquerdo do time em cima. Contorno verde = fica, vermelho = sai, dourado = chega,
+   cinza = a definir. Vagas "Contratação" e "Base" marcadas por posição (P.vagas). */
+const ZONAS=[['GOL','Goleiros'],['ZAG','Zagueiros'],['LE','Lateral esquerdo'],['LD','Lateral direito'],['VOL','Volantes'],['MC','Meio-campistas'],['MO','Meias ofensivos'],['PE','Ponta esquerda'],['PD','Ponta direita'],['ATA','Atacantes']];
+// col = coluna em pé (x fixo, centrada em y) · row = linha deitada (y fixo, centrada em x)
+const ZONA_POS={GOL:['col',5.5,50],ZAG:['col',21,50],LE:['row',27,8],LD:['row',27,92],VOL:['col',36,50],MC:['col',50,50],MO:['col',64,50],PE:['row',73,8],PD:['row',73,92],ATA:['col',92,50]};
+const BANDEIRA=a=>a&&a.length===2&&a.toUpperCase()!=='BR'?String.fromCodePoint(...[...a.toUpperCase()].map(c=>127397+c.charCodeAt(0))):'';
+function zonaDe(j){
+  if(j.campo) return j.campo;
+  const pd=(j.posDet||[]).join(' '), lado=ladoDe(j);
+  switch(j.setor){
+    case 'GOL': return 'GOL'; case 'ZAG': return 'ZAG'; case 'VOL': return 'VOL'; case 'ATA': return 'ATA';
+    case 'LAT': return lado==='D'?'LD':'LE';
+    case 'PON': return lado==='D'?'PD':'PE';
+    case 'MEI': return /\bAM\b/.test(pd)&&!/\bMC\b/.test(pd.split(' ')[0])?'MO':'MC';
+  }
+  return 'MC';
+}
+function campoZona(k,z){ fecharPop(); gravar(`elenco/${k}/campo`,z); }
+function vaga(z,tipo,d){ const v=((P.vagas||{})[z]||{})[tipo]||0; gravar(`vagas/${z}/${tipo}`,Math.max(0,v+d)||null); }
+function menuVaga(ev,z){
+  ev.stopPropagation(); const r=ev.currentTarget.getBoundingClientRect();
+  document.getElementById('camada').innerHTML=`<div class="pop" style="left:${Math.min(r.left,innerWidth-210)}px;top:${r.bottom+4}px" onclick="event.stopPropagation()">
+    <div class="t">${(ZONAS.find(x=>x[0]===z)||[])[1]}</div>
+    <button onclick="fecharPop();vaga('${z}','contratacao',1)">＋ Vaga de contratação</button><button onclick="fecharPop();vaga('${z}','base',1)">＋ Vaga para a base</button></div>`;
+  setTimeout(()=>document.addEventListener('click',fecharPop,{once:true}),0);
+}
+function telaCampograma(){
+  const mostraSai=P.campoSai!==false;
+  const js=jogadores().filter(j=>mostraSai||status(j)!=='sai');
+  const por={}; ZONAS.forEach(([z])=>por[z]=[]);
+  js.forEach(j=>por[zonaDe(j)].push(j));
+  const peso={fica:0,chega:1,'':2,sai:3};
+  const itens=[];
+  ZONAS.forEach(([z])=>{
+    const L=por[z].sort((a,b)=>(peso[status(a)]-peso[status(b)])||((b.valor||0)-(a.valor||0)))
+      .map(j=>({j})).concat(Array.from({length:((P.vagas||{})[z]||{}).contratacao||0},()=>({vaga:'contratacao'})),Array.from({length:((P.vagas||{})[z]||{}).base||0},()=>({vaga:'base'})));
+    const [tipo,x,y]=ZONA_POS[z], n=L.length;
+    if(tipo==='col'){
+      const cols=n>7?2:1, porCol=Math.ceil(n/cols), passo=Math.min(12.5,84/Math.max(porCol,1));
+      L.forEach((it,i)=>{ const c=Math.floor(i/porCol), r=i%porCol, nn=c<cols-1?porCol:n-porCol*(cols-1);
+        itens.push({...it,z,x:x+(cols>1?(c?3.6:-3.6):0),y:y+(r-(nn-1)/2)*passo}); });
+    } else {
+      const passo=Math.min(7.2,40/Math.max(n,1));
+      L.forEach((it,i)=>itens.push({...it,z,x:x+(i-(n-1)/2)*passo,y}));
+    }
+    itens.push({add:z,x:tipo==='col'?x:x+((n+1)/2)*Math.min(7.2,40/Math.max(n,1))+1,y:tipo==='col'?Math.min(97,y+((Math.min(n,7)+1)/2)*Math.min(12.5,84/Math.max(Math.min(n,7),1))):y});
+  });
+  const html=itens.map(it=>{
+    if(it.add) return `<button class="cg-add" style="left:${it.x}%;top:${it.y}%" onclick="menuVaga(event,'${it.add}')" title="Marcar vaga de contratação ou de base">＋</button>`;
+    if(it.vaga) return `<div class="cg-j" style="left:${it.x}%;top:${it.y}%"><div class="cg-f vaga ${it.vaga}" onclick="vaga('${it.z}','${it.vaga}',-1)" title="Clique para tirar a vaga"></div><div class="cg-n">${it.vaga==='base'?'BASE':'CONTRATAÇÃO'}</div></div>`;
+    const j=it.j, s=status(j), f=fotoJog(j.id), aa=j.nasc?String(j.nasc).slice(2,4):'', bd=BANDEIRA(j.nac);
+    return `<div class="cg-j ${s||'def'}" style="left:${it.x}%;top:${it.y}%" title="${esc(j.nome)} · ${s==='sai'?'sai'+(j.saida?' ('+j.saida+')':''):s||'a definir'}">
+      <div class="cg-f">${f?`<img src="${f}" alt="">`:`<span>${iniciais(nomeDe(j))}</span>`}${bd?`<i class="cg-b">${bd}</i>`:''}</div>
+      <div class="cg-n">${esc(curto(nomeDe(j)))}${aa?` (${aa})`:''}</div></div>`;
+  }).join('');
+  const c=contagem(), esc_=fotoTime(TIME?.id);
+  return cabecalho()+`<div class="cg-barra"><label class="chk" style="margin:0"><input type="checkbox" ${mostraSai?'checked':''} onchange="gravar('campoSai',this.checked)"> Mostrar quem sai</label>
+      <span class="cg-leg"><i class="fica"></i>Fica <i class="sai"></i>Sai <i class="chega"></i>Chega <i class="def"></i>A definir <i class="vc"></i>Vaga de contratação <i class="vb"></i>Vaga da base</span>
+      <span style="color:var(--txt3);font-size:11.5px">Posição errada? ⋯ no card da aba Elenco → Posição no campograma</span>
+      <button class="btn ouro" style="margin-left:auto" onclick="baixarCampograma()">⬇ Imagem</button></div>
+    <div id="cgWrap"><div id="cg"><div class="cg-campo">
+      <div class="l" style="left:50%;top:0;bottom:0;border-width:0 0 0 2px"></div><div class="l" style="left:50%;top:50%;height:26%;aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%)"></div>
+      <div class="l" style="left:0;top:22%;bottom:22%;width:15%;border-left:0"></div><div class="l" style="right:0;top:22%;bottom:22%;width:15%;border-right:0"></div>
+      <div class="l" style="left:0;top:37%;bottom:37%;width:5%;border-left:0"></div><div class="l" style="right:0;top:37%;bottom:37%;width:5%;border-right:0"></div>
+      ${html}</div>
+      <div class="cg-rod"><span>${esc_?`<img src="${esc_}" alt="">`:''}${esc(TIME?.nome||'')} <b>${ANO}</b> · elenco <b>${c.total}</b> · saem <b style="color:#c23b3b">${c.sai}</b> · chegam <b style="color:#b8860b">${c.chega}</b></span><span>Scout System · Botafogo</span></div></div></div>`;
+}
+async function baixarCampograma(){
+  const el=document.getElementById('cg'); if(!el||!window.html2canvas){ alert('Não deu para gerar a imagem.'); return; }
+  el.classList.add('foto');
+  try{ const c=await html2canvas(el,{backgroundColor:'#e9ede6',scale:2});
+    const a=document.createElement('a'); a.download=`Campograma_${(TIME?.nome||'elenco').replace(/\s+/g,'_')}_${ANO}.png`; a.href=c.toDataURL('image/png'); a.click(); }
+  finally{ el.classList.remove('foto'); }
+}
+
 /* ═══ escalação ═══ */
 // x: 0 = esquerda, 100 = direita; y: 0 = ataque (alto), 100 = gol. lado: D direita, E esquerda.
 const ESQUEMAS={
@@ -590,7 +695,7 @@ async function baixarImagem(){
   const a=document.createElement('a'); a.download=`${(TIME?.nome||'elenco').replace(/\s+/g,'_')}_${ANO}_${(P.esquema||'4-3-3')}.png`; a.href=c.toDataURL('image/png'); a.click();
 }
 
-function render(){ document.getElementById('tela').innerHTML=ABA==='elenco'?telaElenco():telaEscalacao(); }
+function render(){ document.getElementById('tela').innerHTML=ABA==='elenco'?telaElenco():ABA==='campo'?telaCampograma():telaEscalacao(); }
 iniciar();
 </script>
 </body>
