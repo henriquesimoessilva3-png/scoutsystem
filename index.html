@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="app-versao" content="2026-10-23 16:30"><!-- AO PUBLICAR MUDANÇA, TROQUE ESTA DATA-HORA: as abas abertas mostram o aviso de versão nova -->
+<meta name="app-versao" content="2026-10-26 19:10"><!-- AO PUBLICAR MUDANÇA, TROQUE ESTA DATA-HORA: as abas abertas mostram o aviso de versão nova -->
 <title>Scout System 2026</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
@@ -1287,6 +1287,7 @@ function renderNav(){
   const tools=[
     {id:'metas',label:'Metas',ic:'🎯',t:'Controle de Metas: jogos de cada atleta contra a meta do contrato (contagem pelo SofaScore)'},
     {id:'listaobs',label:'Lista de Observação',ic:'📋',t:'Lista de Observação (Main, Backup, Youth): atualiza pelo print do Squad View do TransferRoom, avaliação de cada jogador e PDF'},
+    {id:'elenco',label:'Elenco 2027',ic:'🧩',t:'Planejamento de Elenco 2027: quem fica, quem sai, quem chega e a escalação (dados do SofaScore)'},
     {id:'relatorio',label:'Player Report',ic:'📄',t:'Relatório Jogadores (mesmo conteúdo do site RANKING/relatorio-jogadores)'}];
   nav.innerHTML=`<div class="nv-top">
       <div class="nv-brand" onclick="switchView('cal')" title="Início">
@@ -1369,13 +1370,28 @@ function mtShow(on){
   else w.style.display='none';
 }
 window.addEventListener('resize',()=>{ if(currentView==='metas') mtShow(true); });
+/* Planejamento de Elenco 2027 (26/10/2026, pedido do Brunno) = página planejamento/ deste mesmo site, aberta aqui dentro. */
+function elShow(on){
+  let w=document.getElementById('elWrap');
+  if(on&&!w){
+    w=document.createElement('div'); w.id='elWrap';
+    w.innerHTML=`<iframe id="elFrame" src="planejamento/?v=${encodeURIComponent((document.querySelector('meta[name="app-versao"]')||{}).content||Date.now())}" title="Planejamento de Elenco" style="border:0;width:100%;height:100%;display:block;background:#15161a"></iframe>
+      <a href="planejamento/" target="_blank" rel="noopener" style="position:absolute;right:10px;bottom:8px;font-size:10px;color:#a9aebb;background:rgba(0,0,0,.55);padding:2px 8px;border-radius:4px;text-decoration:none">abrir em nova aba ↗</a>`;
+    document.body.appendChild(w);
+  }
+  if(!w) return;
+  if(on){ const nav=document.querySelector('.nav'); const top=nav?nav.getBoundingClientRect().bottom:48; w.style.cssText=`position:fixed;left:0;right:0;bottom:0;top:${top}px;z-index:50;background:#15161a`; }
+  else w.style.display='none';
+}
+window.addEventListener('resize',()=>{ if(currentView==='elenco') elShow(true); });
 function renderViews(preserveScroll){
   const views=document.getElementById('views');
-  if(currentView==='relatorio'){ views.innerHTML=''; loShow(false); mtShow(false); sgShow(false); rjShow(true); return; }
-  if(currentView==='listaobs'){ views.innerHTML=''; rjShow(false); mtShow(false); sgShow(false); loShow(true); return; }
-  if(currentView==='metas'){ views.innerHTML=''; rjShow(false); loShow(false); sgShow(false); mtShow(true); return; }
-  if(currentView==='salary'){ views.innerHTML=''; rjShow(false); loShow(false); mtShow(false); sgShow(true); return; }
-  rjShow(false); loShow(false); mtShow(false); sgShow(false);
+  if(currentView==='relatorio'){ views.innerHTML=''; loShow(false); mtShow(false); sgShow(false); elShow(false); rjShow(true); return; }
+  if(currentView==='listaobs'){ views.innerHTML=''; rjShow(false); mtShow(false); sgShow(false); elShow(false); loShow(true); return; }
+  if(currentView==='metas'){ views.innerHTML=''; rjShow(false); loShow(false); sgShow(false); elShow(false); mtShow(true); return; }
+  if(currentView==='salary'){ views.innerHTML=''; rjShow(false); loShow(false); mtShow(false); elShow(false); sgShow(true); return; }
+  if(currentView==='elenco'){ views.innerHTML=''; rjShow(false); loShow(false); mtShow(false); sgShow(false); elShow(true); return; }
+  rjShow(false); loShow(false); mtShow(false); sgShow(false); elShow(false);
   const wrap=document.querySelector('.scroll-wrap');
   const sx=wrap?wrap.scrollLeft:0,sy=wrap?wrap.scrollTop:0;
   if(currentView==='cal'){views.innerHTML=renderCal();setTimeout(()=>{fixStickyTops();if(preserveScroll){const w=document.querySelector('.scroll-wrap');if(w){w.scrollLeft=sx;w.scrollTop=sy;}}},10);}
