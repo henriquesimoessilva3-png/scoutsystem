@@ -369,19 +369,22 @@ function telaElenco(){
 }
 
 /* ═══ contratar ═══ */
-let CT={setor:'GOL',aba:'busca'};
+let CT={setor:'GOL',aba:'listas'};
 const SOFA_POS={GOL:'G',LAT:'D',ZAG:'D',VOL:'M',MEI:'M',PON:'F',ATA:'F'};
-function contratar(s){ CT={setor:s,aba:'busca'}; janelaContratar(); }
+function contratar(s){ CT={setor:s,aba:'listas'}; janelaContratar(); }
 function janelaContratar(){
   const c=document.getElementById('camada');
-  const abas=[['busca','Buscar no SofaScore'],['liga','Mais minutos na liga'],['scout','Indicados e Debatidos'],['mao','À mão']];
+  const abas=[['listas','Sugestões das listas'],['busca','Buscar (SofaScore e Google)'],['liga','Mais minutos na liga'],['scout','Indicados e Debatidos'],['mao','À mão']];
   c.innerHTML=`<div class="fundo" onclick="if(event.target===this)fecharPop()"><div class="jan">
     <h3>Contratar · <span>${NOME_SETOR[CT.setor]}</span><button class="x" onclick="fecharPop()">×</button></h3>
     <div class="abas">${abas.map(([a,n])=>`<button class="${CT.aba===a?'on':''}" onclick="CT.aba='${a}';janelaContratar()">${n}</button>`).join('')}</div>
     <div id="ctCorpo"></div></div></div>`;
   const b=document.getElementById('ctCorpo');
-  if(CT.aba==='busca'){
-    b.innerHTML=`<div class="linha"><input id="ctQ" placeholder="nome do jogador" value="${esc(CT.q||'')}" onkeydown="if(event.key==='Enter')ctBuscar()"><button class="btn ouro" onclick="ctBuscar()">Buscar</button></div><div class="res" id="ctRes"><div class="vaz">Digite o nome e confira clube, posição e idade antes de escolher.</div></div>`;
+  if(CT.aba==='listas'){
+    b.innerHTML=`<div class="res" id="ctRes" style="max-height:60vh"><div class="vaz">Carregando a Lista de Observação…</div></div>`;
+    ctListas();
+  } else if(CT.aba==='busca'){
+    b.innerHTML=`<div class="linha"><input id="ctQ" placeholder="nome do jogador" value="${esc(CT.q||'')}" onkeydown="if(event.key==='Enter')ctBuscar()"><button class="btn ouro" onclick="ctBuscar()">Buscar no SofaScore</button><button class="btn" onclick="ctGoogle(document.getElementById('ctQ').value)" title="Abre o Google numa aba nova com o nome do jogador">🔎 Google</button></div><div class="res" id="ctRes"><div class="vaz">Digite o nome e confira clube, posição e idade antes de escolher.</div></div>`;
     document.getElementById('ctQ').focus(); if(CT.q) ctBuscar();
   } else if(CT.aba==='liga'){
     b.innerHTML=`<div class="linha"><select id="ctLiga" onchange="CT.liga=+this.value;ctLiga()">${LIGAS.map(([u,n])=>`<option value="${u}" ${(CT.liga||LIGA)===u?'selected':''}>${n}</option>`).join('')}</select></div><div class="res" id="ctRes"></div>`;
@@ -407,7 +410,7 @@ async function ctBuscar(){
   try{
     const j=await sofa('/search/all?q='+encodeURIComponent(q));
     const ps=(j.results||[]).filter(x=>x.type==='player').map(x=>x.entity).slice(0,15);
-    r.innerHTML=ps.length?ps.map(p=>itemHTML({id:String(p.id),nome:p.name,clube:p.team?.name||'',posTxt:({G:'Goleiro',D:'Defensor',M:'Meio-campo',F:'Atacante'})[p.position]||p.position||'',nasc:p.dateOfBirthTimestamp?isoTs(p.dateOfBirthTimestamp):'',pais:p.country?.name||''})).join(''):'<div class="vaz">Nada encontrado.</div>';
+    r.innerHTML=ps.length?ps.map(p=>itemHTML({id:String(p.id),nome:p.name,clube:p.team?.name||'',posTxt:({G:'Goleiro',D:'Defensor',M:'Meio-campo',F:'Atacante'})[p.position]||p.position||'',nasc:p.dateOfBirthTimestamp?isoTs(p.dateOfBirthTimestamp):'',pais:p.country?.name||''})).join(''):`<div class="vaz">Nada encontrado no SofaScore. <a href="#" onclick="ctGoogle(${esc(JSON.stringify(q))});return false" style="color:var(--gold)">Procurar no Google ↗</a> ou use a aba À mão.</div>`;
     fotosLista();
   }catch(e){ r.innerHTML=`<div class="vaz">⚠ ${esc(e.message)} — precisa da extensão BFR.</div>`; }
 }
@@ -420,6 +423,39 @@ async function ctLiga(){
     r.innerHTML=L.length?L.map(x=>itemHTML({id:String(x.player.id),nome:x.player.name,clube:x.team?.name||'',posTxt:NOME_SETOR[CT.setor]},`<div class="n"><b>${(x.minutesPlayed||0).toLocaleString('pt-BR')}'</b>${x.appearances||0} jogos</div>`)).join(''):'<div class="vaz">Sem dados dessa liga.</div>';
     fotosLista();
   }catch(e){ r.innerHTML=`<div class="vaz">⚠ ${esc(e.message)}</div>`; }
+}
+/* Sugestões = Lista de Observação do Scout System (Main, Backup, Youth do TransferRoom), pelo setor. */
+const CAIXA_SETOR={GOL:'GOL',LE:'LAT',LD:'LAT',ZC:'ZAG',ZD:'ZAG',MED:'VOL',VOL:'VOL',MEI:'MEI',EE:'PON',ED:'PON',ATA:'ATA'};
+const CAIXA_NOME={GOL:'Goleiro',LE:'Lateral esquerdo',LD:'Lateral direito',ZC:'Zagueiro canhoto',ZD:'Zagueiro destro',MED:'Médio',VOL:'Volante',MEI:'Meia',EE:'Extremo esquerdo',ED:'Extremo direito',ATA:'Atacante'};
+const LISTAS_OBS=[['MAIN','Main List'],['BACKUP','Backup List'],['YOUTH','Youth List']];
+let OBS=null;
+const fotoObs=f=>!f?'':/^(https?:|data:)/.test(f)?f:'../lista-observacao/'+f;
+function ctGoogle(q){ q=String(q||'').trim(); if(!q){ alert('Digite o nome do jogador.'); return; } window.open('https://www.google.com/search?q='+encodeURIComponent(q+' jogador futebol'),'_blank','noopener'); }
+async function ctListas(){
+  const r=document.getElementById('ctRes');
+  if(!OBS){
+    if(!db){ r.innerHTML='<div class="vaz">Sem conexão com o banco.</div>'; return; }
+    const [a,b]=await Promise.all([db.ref('lista_obs/jogadores').once('value'),db.ref('lista_obs/listas').once('value')]);
+    OBS={J:a.val()||{},L:b.val()||{}};
+  }
+  const blocos=LISTAS_OBS.map(([k,n])=>{
+    const cx=(OBS.L[k]||{}).caixas||{};
+    const ids=Object.entries(cx).filter(([c])=>CAIXA_SETOR[c]===CT.setor).flatMap(([c,l])=>(l||[]).map(id=>[c,id]));
+    if(!ids.length) return '';
+    return `<div style="font-family:var(--cond);font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--gold);margin:8px 2px 2px">${n} <span style="color:var(--txt3);font-family:inherit;font-weight:600;letter-spacing:0;text-transform:none;font-size:11px">· atualizada em ${esc(String((OBS.L[k]||{}).atualizado||'—').slice(0,10).split('-').reverse().join('/'))}</span></div>`+
+      ids.map(([c,id])=>{ const j=OBS.J[id]; if(!j) return '';
+        const sid=j.ss&&j.ss.sid?String(j.ss.sid):'', ja=sid&&P.elenco[sid]&&!P.elenco[sid].removido;
+        const dados={id:sid,nome:j.nome,clube:(j.clube&&j.clube.nome)||'',idade:j.idade||''};
+        const f=fotoObs(j.foto);
+        return `<div class="it" ${ja?'style="opacity:.5;cursor:default"':`onclick='ctObs(${JSON.stringify(dados).replace(/'/g,"&#39;")})'`}>${f?`<img src="${esc(f)}" referrerpolicy="no-referrer" alt="" style="object-position:bottom">`:'<div class="sem"></div>'}
+          <div class="q"><b>${esc(j.nome)}</b><small>${esc((j.clube&&j.clube.nome)||'—')} · ${CAIXA_NOME[c]||c}${j.idade?' · '+j.idade+' anos':''}${j.ss&&j.ss.nac?' · '+esc(j.ss.nac):''}</small></div>
+          <div class="n">${ja?'<b style="font-size:12px">já está</b>no planejamento':`<a href="#" onclick="event.stopPropagation();ctGoogle(${esc(JSON.stringify(j.nome+' '+((j.clube&&j.clube.nome)||'')))});return false" style="color:var(--txt2)">Google ↗</a>`}</div></div>`; }).join('');
+  }).join('');
+  r.innerHTML=blocos||`<div class="vaz">Nenhum jogador deste setor na Main, Backup ou Youth List.</div>`;
+}
+async function ctObs(d){
+  if(d.id) return ctEscolher({id:d.id,nome:d.nome,clube:d.clube});
+  CT.aba='busca'; CT.q=d.nome; janelaContratar();   // sem o SofaScore ligado: procura pelo nome
 }
 let SCOUT_LISTA=null;
 const IND_SETOR={'1':'GOL','2':'LAT','3':'LAT','4':'ZAG','5':'VOL','6':'MEI','7':'MEI','8':'PON','9':'ATA'};
