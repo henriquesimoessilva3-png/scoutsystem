@@ -565,7 +565,7 @@ function ctMao(){
    cinza = a definir. Vagas "Contratação" e "Base" marcadas por posição (P.vagas). */
 const ZONAS=[['GOL','Goleiros'],['ZAG','Zagueiros'],['LE','Lateral esquerdo'],['LD','Lateral direito'],['VOL','Volantes'],['MC','Meio-campistas'],['MO','Meias ofensivos'],['PE','Ponta esquerda'],['PD','Ponta direita'],['ATA','Atacantes']];
 // col = coluna em pé (x fixo, centrada em y) · row = linha deitada (y fixo, centrada em x)
-const ZONA_POS={GOL:['col',5.5,50],ZAG:['col',21,50],LE:['row',27,8],LD:['row',27,92],VOL:['col',36,50],MC:['col',50,50],MO:['col',64,50],PE:['row',73,8],PD:['row',73,92],ATA:['col',92,50]};
+const ZONA_POS={GOL:['col',5.5,50],ZAG:['col',21,50],LE:['row',27,8],LD:['row',27,92],VOL:['col',36,50],MC:['col',50,50],MO:['col',64,50],PE:['row',71,8],PD:['row',71,92],ATA:['col',93,50]};
 const BANDEIRA=a=>a&&a.length===2&&a.toUpperCase()!=='BR'?String.fromCodePoint(...[...a.toUpperCase()].map(c=>127397+c.charCodeAt(0))):'';
 function zonaDe(j){
   if(j.campo) return j.campo;
@@ -599,14 +599,17 @@ function telaCampograma(){
       .map(j=>({j})).concat(Array.from({length:((P.vagas||{})[z]||{}).contratacao||0},()=>({vaga:'contratacao'})),Array.from({length:((P.vagas||{})[z]||{}).base||0},()=>({vaga:'base'})));
     const [tipo,x,y]=ZONA_POS[z], n=L.length;
     if(tipo==='col'){
-      const cols=n>7?2:1, porCol=Math.ceil(n/cols), passo=Math.min(12.5,84/Math.max(porCol,1));
+      const cols=n>7?2:1, porCol=Math.ceil(n/cols), passo=Math.min(12.5,66/Math.max(porCol-1,1));
       L.forEach((it,i)=>{ const c=Math.floor(i/porCol), r=i%porCol, nn=c<cols-1?porCol:n-porCol*(cols-1);
         itens.push({...it,z,x:x+(cols>1?(c?3.6:-3.6):0),y:y+(r-(nn-1)/2)*passo}); });
     } else {
       const passo=Math.min(7.2,40/Math.max(n,1));
       L.forEach((it,i)=>itens.push({...it,z,x:x+(i-(n-1)/2)*passo,y}));
     }
-    itens.push({add:z,x:tipo==='col'?x:x+((n+1)/2)*Math.min(7.2,40/Math.max(n,1))+1,y:tipo==='col'?Math.min(97,y+((Math.min(n,7)+1)/2)*Math.min(12.5,84/Math.max(Math.min(n,7),1))):y});
+    // botão "+" (vaga): na coluna, ao lado do primeiro jogador; na linha, no fim dela
+    if(tipo==='col'){ const cols=n>7?2:1, porCol=Math.max(1,Math.ceil(n/cols)), passo=Math.min(12.5,66/Math.max(porCol-1,1));
+      itens.push({add:z,x:x+(cols>1?7.2:3.8),y:n?y-((porCol-1)/2)*passo:y}); }
+    else itens.push({add:z,x:x+(n?((n-1)/2)*Math.min(7.2,40/Math.max(n,1))+4.2:0),y});
   });
   const html=itens.map(it=>{
     if(it.add) return `<button class="cg-add" style="left:${it.x}%;top:${it.y}%" onclick="menuVaga(event,'${it.add}')" title="Marcar vaga de contratação ou de base">＋</button>`;
