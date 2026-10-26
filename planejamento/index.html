@@ -88,7 +88,8 @@ main{padding:4px 16px 40px;max-width:1500px;margin:0 auto}
 .jan h3{font-family:var(--cond);font-size:26px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;display:flex;align-items:center;gap:10px}
 .jan h3 span{color:var(--gold)}
 .jan .x{margin-left:auto;background:none;border:0;color:var(--txt2);font-size:22px;cursor:pointer}
-.abas{display:flex;gap:6px;margin:10px 0}
+.abas{display:flex;gap:6px;margin:10px 0;flex-wrap:wrap}
+.abas button{white-space:nowrap}
 .abas button{background:var(--ink3);border:1px solid var(--line);color:var(--txt2);padding:5px 11px;border-radius:999px;cursor:pointer;font-weight:600;font-size:12px}
 .abas button.on{background:var(--gold);border-color:var(--gold);color:var(--ink)}
 .linha{display:flex;gap:8px;margin-bottom:8px}
@@ -159,7 +160,7 @@ const LIGAS=[[325,'Brasileirão Série A'],[390,'Brasileirão Série B'],[155,'A
 const SETORES=[['GOL','Goleiros'],['LAT','Laterais'],['ZAG','Zagueiros'],['VOL','Volantes'],['MEI','Meias'],['PON','Pontas'],['ATA','Atacantes']];
 const NOME_SETOR=Object.fromEntries(SETORES);
 const POS_PT={GK:'GOL',DL:'LE',DR:'LD',DC:'ZAG',DM:'VOL',MC:'MC',AM:'MEI',ML:'ME',MR:'MD',LW:'PE',RW:'PD',ST:'CA',WBL:'LE',WBR:'LD',CF:'CA',SS:'SA',LM:'ME',RM:'MD',CB:'ZAG',LB:'LE',RB:'LD',CM:'MC',CDM:'VOL',CAM:'MEI'};
-const SAIDAS=[['venda','Venda'],['emprestimo','Emprést.'],['fim','Fim ctr.']];
+const SAIDAS=[['venda','Venda'],['emprestimo','Emprést.'],['fim','Fim']];
 
 let db=null, TIME=null, P={elenco:{}}, ABA='elenco', REF=null, LIGA=325, TIMES={}, FOTOS={}, EXT=false;
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -374,7 +375,7 @@ const SOFA_POS={GOL:'G',LAT:'D',ZAG:'D',VOL:'M',MEI:'M',PON:'F',ATA:'F'};
 function contratar(s){ CT={setor:s,aba:'listas'}; janelaContratar(); }
 function janelaContratar(){
   const c=document.getElementById('camada');
-  const abas=[['listas','Sugestões das listas'],['busca','Buscar (SofaScore e Google)'],['liga','Mais minutos na liga'],['scout','Indicados e Debatidos'],['mao','À mão']];
+  const abas=[['listas','⭐ Main · Backup · Youth'],['busca','Buscar'],['liga','Minutos na liga'],['scout','Indicados'],['mao','À mão']];
   c.innerHTML=`<div class="fundo" onclick="if(event.target===this)fecharPop()"><div class="jan">
     <h3>Contratar · <span>${NOME_SETOR[CT.setor]}</span><button class="x" onclick="fecharPop()">×</button></h3>
     <div class="abas">${abas.map(([a,n])=>`<button class="${CT.aba===a?'on':''}" onclick="CT.aba='${a}';janelaContratar()">${n}</button>`).join('')}</div>
