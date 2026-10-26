@@ -75,6 +75,7 @@ main{padding:4px 16px 40px;max-width:1500px;margin:0 auto}
 .tipos button.on{background:#7a2b2b;color:#fff}
 .card.novo{border:2px dashed #4a4e59;background:transparent;align-items:center;justify-content:center;cursor:pointer;color:var(--txt3);min-height:200px;font-weight:700;letter-spacing:.08em;font-size:11px;gap:8px}
 .card.novo:hover{border-color:var(--gold);color:var(--gold)}
+.card.novo.inc{min-height:0;height:auto;padding:10px 4px;font-size:10px;text-align:center;border-color:#3a3d46}
 .card.novo i{font-style:normal;font-size:30px;line-height:1}
 /* menu do card */
 .pop{position:fixed;z-index:80;background:#fff;color:#17181c;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.45);padding:6px;min-width:190px;font-size:12.5px}
@@ -297,6 +298,30 @@ async function importarElenco(auto){
     log(auto?'':`✓ elenco atualizado (${ps.length} jogadores${novos?', '+novos+' novos':''})`);
   }catch(e){ log('⚠ '+e.message); if(!auto) alert('Não deu para buscar o elenco: '+e.message); }
 }
+/* Elenco atual = jogadores que aparecem na página do clube no Wyscout (pedido do Henrique, 26/10).
+   lista: [{nome:'N. Ferraresi', ano:1998, grupo:'DEF'|'GKP'|'MID'|'FWD'|'', jogos}] — casa com o SofaScore por
+   sobrenome + ano de nascimento (+ inicial). Quem só está no SofaScore sai do elenco atual (dá para voltar);
+   quem só está no Wyscout entra à mão. */
+const semAc=t=>String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9 .]/g,' ').replace(/\s+/g,' ').trim();
+async function aplicarWyscout(lista){
+  const sofaJ=Object.values(P.elenco||{}).filter(j=>j.origem!=='chegada'&&/^\d+$/.test(String(j.id))&&!j.incluidoAMao);
+  const usados=new Set(), casou={}, faltam=[];
+  for(const w of lista){
+    const tk=semAc(w.nome).replace(/\./g,' ').split(' ').filter(Boolean), ult=tk[tk.length-1], ini=tk.length>1&&tk[0].length===1?tk[0]:'';
+    let c=sofaJ.filter(j=>!usados.has(String(j.id))&&String(j.nasc||'').slice(0,4)==String(w.ano)&&semAc(j.nome).split(' ').includes(ult));
+    if(c.length>1&&ini) c=c.filter(j=>semAc(j.nome).split(' ').some(t=>t.startsWith(ini)));
+    if(c.length>1&&tk.length===1) c=c.filter(j=>semAc(j.nome).split(' ')[0]===ult);
+    if(c.length===1){ usados.add(String(c[0].id)); casou[c[0].id]=w; } else faltam.push(w);
+  }
+  const upd={}, SET={GKP:'GOL',DEF:'ZAG',MID:'MEI',FWD:'ATA'};
+  sofaJ.forEach(j=>{ const k=String(j.id); if(casou[k]){ upd[`elenco/${k}/removido`]=null; upd[`elenco/${k}/foraWyscout`]=null; upd[`elenco/${k}/wy`]={nome:casou[k].nome,jogos:casou[k].jogos||0}; }
+    else { upd[`elenco/${k}/removido`]=true; upd[`elenco/${k}/foraWyscout`]=true; } });
+  faltam.forEach((w,i)=>{ const id='w'+semAc(w.nome).replace(/[^a-z0-9]/g,'')+w.ano; if(P.elenco[id]) return;
+    upd['elenco/'+id]={id,nome:w.nome,setor:SET[w.grupo]||'MEI',origem:'elenco',nasc:w.ano?w.ano+'-07-01':'',posDet:[],valor:0,manual:true,soWyscout:true,wy:{nome:w.nome,jogos:w.jogos||0}}; });
+  upd.wyscout={em:new Date().toISOString(),total:lista.length,casados:Object.keys(casou).length,soWyscout:faltam.map(w=>w.nome)};
+  await db.ref('planejador/'+TIME.id).update(upd);
+  return {casados:Object.keys(casou).length,soWyscout:faltam.map(w=>w.nome+' ('+w.ano+')'),foraWyscout:sofaJ.filter(j=>!casou[j.id]).map(j=>j.nome)};
+}
 function recomecar(){
   if(!confirm(`Apagar todas as decisões do ${TIME?.nome||'clube'} (fica, sai, chegadas, apelidos, mudanças de setor e escalação)? Vale para a equipe toda.`)) return;
   if(db) db.ref('planejador/'+TIME.id).remove().then(()=>importarElenco(true)); else { P={elenco:{}}; importarElenco(true); }
@@ -315,7 +340,7 @@ function menu(ev,k){
     <div class="t">Mover para</div>
     ${SETORES.filter(([s])=>s!==j.setor).map(([s,n])=>`<button onclick="mover('${k}','${s}')">${n}</button>`).join('')}
     <div class="t"></div>
-    ${j.origem==='chegada'?`<button class="vm" onclick="tirar('${k}')">✕ Desfazer contratação</button>`:`<button class="vm" onclick="tirar('${k}')">Não está mais no clube</button>`}
+    ${j.origem==='chegada'?`<button class="vm" onclick="tirar('${k}')">✕ Desfazer contratação</button>`:`<button class="vm" onclick="tirar('${k}')">✕ Excluir do elenco atual</button>`}
   </div>`;
   setTimeout(()=>document.addEventListener('click',fecharPop,{once:true}),0);
 }
@@ -335,7 +360,7 @@ function contagem(){
 function cabecalho(){
   const c=contagem(), esc_=fotoTime(TIME?.id);
   return `<div class="clube">${esc_?`<img src="${esc_}" alt="">`:''}<div><h1>${esc(TIME?.nome||P.clube||'')} <span>${ANO}</span></h1>
-    <div class="sub">${esc((LIGAS.find(l=>l[0]===LIGA)||[])[1]||'')} · elenco atual com <b>${c.atual}</b> jogadores${P.atualizado?' · SofaScore em '+new Date(P.atualizado).toLocaleDateString('pt-BR'):''}</div></div>
+    <div class="sub">${esc((LIGAS.find(l=>l[0]===LIGA)||[])[1]||'')} · elenco atual com <b>${c.atual}</b> jogadores${P.wyscout?' (lista do Wyscout de '+new Date(P.wyscout.em).toLocaleDateString('pt-BR')+')':''}${P.atualizado?' · SofaScore em '+new Date(P.atualizado).toLocaleDateString('pt-BR'):''}</div></div>
     <div class="conts"><div class="cont f"><b>${c.fica}</b><small>Ficam</small></div><div class="cont s"><b>${c.sai}</b><small>Saem</small></div>
     <div class="cont c"><b>${c.chega}</b><small>Chegam</small></div><div class="cont d"><b>${c.def}</b><small>A definir</small></div>
     <div class="cont t"><b>${c.total}</b><small>Elenco ${ANO}</small></div></div></div>`;
@@ -365,19 +390,28 @@ function telaElenco(){
     const g=js.filter(j=>(j.setor||'MEI')===s).sort(ordem);
     const sai=g.filter(j=>status(j)==='sai').length, ch=g.filter(j=>status(j)==='chega').length, atual=g.length-ch;
     return `<section class="setor"><div class="setor-cab"><h2>${n}</h2><span class="q">hoje <b>${atual}</b>${sai?` · saem <b style="color:var(--sai)">${sai}</b>`:''}${ch?` · chegam <b style="color:var(--chega)">${ch}</b>`:''} · em ${ANO} <b>${g.length-sai}</b></span></div>
-      <div class="cards">${g.map(cardJog).join('')}<div class="card novo" onclick="contratar('${s}')"><i>＋</i>CONTRATAR</div></div></section>`;
-  }).join('');
+      <div class="cards">${g.map(cardJog).join('')}<div class="card novo" onclick="contratar('${s}')"><i>＋</i>CONTRATAR</div><div class="card novo inc" onclick="contratar('${s}','elenco')" title="Jogador que já é do clube e não apareceu na lista"><i>＋</i>INCLUIR NO<br>ELENCO ATUAL</div></div></section>`;
+  }).join('')+telaExcluidos();
 }
+function telaExcluidos(){
+  const ex=Object.values(P.elenco||{}).filter(j=>j.removido&&j.origem!=='chegada').sort((a,b)=>nomeDe(a).localeCompare(nomeDe(b)));
+  if(!ex.length) return '';
+  return `<section class="setor"><details><summary class="setor-cab" style="cursor:pointer;list-style:none"><h2 style="color:var(--txt2)">Fora do elenco atual</h2><span class="q"><b>${ex.length}</b> jogadores excluídos${P.wyscout?' · o elenco atual segue a lista do Wyscout de '+new Date(P.wyscout.em).toLocaleDateString('pt-BR'):''} · clique para ver</span></summary>
+    <div class="cards">${ex.map(j=>{ const f=fotoJog(j.id); return `<div class="card" style="opacity:.75">${f?`<img class="ft" src="${f}" alt="">`:`<div class="ft">${iniciais(nomeDe(j))}</div>`}
+      <div class="nm">${esc(nomeDe(j))}</div><div class="dt">${esc(NOME_SETOR[j.setor]||'')}${j.nasc?' · '+idade(j.nasc)+' anos':''}</div><div class="ct">${j.foraWyscout?'não está no Wyscout':'excluído à mão'}</div>
+      <div class="acoes"><button onclick="voltar('${j.id}')">↺ Voltar ao elenco</button></div></div>`; }).join('')}</div></details></section>`;
+}
+function voltar(k){ gravar(`elenco/${k}/removido`,null); gravar(`elenco/${k}/foraWyscout`,null); }
 
 /* ═══ contratar ═══ */
 let CT={setor:'GOL',aba:'listas'};
 const SOFA_POS={GOL:'G',LAT:'D',ZAG:'D',VOL:'M',MEI:'M',PON:'F',ATA:'F'};
-function contratar(s){ CT={setor:s,aba:'listas'}; janelaContratar(); }
+function contratar(s,modo){ CT={setor:s,aba:modo==='elenco'?'busca':'listas',modo:modo||'chegada'}; janelaContratar(); }
 function janelaContratar(){
   const c=document.getElementById('camada');
   const abas=[['listas','⭐ Main · Backup · Youth'],['busca','Buscar'],['liga','Minutos na liga'],['scout','Indicados'],['mao','À mão']];
   c.innerHTML=`<div class="fundo" onclick="if(event.target===this)fecharPop()"><div class="jan">
-    <h3>Contratar · <span>${NOME_SETOR[CT.setor]}</span><button class="x" onclick="fecharPop()">×</button></h3>
+    <h3>${CT.modo==='elenco'?'Incluir no elenco atual':'Contratar'} · <span>${NOME_SETOR[CT.setor]}</span><button class="x" onclick="fecharPop()">×</button></h3>
     <div class="abas">${abas.map(([a,n])=>`<button class="${CT.aba===a?'on':''}" onclick="CT.aba='${a}';janelaContratar()">${n}</button>`).join('')}</div>
     <div id="ctCorpo"></div></div></div>`;
   const b=document.getElementById('ctCorpo');
@@ -481,8 +515,10 @@ async function ctScout(f){
   r.innerHTML=L.length?L.map(x=>`<div class="it" onclick="CT.aba='busca';CT.q=${esc(JSON.stringify(x.nome))};janelaContratar()"><div class="sem"></div><div class="q"><b>${esc(x.nome)}</b><small>${esc(x.clube||'—')}${x.ger?' · geração '+esc(x.ger):''} · ${x.orig}</small></div><div class="n">buscar no<br>SofaScore →</div></div>`).join(''):'<div class="vaz">Nenhum indicado deste setor. Digite um nome para procurar em todos.</div>';
 }
 async function ctEscolher(p){
-  if(P.elenco[p.id]&&!P.elenco[p.id].removido){ alert(`${p.nome} já está no planejamento.`); return; }
-  const reg={id:p.id,nome:p.nome,setor:CT.setor,origem:'chegada',clubeOrigem:p.clube||'',nasc:p.nasc||'',posDet:[],valor:0,criadoEm:new Date().toISOString()};
+  const ant=P.elenco[p.id];
+  if(ant&&!ant.removido){ alert(`${p.nome} já está no planejamento.`); return; }
+  if(ant&&ant.removido&&ant.origem!=='chegada'&&CT.modo==='elenco'){ fecharPop(); voltar(p.id); return; }
+  const reg={id:p.id,nome:p.nome,setor:CT.setor,origem:CT.modo==='elenco'?'elenco':'chegada',incluidoAMao:CT.modo==='elenco'||null,clubeOrigem:p.clube||'',nasc:p.nasc||'',posDet:[],valor:0,criadoEm:new Date().toISOString()};
   fecharPop();
   if(/^\d+$/.test(p.id)&&EXT){ try{ const d=(await sofa('/player/'+p.id)).player; reg.posDet=d.positionsDetailed||[]; reg.nasc=d.dateOfBirthTimestamp?isoTs(d.dateOfBirthTimestamp):reg.nasc; reg.contrato=d.contractUntilTimestamp?isoTs(d.contractUntilTimestamp):''; reg.valor=d.proposedMarketValue||0; reg.clubeOrigem=d.team?.name||reg.clubeOrigem; }catch(e){} }
   await gravar('elenco/'+p.id,reg);
@@ -490,7 +526,7 @@ async function ctEscolher(p){
 function ctMao(){
   const g=id=>document.getElementById(id).value.trim(); const nome=g('mNome'); if(!nome){ alert('Informe o nome.'); return; }
   const id='m'+Date.now().toString(36);
-  gravar('elenco/'+id,{id,nome,setor:g('mSetor'),origem:'chegada',clubeOrigem:g('mClube'),nasc:g('mNasc'),posDet:g('mPos')?[g('mPos').toUpperCase()]:[],valor:0,manual:true,criadoEm:new Date().toISOString()});
+  gravar('elenco/'+id,{id,nome,setor:g('mSetor'),origem:CT.modo==='elenco'?'elenco':'chegada',clubeOrigem:g('mClube'),nasc:g('mNasc'),posDet:g('mPos')?[g('mPos').toUpperCase()]:[],valor:0,manual:true,criadoEm:new Date().toISOString()});
   fecharPop();
 }
 
