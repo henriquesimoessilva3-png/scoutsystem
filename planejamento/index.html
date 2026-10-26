@@ -71,7 +71,7 @@ main{padding:4px 16px 40px;max-width:1500px;margin:0 auto}
 .acoes button.f.on{background:var(--fica);border-color:var(--fica);color:#fff}
 .acoes button.s.on{background:var(--sai);border-color:var(--sai);color:#fff}
 .tipos{display:flex;gap:3px;padding:0 6px 6px}
-.tipos button{flex:1;border:1px solid #5a2a2a;background:transparent;color:#e3a3a3;border-radius:5px;padding:2px 0;font-size:9.5px;font-weight:700;cursor:pointer;text-transform:uppercase}
+.tipos button{flex:1;min-width:0;letter-spacing:-.2px;border:1px solid #5a2a2a;background:transparent;color:#e3a3a3;border-radius:5px;padding:2px 0;font-size:9.5px;font-weight:700;cursor:pointer;text-transform:uppercase}
 .tipos button.on{background:#7a2b2b;color:#fff}
 .card.novo{border:2px dashed #4a4e59;background:transparent;align-items:center;justify-content:center;cursor:pointer;color:var(--txt3);min-height:200px;font-weight:700;letter-spacing:.08em;font-size:11px;gap:8px}
 .card.novo:hover{border-color:var(--gold);color:var(--gold)}
@@ -159,7 +159,7 @@ const LIGAS=[[325,'Brasileirão Série A'],[390,'Brasileirão Série B'],[155,'A
 const SETORES=[['GOL','Goleiros'],['LAT','Laterais'],['ZAG','Zagueiros'],['VOL','Volantes'],['MEI','Meias'],['PON','Pontas'],['ATA','Atacantes']];
 const NOME_SETOR=Object.fromEntries(SETORES);
 const POS_PT={GK:'GOL',DL:'LE',DR:'LD',DC:'ZAG',DM:'VOL',MC:'MC',AM:'MEI',ML:'ME',MR:'MD',LW:'PE',RW:'PD',ST:'CA',WBL:'LE',WBR:'LD',CF:'CA',SS:'SA',LM:'ME',RM:'MD',CB:'ZAG',LB:'LE',RB:'LD',CM:'MC',CDM:'VOL',CAM:'MEI'};
-const SAIDAS=[['venda','Venda'],['emprestimo','Empréstimo'],['fim','Fim contrato']];
+const SAIDAS=[['venda','Venda'],['emprestimo','Emprést.'],['fim','Fim ctr.']];
 
 let db=null, TIME=null, P={elenco:{}}, ABA='elenco', REF=null, LIGA=325, TIMES={}, FOTOS={}, EXT=false;
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -356,7 +356,7 @@ function cardJog(j){
       ${s==='sai'?`<div class="tipos">${SAIDAS.map(([t,n])=>`<button class="${(j.saida||'venda')===t?'on':''}" onclick="tipoSaida('${k}','${t}')">${n}</button>`).join('')}</div>`:''}`}
   </div>`;
 }
-function ordem(a,b){ const o={chega:0,fica:1,'':2,sai:3}; return (o[status(a)]-o[status(b)])||((b.valor||0)-(a.valor||0)); }
+function ordem(a,b){ return ((a.origem==='chegada')-(b.origem==='chegada'))||((b.valor||0)-(a.valor||0))||nomeDe(a).localeCompare(nomeDe(b)); }
 function telaElenco(){
   const js=jogadores();
   if(!js.length) return cabecalho()+`<div class="vaz">${EXT?'Buscando o elenco no SofaScore…':'Sem elenco salvo para este clube. Instale a extensão para buscar no SofaScore.'}</div>`;
@@ -423,6 +423,13 @@ async function ctLiga(){
 }
 let SCOUT_LISTA=null;
 const IND_SETOR={'1':'GOL','2':'LAT','3':'LAT','4':'ZAG','5':'VOL','6':'MEI','7':'MEI','8':'PON','9':'ATA'};
+function setorIndicado(x){
+  const c=String(x.posicao||'').trim()[0]; if(IND_SETOR[c]) return IND_SETOR[c];
+  const t=String(x.posicao||x.posicaoText||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  if(/goleir|\bgk\b/.test(t)) return 'GOL'; if(/lateral|\b(lb|rb|ld|le)\b/.test(t)) return 'LAT'; if(/zag|\bcb\b/.test(t)) return 'ZAG';
+  if(/volan|\bdm\b/.test(t)) return 'VOL'; if(/extrem|ponta|\b(rw|lw)\b/.test(t)) return 'PON'; if(/meia|medio|meio|\b(cm|am)\b/.test(t)) return 'MEI';
+  if(/ataca|centroav|\b(cf|st)\b/.test(t)) return 'ATA'; return '';
+}
 async function ctScout(f){
   const r=document.getElementById('ctRes');
   if(!SCOUT_LISTA){
@@ -430,10 +437,11 @@ async function ctScout(f){
     if(db){ const [a,b]=await Promise.all([db.ref('ind_jog').once('value'),db.ref('deb_jog').once('value')]);
       const vistos=new Set();
       [[a.val()||{},'Indicado'],[b.val()||{},'Debatido']].forEach(([o,orig])=>Object.values(o).forEach(x=>{ if(!x||!x.nome) return; const k=(x.nome+'|'+(x.geracao||'')).toLowerCase(); if(vistos.has(k)) return; vistos.add(k);
-        SCOUT_LISTA.push({nome:x.nome,clube:x.clube||'',ger:x.geracao||'',setor:IND_SETOR[String(x.posicao||'').trim()[0]]||'',orig,data:x.data||''}); })); }
+        SCOUT_LISTA.push({nome:x.nome,clube:x.clube||'',ger:x.geracao||'',setor:setorIndicado(x),orig,data:x.data||''}); }));
+      SCOUT_LISTA.sort((a,b)=>String(b.data).localeCompare(String(a.data))); }
   }
-  const fl=f.toLowerCase(); const L=SCOUT_LISTA.filter(x=>(!x.setor||x.setor===CT.setor)&&(!fl||(x.nome+' '+x.clube).toLowerCase().includes(fl))).slice(0,80);
-  r.innerHTML=L.length?L.map(x=>`<div class="it" onclick="CT.aba='busca';CT.q=${esc(JSON.stringify(x.nome))};janelaContratar()"><div class="sem"></div><div class="q"><b>${esc(x.nome)}</b><small>${esc(x.clube||'—')}${x.ger?' · geração '+esc(x.ger):''} · ${x.orig}</small></div><div class="n">buscar no<br>SofaScore →</div></div>`).join(''):'<div class="vaz">Nenhum indicado deste setor.</div>';
+  const fl=f.toLowerCase(); const L=SCOUT_LISTA.filter(x=>(fl?(x.nome+' '+x.clube).toLowerCase().includes(fl):x.setor===CT.setor)).slice(0,80);
+  r.innerHTML=L.length?L.map(x=>`<div class="it" onclick="CT.aba='busca';CT.q=${esc(JSON.stringify(x.nome))};janelaContratar()"><div class="sem"></div><div class="q"><b>${esc(x.nome)}</b><small>${esc(x.clube||'—')}${x.ger?' · geração '+esc(x.ger):''} · ${x.orig}</small></div><div class="n">buscar no<br>SofaScore →</div></div>`).join(''):'<div class="vaz">Nenhum indicado deste setor. Digite um nome para procurar em todos.</div>';
 }
 async function ctEscolher(p){
   if(P.elenco[p.id]&&!P.elenco[p.id].removido){ alert(`${p.nome} já está no planejamento.`); return; }
