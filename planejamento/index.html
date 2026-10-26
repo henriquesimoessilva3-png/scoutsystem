@@ -305,6 +305,7 @@ async function importarElenco(auto){
 const semAc=t=>String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9 .]/g,' ').replace(/\s+/g,' ').trim();
 async function aplicarWyscout(lista){
   const sofaJ=Object.values(P.elenco||{}).filter(j=>j.origem!=='chegada'&&/^\d+$/.test(String(j.id))&&!j.incluidoAMao);
+  if(sofaJ.length<10) throw new Error('o elenco do SofaScore ainda não carregou: espere a página abrir e tente de novo');
   const usados=new Set(), casou={}, faltam=[];
   for(const w of lista){
     const tk=semAc(w.nome).replace(/\./g,' ').split(' ').filter(Boolean), ult=tk[tk.length-1], ini=tk.length>1&&tk[0].length===1?tk[0]:'';
