@@ -37,7 +37,7 @@ button,select,input{font:inherit}
 .aviso{background:#3a3214;color:#f3e3a0;border-bottom:1px solid #5a4c1c;padding:7px 16px;font-size:12.5px}
 .aviso a{color:var(--gold)}
 #log{color:var(--txt3);font-size:11.5px;padding:3px 16px;min-height:20px}
-main{padding:4px 16px 40px;max-width:1500px;margin:0 auto}
+main{padding:4px 16px 40px;max-width:1900px;margin:0 auto}
 /* cabeçalho do clube */
 .clube{display:flex;align-items:center;gap:14px;margin:6px 0 12px;flex-wrap:wrap}
 .clube img{width:58px;height:58px;object-fit:contain}
@@ -142,8 +142,8 @@ main{padding:4px 16px 40px;max-width:1500px;margin:0 auto}
 .cg-leg i.fica{border-color:#1f9d55}.cg-leg i.sai{border-color:#d64545;background:#f3c1bd}.cg-leg i.chega{border-color:#d4ad1f;background:#fbf0c4}.cg-leg i.def{border-color:#9aa0ab}
 .cg-leg i.vc{border-color:#2f6fd0;background:#3b7fe0}.cg-leg i.vb{border-color:#2f8a3a;background:#3a9a46}
 #cgWrap{overflow-x:auto}
-#cg{min-width:760px;width:min(100%,calc((100vh - 125px) * 1.62));margin:0 auto;background:#e9ede6;border-radius:12px;padding:12px 12px 8px}
-.cg-campo{position:relative;width:100%;aspect-ratio:16/9.4;border:2px solid #fff;border-radius:6px;background:linear-gradient(135deg,#dfe6dc,#eef1ea 40%,#dfe6dc);overflow:hidden}
+#cg{min-width:760px;width:min(100%,calc((100vh - 125px) * 1.95));margin:0 auto;background:#e9ede6;border-radius:12px;padding:12px 12px 8px}
+.cg-campo{position:relative;width:100%;aspect-ratio:16/8.2;border:2px solid #fff;border-radius:6px;background:linear-gradient(135deg,#dfe6dc,#eef1ea 40%,#dfe6dc);overflow:hidden}
 .cg-campo .l{position:absolute;border:2px solid rgba(255,255,255,.95)}
 .cg-j{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;width:96px;max-width:110px;pointer-events:auto}
 .cg-f{position:relative;width:42px;height:42px;border-radius:50%;background:#fff;border:3px solid #9aa0ab;overflow:visible;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 5px rgba(0,0,0,.18)}
@@ -448,7 +448,7 @@ function cabecalho(){
     <div class="sub">${esc((LIGAS.find(l=>l[0]===LIGA)||[])[1]||'')} · elenco atual com <b>${c.atual}</b> jogadores${P.wyscout?' (lista do Wyscout de '+new Date(P.wyscout.em).toLocaleDateString('pt-BR')+')':''}${P.atualizado?' · SofaScore em '+new Date(P.atualizado).toLocaleDateString('pt-BR'):''}</div></div>
     <div class="conts"><div class="cont f"><b>${c.fica}</b><small>Ficam</small></div><div class="cont s"><b>${c.sai}</b><small>Saem</small></div>
     <div class="cont c"><b>${c.chega}</b><small>Chegam</small></div><div class="cont d"><b>${c.def}</b><small>A definir</small></div>
-    <div class="cont t"><b>${c.total}</b><small>Elenco ${ANO}</small></div></div></div>${P.visaoAberta?`<div style="margin:-6px 0 10px;color:var(--gold);font-size:12px">📂 Visão aberta: <b>${esc(P.visaoAberta.nome)}</b> (mudanças feitas depois não alteram a visão salva — use "Atualizar" em 💾 Visões)</div>`:''}
+    <div class="cont t"><b>${c.total}</b><small>Elenco ${ANO}</small></div></div></div>${P.visaoAberta?`<div style="margin:-6px 0 10px;color:var(--gold);font-size:12px">📂 Visão aberta: <b>${esc(P.visaoAberta.nome)}</b> (mudanças feitas depois não alteram a visão salva — use "Atualizar" em 💾 Visões)</div>`:''}`;
 }
 function cardJog(j){
   const k=String(j.id), s=status(j), f=fotoJog(j.id), ida=idade(j.nasc);
