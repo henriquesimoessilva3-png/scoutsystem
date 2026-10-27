@@ -76,6 +76,9 @@ body.campo main{max-width:none;padding:6px 10px 6px}
 .acoes button{flex:1;border:1px solid var(--line);background:var(--ink2);color:var(--txt2);border-radius:6px;padding:4px 0;font-size:11px;font-weight:700;cursor:pointer}
 .acoes button.f.on{background:var(--fica);border-color:var(--fica);color:#fff}
 .acoes button.s.on{background:var(--sai);border-color:var(--sai);color:#fff}
+.barra{flex-wrap:nowrap}
+.barra .extra{flex-wrap:nowrap;white-space:nowrap;overflow:hidden}
+@media (max-width:1400px){#infoBanco{display:none}.cg-leg{gap:3px}}
 .tipos{display:flex;padding:0 6px 7px}
 .tipos select{width:100%;background:#4a1f1f;color:#ffd9d6;border:1px solid #7a2b2b;border-radius:6px;padding:4px 6px;font-size:11.5px;font-weight:700;cursor:pointer}
 .tipos button{flex:1;min-width:0;letter-spacing:-.2px;border:1px solid #5a2a2a;background:transparent;color:#e3a3a3;border-radius:5px;padding:2px 0;font-size:9.5px;font-weight:700;cursor:pointer;text-transform:uppercase}
@@ -165,7 +168,7 @@ body.campo main{max-width:none;padding:6px 10px 6px}
 .cg-ac button{border:1px solid #c9ccd4;background:#fff;color:#5b6070;border-radius:4px;font:700 10px/1 -apple-system,Arial,sans-serif;padding:3px 6px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.25)}
 .cg-ac button.f:hover,.cg-ac button.f.on{background:#1f9d55;border-color:#1f9d55;color:#fff}
 .cg-ac button.s:hover,.cg-ac button.s.on{background:#d64545;border-color:#d64545;color:#fff}
-.cg-tipo{margin-top:0;border:0;background:#d64545;color:#fff;border-radius:3px;font:700 8.5px/1 -apple-system,Arial,sans-serif;letter-spacing:.2px;padding:2px 4px;cursor:pointer;white-space:nowrap}
+.cg-tipo{margin-top:0;border:0;background:#d64545;color:#fff;border-radius:3px;font:700 8px/1 -apple-system,Arial,sans-serif;letter-spacing:.2px;padding:2px 4px;cursor:pointer;white-space:nowrap}
 #cg.foto .cg-tipo{cursor:default}
 #cg.foto .cg-ac{display:none}
 
@@ -735,7 +738,7 @@ function telaCampograma(){
   const js=jogadores().filter(j=>mostraSai||status(j)!=='sai');
   const por={}; ZONAS.forEach(([z])=>por[z]=[]);
   js.forEach(j=>por[zonaDe(j)].push(j));
-  const H=Math.max(480,innerHeight-120), fotoPx=pc=>Math.max(30,Math.min(54,Math.round(pc/100*H-40)));
+  const H=Math.max(480,innerHeight-120), fotoPx=pc=>Math.max(30,Math.min(54,Math.round(pc/100*H-32)));
   const itens=[];
   ZONAS.forEach(([z])=>{
     // atuais primeiro (ordem fixa: marcar fica/sai não muda o lugar), contratações depois, na ordem em que entraram
@@ -745,7 +748,7 @@ function telaCampograma(){
     if(tipo==='col'){
       const cols=n>7?2:1, porCol=Math.ceil(n/cols), passo=Math.min(13,72/Math.max(porCol-1,1));
       L.forEach((it,i)=>{ const c=Math.floor(i/porCol), r=i%porCol, nn=c<cols-1?porCol:n-porCol*(cols-1);
-        itens.push({...it,z,c2:cols>1,f:Math.min(cols>1?48:54,fotoPx(passo)),w:cols>1?7.5:11,x:x+(cols>1?(c?3.8:-3.8):0),y:y+(r-(nn-1)/2)*passo}); });
+        itens.push({...it,z,c2:cols>1,f:fotoPx(passo),w:cols>1?7.5:11,x:x+(cols>1?(c?3.8:-3.8):0),y:y+(r-(nn-1)/2)*passo}); });
     } else {
       const passo=Math.min(7.4,40/Math.max(n,1));
       L.forEach((it,i)=>itens.push({...it,z,f:54,w:passo*.96,x:x+(i-(n-1)/2)*passo,y}));
@@ -755,6 +758,7 @@ function telaCampograma(){
       itens.push({add:z,x:x+(cols>1?7.2:3.8),y:n?y-((porCol-1)/2)*passo:y}); }
     else itens.push({add:z,x:x+(n?((n-1)/2)*Math.min(7.4,40/Math.max(n,1))+4.6:0),y});
   });
+  const fUnico=Math.min(54,...itens.filter(i=>i.f).map(i=>i.f)); itens.forEach(i=>{ if(i.f) i.f=fUnico; });
   const html=itens.map(it=>{
  if(it.add) return `<button class="cg-add" data-z="${it.add}" ondragover="arrSobre(event)" ondragleave="this.classList.remove('alvo')" ondrop="arrSolta(event)" style="left:${it.x}%;top:${it.y}%" onclick="menuVaga(event,'${it.add}')" title="Marcar vaga de contratação ou de base">＋</button>`;
     if(it.vaga) return `<div class="cg-j" style="left:${it.x}%;top:${it.y}%;width:${it.w}%;--f:${it.f||54}px"><div class="cg-f vaga ${it.vaga}" onclick="vaga('${it.z}','${it.vaga}',-1)" title="Clique para tirar a vaga"></div><div class="cg-n">${it.vaga==='base'?'BASE':'CONTRATAÇÃO'}</div></div>`;
