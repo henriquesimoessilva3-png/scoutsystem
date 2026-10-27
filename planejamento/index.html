@@ -24,6 +24,9 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--ink);color:var(--txt);font:13px -apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased}
 button,select,input{font:inherit}
+.extra{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px}
+.extra:empty{display:none}
+.dica{cursor:help;color:var(--txt3);font-size:14px}
 .barra{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 16px;background:var(--ink2);border-bottom:1px solid var(--line)}
 .barra select{background:var(--ink3);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:6px 9px}
 .seg{display:flex;background:var(--ink3);border:1px solid var(--line);border-radius:9px;padding:3px}
@@ -36,9 +39,10 @@ button,select,input{font:inherit}
 .info{color:var(--txt3);font-size:11.5px}
 .aviso{background:#3a3214;color:#f3e3a0;border-bottom:1px solid #5a4c1c;padding:7px 16px;font-size:12.5px}
 .aviso a{color:var(--gold)}
-#log{color:var(--txt3);font-size:11.5px;padding:3px 16px;min-height:20px}
+#log{color:var(--txt3);font-size:11.5px;padding:3px 16px}
+#log:empty{display:none}
 main{padding:4px 16px 40px;max-width:1900px;margin:0 auto}
-body.campo main{max-width:none;padding:2px 10px 6px}
+body.campo main{max-width:none;padding:6px 10px 6px}
 /* cabeçalho do clube */
 .clube{display:flex;align-items:center;gap:14px;margin:6px 0 12px;flex-wrap:wrap}
 .clube img{width:58px;height:58px;object-fit:contain}
@@ -144,7 +148,7 @@ body.campo main{max-width:none;padding:2px 10px 6px}
 .cg-leg i.vc{border-color:#2f6fd0;background:#3b7fe0}.cg-leg i.vb{border-color:#2f8a3a;background:#3a9a46}
 #cgWrap{overflow-x:auto}
 #cg{min-width:760px;width:100%;margin:0 auto;background:#e9ede6;border-radius:12px;padding:12px 12px 8px}
-.cg-campo{position:relative;width:100%;height:calc(100vh - 150px);min-height:480px;border:2px solid #fff;border-radius:6px;background:linear-gradient(135deg,#dfe6dc,#eef1ea 40%,#dfe6dc);overflow:hidden}
+.cg-campo{position:relative;width:100%;height:calc(100vh - 100px);min-height:480px;border:2px solid #fff;border-radius:6px;background:linear-gradient(135deg,#dfe6dc,#eef1ea 40%,#dfe6dc);overflow:hidden}
 .cg-campo .l{position:absolute;border:2px solid rgba(255,255,255,.95)}
 .cg-j{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;width:96px;max-width:110px;pointer-events:auto}
 .cg-f{position:relative;width:42px;height:42px;border-radius:50%;background:#fff;border:3px solid #9aa0ab;overflow:visible;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 5px rgba(0,0,0,.18)}
@@ -182,11 +186,11 @@ body.campo main{max-width:none;padding:2px 10px 6px}
   <select id="selLiga" onchange="trocarLiga(this.value)"></select>
   <select id="selClube" onchange="trocarClube(this.value)"><option>carregando…</option></select>
   <div class="seg"><button id="abaE" class="on" onclick="aba('elenco')">Elenco</button><button id="abaC" onclick="aba('campo')">Campograma</button><button id="abaX" onclick="aba('esc')">Escalação</button></div>
+  <button class="btn ouro" onclick="janelaVisoes()" title="Salvar o cenário atual com um nome ou abrir um cenário salvo">💾 Visões</button>
+  <div id="barraExtra" class="extra"></div>
   <div class="dir">
-    <span class="info" id="infoBanco">conectando…</span>
-    <button class="btn ouro" onclick="janelaVisoes()" title="Salvar o cenário atual com um nome ou abrir um cenário salvo">💾 Visões</button>
-    <button class="btn" onclick="importarElenco(false)" title="Busca o elenco atual no SofaScore e acrescenta quem é novo. Não mexe nas decisões já marcadas.">↻ Elenco do SofaScore</button>
-    <button class="btn" onclick="recomecar()" title="Apaga as decisões (fica, sai, chegadas, apelidos) deste clube">Recomeçar</button>
+    <span class="info" id="infoBanco" title="conexão com o banco">conectando…</span>
+    <button class="btn" onclick="menuMais(event)" title="Mais opções">⋯</button>
   </div>
 </div>
 <div id="avisos"></div>
@@ -406,6 +410,13 @@ async function abrirVisao(id){
   fecharPop();
 }
 async function apagarVisao(id){ if(!confirm('Apagar esta visão? (o planejamento atual não muda)')) return; await db.ref(`planejador_visoes/${TIME.id}/${id}`).remove(); janelaVisoes(); }
+function menuMais(ev){
+  ev.stopPropagation(); const r=ev.currentTarget.getBoundingClientRect();
+  document.getElementById('camada').innerHTML=`<div class="pop" style="left:${Math.max(8,r.right-240)}px;top:${r.bottom+4}px;min-width:230px" onclick="event.stopPropagation()">
+    <button onclick="fecharPop();importarElenco(false)" title="Busca o elenco no SofaScore e acrescenta quem é novo. Não mexe nas decisões.">↻ Atualizar elenco do SofaScore</button>
+    <button class="vm" onclick="fecharPop();recomecar()">Recomeçar (apagar as decisões deste clube)</button></div>`;
+  setTimeout(()=>document.addEventListener('click',fecharPop,{once:true}),0);
+}
 function recomecar(){
   if(!confirm(`Apagar todas as decisões do ${TIME?.nome||'clube'} (fica, sai, chegadas, apelidos, mudanças de setor e escalação)? Vale para a equipe toda.`)) return;
   if(db) db.ref('planejador/'+TIME.id).remove().then(()=>importarElenco(true)); else { P={elenco:{}}; importarElenco(true); }
@@ -719,11 +730,11 @@ function telaCampograma(){
       <div class="cg-n">${esc(curto(nomeDe(j)))}${aa?` (${aa})`:''}</div>${s==='sai'?tipoCampo(j):''}</div>`;
   }).join('');
   const c=contagem(), esc_=fotoTime(TIME?.id);
-  return `<div class="cg-barra"><label class="chk" style="margin:0"><input type="checkbox" ${mostraSai?'checked':''} onchange="gravar('campoSai',this.checked)"> Mostrar quem sai</label>
+  document.getElementById('barraExtra').innerHTML=`<label class="chk" style="margin:0"><input type="checkbox" ${mostraSai?'checked':''} onchange="gravar('campoSai',this.checked)"> Mostrar quem sai</label>
       <span class="cg-leg"><i class="fica"></i>Fica <i class="sai"></i>Sai <i class="chega"></i>Chega <i class="def"></i>A definir <i class="vc"></i>Vaga de contratação <i class="vb"></i>Vaga da base</span>
-      <span style="color:var(--txt3);font-size:11.5px">Mouse: Fica/Sai · clique: posição/excluir · etiqueta: tipo de saída</span>
-      <button class="btn ouro" style="margin-left:auto" onclick="baixarCampograma()">⬇ Imagem</button></div>
-    <div id="cgWrap"><div id="cg"><div class="cg-campo">
+      <span class="dica" title="Mouse no jogador: Fica / Sai · clique no jogador: posição, apelido ou excluir · etiqueta vermelha: troca o tipo de saída · ＋: contratar ou marcar vaga">ⓘ</span>
+      <button class="btn" onclick="baixarCampograma()">⬇ Imagem</button>`;
+  return `<div id="cgWrap"><div id="cg"><div class="cg-campo">
       <div class="l" style="left:50%;top:0;bottom:0;border-width:0 0 0 2px"></div><div class="l" style="left:50%;top:50%;height:26%;aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%)"></div>
       <div class="l" style="left:0;top:22%;bottom:22%;width:15%;border-left:0"></div><div class="l" style="right:0;top:22%;bottom:22%;width:15%;border-right:0"></div>
       <div class="l" style="left:0;top:37%;bottom:37%;width:5%;border-left:0"></div><div class="l" style="right:0;top:37%;bottom:37%;width:5%;border-right:0"></div>
@@ -797,7 +808,7 @@ async function baixarImagem(){
   const a=document.createElement('a'); a.download=`${(TIME?.nome||'elenco').replace(/\s+/g,'_')}_${ANO}_${(P.esquema||'4-3-3')}.png`; a.href=c.toDataURL('image/png'); a.click();
 }
 
-function render(){ document.body.classList.toggle('campo',ABA==='campo'); document.getElementById('tela').innerHTML=ABA==='elenco'?telaElenco():ABA==='campo'?telaCampograma():telaEscalacao(); }
+function render(){ document.body.classList.toggle('campo',ABA==='campo'); document.getElementById('barraExtra').innerHTML=''; document.getElementById('tela').innerHTML=ABA==='elenco'?telaElenco():ABA==='campo'?telaCampograma():telaEscalacao(); }
 iniciar();
 </script>
 </body>

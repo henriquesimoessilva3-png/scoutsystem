@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="app-versao" content="2026-10-27 00:05"><!-- AO PUBLICAR MUDANÇA, TROQUE ESTA DATA-HORA: as abas abertas mostram o aviso de versão nova -->
+<meta name="app-versao" content="2026-10-27 00:20"><!-- AO PUBLICAR MUDANÇA, TROQUE ESTA DATA-HORA: as abas abertas mostram o aviso de versão nova -->
 <title>Scout System 2026</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
@@ -1303,11 +1303,11 @@ function renderNav(){
         <label class="nv-icon" title="Importar dados (JSON)">⬆<input type="file" accept=".json" style="display:none" onchange="importData(this)"></label>
       </div>
     </div>
-    <div class="nv-scouts">
+    ${['metas','listaobs','elenco','relatorio','salary'].includes(currentView)?'':`<div class="nv-scouts">
       <span class="nv-lbl">Scouts</span>
       ${SCOUTS.map(s=>{const c=SCOUT_COLORS[s]||{};const on=currentView==='scout_'+s;return `<button class="nv-chip${on?' active':''}" style="--sc:${c.btn||'#777'}" onclick="switchView('scout_${s.replace(/'/g,"\\'")}')"><i></i>${s}</button>`;}).join('')}
       <button class="nv-chip nv-add" onclick="openScoutModal()" title="Adicionar ou remover scouts">＋ Scout</button>
-    </div>`;
+    </div>`}`;
 }
 
 function switchView(id){currentView=id;renderNav();renderViews();}
