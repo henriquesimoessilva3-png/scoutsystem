@@ -169,11 +169,15 @@ body.campo main{max-width:none;padding:6px 10px 6px}
 #cg.foto .cg-ac{display:none}
 .cg-j.c2 .cg-f{width:48px;height:48px}
 .cg-j.c2 .cg-n{font-size:11px}
+.cg-j[draggable=true]{cursor:grab}
+.cg-j.arrastando{opacity:.35}
+.cg-j.alvo .cg-f{box-shadow:0 0 0 4px #e8c84a}
+.cg-add.alvo{border-color:#e8c84a;background:#fbf0c4}
 .cg-x{display:none;position:absolute;right:-8px;top:-8px;width:20px;height:20px;border-radius:50%;border:0;background:#d64545;color:#fff;font-size:14px;line-height:20px;font-weight:700;cursor:pointer;padding:0;z-index:3;box-shadow:0 1px 4px rgba(0,0,0,.3)}
 .cg-j:hover .cg-x{display:block}.cg-j:hover{z-index:5}
 #cg.foto .cg-x{display:none!important}
 .cg-b{position:absolute;right:-7px;top:-5px;font-style:normal;font-size:14px;line-height:1}
-.cg-n{margin-top:3px;font-family:var(--cond);font-weight:800;font-size:12.5px;line-height:1.1;letter-spacing:0;color:#17181c;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;text-align:center;text-shadow:0 0 3px #fff,0 0 3px #fff}
+.cg-n{margin-top:3px;font-family:var(--cond);font-weight:800;font-size:12px;line-height:1.1;letter-spacing:-.1px;color:#17181c;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;text-align:center;text-shadow:0 0 3px #fff,0 0 3px #fff}
 .cg-add{position:absolute;transform:translate(-50%,-50%);width:22px;height:22px;border-radius:50%;border:1.5px dashed #8a8f9c;background:rgba(255,255,255,.6);color:#6f7482;cursor:pointer;font-size:13px;line-height:1}
 .cg-add:hover{border-color:#15161a;color:#15161a}
 #cg.foto .cg-add{display:none}
@@ -665,6 +669,26 @@ function menuCampo(ev,k){
   setTimeout(()=>document.addEventListener('click',fecharPop,{once:true}),0);
 }
 // botões direto no campograma: Fica / Sai e, quando sai, o tipo (venda, empréstimo, fim de contrato)
+/* arrastar e soltar (como ícones no celular): soltar em cima de outro jogador ocupa o lugar dele e empurra os demais;
+   soltar no ＋ de uma posição leva para o fim dela. Grava a ordem (e a posição no campograma) de todos daquela posição. */
+let ARR=null;
+function arrIni(ev){ ARR=ev.currentTarget.dataset.id; ev.dataTransfer.effectAllowed='move'; try{ ev.dataTransfer.setData('text/plain',ARR); }catch(e){} ev.currentTarget.classList.add('arrastando'); fecharPop(); }
+function arrSobre(ev){ if(!ARR) return; ev.preventDefault(); ev.dataTransfer.dropEffect='move'; ev.currentTarget.classList.add('alvo'); }
+function arrFim(){ ARR=null; document.querySelectorAll('.cg-j.arrastando,.alvo').forEach(e=>e.classList.remove('arrastando','alvo')); }
+function arrSolta(ev){
+  ev.preventDefault(); ev.stopPropagation();
+  const de=ARR, alvo=ev.currentTarget, z=alvo.dataset.z, para=alvo.dataset.id||null; arrFim();
+  if(!de||!z||de===para) return;
+  // ordem atual da posição de destino, como está na tela
+  const atual=[...document.querySelectorAll('#cg .cg-j[data-z="'+z+'"]')].map(e=>e.dataset.id).filter(id=>id!==de);
+  let i=para?atual.indexOf(para):atual.length; if(i<0) i=atual.length;
+  const naTela=[...document.querySelectorAll('#cg .cg-j[data-z="'+z+'"]')].map(e=>e.dataset.id);
+  if(para&&naTela.indexOf(de)>-1&&naTela.indexOf(de)<naTela.indexOf(para)) i++;   // vindo de antes, entra depois do alvo (troca natural)
+  atual.splice(i,0,de);
+  const upd={}; atual.forEach((id,n)=>upd[`elenco/${id}/ordem`]=n);
+  upd[`elenco/${de}/campo`]=z;
+  db.ref('planejador/'+TIME.id).update(upd);
+}
 function nomeCampo(j){ const n=nomeDe(j); return j.apelido||n.length<=15?n:curto(n); }
 function acoesCampo(j,s){
   const k=j.id, p=(c,on,txt,st,tit)=>`<button class="${c}${on?' on':''}" title="${tit}" onclick="event.stopPropagation();campoStatus('${k}','${st}')">${txt}</button>`;
@@ -708,7 +732,7 @@ function telaCampograma(){
   const itens=[];
   ZONAS.forEach(([z])=>{
     // atuais primeiro (ordem fixa: marcar fica/sai não muda o lugar), contratações depois, na ordem em que entraram
-    const L=por[z].sort((a,b)=>((a.origem==='chegada')-(b.origem==='chegada'))||(a.origem==='chegada'?String(a.criadoEm||'').localeCompare(String(b.criadoEm||'')):((b.valor||0)-(a.valor||0))||nomeDe(a).localeCompare(nomeDe(b))))
+    const L=por[z].sort((a,b)=>((a.ordem??1e6)-(b.ordem??1e6))||((a.origem==='chegada')-(b.origem==='chegada'))||(a.origem==='chegada'?String(a.criadoEm||'').localeCompare(String(b.criadoEm||'')):((b.valor||0)-(a.valor||0))||nomeDe(a).localeCompare(nomeDe(b))))
       .map(j=>({j})).concat(Array.from({length:((P.vagas||{})[z]||{}).contratacao||0},()=>({vaga:'contratacao'})),Array.from({length:((P.vagas||{})[z]||{}).base||0},()=>({vaga:'base'})));
     const [tipo,x,y]=ZONA_POS[z], n=L.length;
     if(tipo==='col'){
@@ -725,17 +749,17 @@ function telaCampograma(){
     else itens.push({add:z,x:x+(n?((n-1)/2)*Math.min(7.4,40/Math.max(n,1))+4.6:0),y});
   });
   const html=itens.map(it=>{
-    if(it.add) return `<button class="cg-add" style="left:${it.x}%;top:${it.y}%" onclick="menuVaga(event,'${it.add}')" title="Marcar vaga de contratação ou de base">＋</button>`;
+ if(it.add) return `<button class="cg-add" data-z="${it.add}" ondragover="arrSobre(event)" ondragleave="this.classList.remove('alvo')" ondrop="arrSolta(event)" style="left:${it.x}%;top:${it.y}%" onclick="menuVaga(event,'${it.add}')" title="Marcar vaga de contratação ou de base">＋</button>`;
     if(it.vaga) return `<div class="cg-j" style="left:${it.x}%;top:${it.y}%;width:${it.w}%"><div class="cg-f vaga ${it.vaga}" onclick="vaga('${it.z}','${it.vaga}',-1)" title="Clique para tirar a vaga"></div><div class="cg-n">${it.vaga==='base'?'BASE':'CONTRATAÇÃO'}</div></div>`;
     const j=it.j, s=status(j), f=fotoJog(j.id), aa=j.nasc?String(j.nasc).slice(2,4):'', bd=BANDEIRA(j.nac);
-    return `<div class="cg-j ${s||'def'}${it.c2?' c2':''}" onclick="menuCampo(event,'${j.id}')" style="left:${it.x}%;top:${it.y}%;width:${it.w}%;cursor:pointer" title="${esc(j.nome)} · ${s==='sai'?'sai'+(j.saida?' ('+j.saida+')':''):s||'a definir'}">
+    return `<div class="cg-j ${s||'def'}${it.c2?' c2':''}" draggable="true" data-id="${j.id}" data-z="${it.z}" ondragstart="arrIni(event)" ondragover="arrSobre(event)" ondragleave="this.classList.remove('alvo')" ondrop="arrSolta(event)" ondragend="arrFim()" onclick="menuCampo(event,'${j.id}')" style="left:${it.x}%;top:${it.y}%;width:${it.w}%;cursor:pointer" title="${esc(j.nome)} · ${s==='sai'?'sai'+(j.saida?' ('+j.saida+')':''):s||'a definir'}">
       <div class="cg-f">${f?`<img src="${f}" alt="">`:`<span>${iniciais(nomeDe(j))}</span>`}${bd?`<i class="cg-b">${bd}</i>`:''}<button class="cg-x" onclick="event.stopPropagation();apagarCampo('${j.id}')" title="${j.origem==='chegada'?'Desfazer a contratação':'Excluir do elenco atual'}">×</button></div>
       <div class="cg-n">${esc(nomeCampo(j))}${aa?` (${aa})`:''}</div>${s==='sai'?tipoCampo(j):''}${j.origem==='chegada'?'':acoesCampo(j,s)}</div>`;
   }).join('');
   const c=contagem(), esc_=fotoTime(TIME?.id);
   document.getElementById('barraExtra').innerHTML=`<label class="chk" style="margin:0"><input type="checkbox" ${mostraSai?'checked':''} onchange="gravar('campoSai',this.checked)"> Quem sai</label>
       <span class="cg-leg"><i class="fica"></i>Fica <i class="sai"></i>Sai <i class="chega"></i>Chega <i class="def"></i>A definir <i class="vc"></i>Contratação <i class="vb"></i>Base</span>
-      <span class="dica" title="Mouse no jogador: Fica / Sai · clique no jogador: posição, apelido ou excluir · etiqueta vermelha: troca o tipo de saída · ＋: contratar ou marcar vaga">ⓘ</span>
+      <span class="dica" title="Arraste o jogador para mudar a ordem ou a posição (solte em cima de outro ou no ＋) · Mouse no jogador: Fica / Sai · clique no jogador: posição, apelido ou excluir · etiqueta vermelha: troca o tipo de saída · ＋: contratar ou marcar vaga">ⓘ</span>
       <button class="btn" onclick="baixarCampograma()">⬇ Imagem</button>`;
   return `<div id="cgWrap"><div id="cg"><div class="cg-campo">
       <div class="l" style="left:50%;top:0;bottom:0;border-width:0 0 0 2px"></div><div class="l" style="left:50%;top:50%;height:26%;aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%)"></div>
