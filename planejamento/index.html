@@ -651,7 +651,7 @@ function ctMao(){
    cinza = a definir. Vagas "Contratação" e "Base" marcadas por posição (P.vagas). */
 const ZONAS=[['GOL','Goleiros'],['ZAG','Zagueiros'],['LE','Lateral esquerdo'],['LD','Lateral direito'],['VOL','Volantes'],['MC','Meio-campistas'],['MO','Meias ofensivos'],['PE','Ponta esquerda'],['PD','Ponta direita'],['ATA','Atacantes']];
 // col = coluna em pé (x fixo, centrada em y) · row = linha deitada (y fixo, centrada em x)
-const ZONA_POS={GOL:['col',7,56],ZAG:['col',21,55],LE:['row',25,11],LD:['row',33,90],VOL:['col',36,56],MC:['col',51,55],MO:['col',70,56],PE:['row',73,11],PD:['row',66,90],ATA:['col',91,56]};
+const ZONA_POS={GOL:['col',7,56],ZAG:['col',21,55],LE:['row',25,11],LD:['row',29,90],VOL:['col',36,56],MC:['col',51,55],MO:['col',70,56],PE:['row',73,11],PD:['row',66,90],ATA:['col',91,56]};
 const BANDEIRA=a=>a&&a.length===2&&a.toUpperCase()!=='BR'?String.fromCodePoint(...[...a.toUpperCase()].map(c=>127397+c.charCodeAt(0))):'';
 function zonaDe(j){
   if(j.campo) return j.campo;
