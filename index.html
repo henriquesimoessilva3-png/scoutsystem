@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="app-versao" content="2026-10-26 19:10"><!-- AO PUBLICAR MUDANÇA, TROQUE ESTA DATA-HORA: as abas abertas mostram o aviso de versão nova -->
+<meta name="app-versao" content="2026-10-27 00:05"><!-- AO PUBLICAR MUDANÇA, TROQUE ESTA DATA-HORA: as abas abertas mostram o aviso de versão nova -->
 <title>Scout System 2026</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
@@ -1347,7 +1347,7 @@ function loShow(on){
   let w=document.getElementById('loWrap');
   if(on&&!w){
     w=document.createElement('div'); w.id='loWrap';
-    w.innerHTML=`<iframe id="loFrame" src="lista-observacao/?v=${encodeURIComponent((document.querySelector('meta[name="app-versao"]')||{}).content||Date.now())}" title="Lista de Observação" allow="clipboard-read; clipboard-write; fullscreen" style="border:0;width:100%;height:100%;display:block;background:#d9d9d9"></iframe>
+    w.innerHTML=`<iframe id="loFrame" src="lista-observacao/?v=${Date.now().toString(36)}" title="Lista de Observação" allow="clipboard-read; clipboard-write; fullscreen" style="border:0;width:100%;height:100%;display:block;background:#d9d9d9"></iframe>
       <a href="lista-observacao/" target="_blank" rel="noopener" style="position:absolute;right:10px;bottom:8px;font-size:10px;color:#888780;background:rgba(255,255,255,.85);padding:2px 8px;border-radius:4px;text-decoration:none">abrir em nova aba ↗</a>`;
     document.body.appendChild(w);
   }
@@ -1361,7 +1361,7 @@ function mtShow(on){
   let w=document.getElementById('mtWrap');
   if(on&&!w){
     w=document.createElement('div'); w.id='mtWrap';
-    w.innerHTML=`<iframe id="mtFrame" src="metas/?v=${encodeURIComponent((document.querySelector('meta[name="app-versao"]')||{}).content||Date.now())}" title="Controle de Metas" style="border:0;width:100%;height:100%;display:block;background:#ecebe6"></iframe>
+    w.innerHTML=`<iframe id="mtFrame" src="metas/?v=${Date.now().toString(36)}" title="Controle de Metas" style="border:0;width:100%;height:100%;display:block;background:#ecebe6"></iframe>
       <a href="metas/" target="_blank" rel="noopener" style="position:absolute;right:10px;bottom:8px;font-size:10px;color:#888780;background:rgba(255,255,255,.85);padding:2px 8px;border-radius:4px;text-decoration:none">abrir em nova aba ↗</a>`;
     document.body.appendChild(w);
   }
@@ -1375,7 +1375,7 @@ function elShow(on){
   let w=document.getElementById('elWrap');
   if(on&&!w){
     w=document.createElement('div'); w.id='elWrap';
-    w.innerHTML=`<iframe id="elFrame" src="planejamento/?v=${encodeURIComponent((document.querySelector('meta[name="app-versao"]')||{}).content||Date.now())}" title="Planejamento de Elenco" style="border:0;width:100%;height:100%;display:block;background:#15161a"></iframe>
+    w.innerHTML=`<iframe id="elFrame" src="planejamento/?v=${Date.now().toString(36)}" title="Planejamento de Elenco" style="border:0;width:100%;height:100%;display:block;background:#15161a"></iframe>
       <a href="planejamento/" target="_blank" rel="noopener" style="position:absolute;right:10px;bottom:8px;font-size:10px;color:#a9aebb;background:rgba(0,0,0,.55);padding:2px 8px;border-radius:4px;text-decoration:none">abrir em nova aba ↗</a>`;
     document.body.appendChild(w);
   }
@@ -4538,7 +4538,7 @@ function sgShow(on){
   let w=document.getElementById('sgWrap');
   if(on&&!w){
     w=document.createElement('div'); w.id='sgWrap';
-    w.innerHTML=`<iframe id="sgFrame" src="salary_guide.html?v=${encodeURIComponent((document.querySelector('meta[name="app-versao"]')||{}).content||Date.now())}" title="Salary Guide" style="border:0;width:100%;height:100%;display:block;background:#fff"></iframe>
+    w.innerHTML=`<iframe id="sgFrame" src="salary_guide.html?v=${Date.now().toString(36)}" title="Salary Guide" style="border:0;width:100%;height:100%;display:block;background:#fff"></iframe>
       <a href="salary_guide.html" target="_blank" rel="noopener" style="position:absolute;right:10px;bottom:8px;font-size:10px;color:#888780;background:rgba(255,255,255,.85);padding:2px 8px;border-radius:4px;text-decoration:none">abrir em nova aba ↗</a>`;
     document.body.appendChild(w);
   }
