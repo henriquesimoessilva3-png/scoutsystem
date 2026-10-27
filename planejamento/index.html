@@ -183,6 +183,7 @@ main{padding:4px 16px 40px;max-width:1500px;margin:0 auto}
   <div class="seg"><button id="abaE" class="on" onclick="aba('elenco')">Elenco</button><button id="abaC" onclick="aba('campo')">Campograma</button><button id="abaX" onclick="aba('esc')">Escalação</button></div>
   <div class="dir">
     <span class="info" id="infoBanco">conectando…</span>
+    <button class="btn ouro" onclick="janelaVisoes()" title="Salvar o cenário atual com um nome ou abrir um cenário salvo">💾 Visões</button>
     <button class="btn" onclick="importarElenco(false)" title="Busca o elenco atual no SofaScore e acrescenta quem é novo. Não mexe nas decisões já marcadas.">↻ Elenco do SofaScore</button>
     <button class="btn" onclick="recomecar()" title="Apaga as decisões (fica, sai, chegadas, apelidos) deste clube">Recomeçar</button>
   </div>
@@ -364,6 +365,46 @@ async function aplicarWyscout(lista){
   await db.ref('planejador/'+TIME.id).update(upd);
   return {casados:Object.keys(casou).length,soWyscout:faltam.map(w=>w.nome+' ('+w.ano+')'),foraWyscout:sofaJ.filter(j=>!casou[j.id]).map(j=>j.nome)};
 }
+/* ═══ visões salvas (26/10): o cenário inteiro (fica/sai, chegadas, posições, vagas e escalação) guardado com um nome,
+   para comparar alternativas e voltar a qualquer uma. Ficam em planejador_visoes/<clube>/<id>, para a equipe toda. ═══ */
+const CAMPOS_VISAO=['elenco','vagas','esquema','escalacao','campoSai','mostraRes'];
+async function janelaVisoes(){
+  if(!db){ alert('Sem conexão com o banco.'); return; }
+  const v=(await db.ref('planejador_visoes/'+TIME.id).once('value')).val()||{};
+  const L=Object.entries(v).sort((a,b)=>String(b[1].em).localeCompare(String(a[1].em)));
+  const c=contagem();
+  document.getElementById('camada').innerHTML=`<div class="fundo" onclick="if(event.target===this)fecharPop()"><div class="jan">
+    <h3>Visões · <span>${esc(TIME?.nome||'')}</span><button class="x" onclick="fecharPop()">×</button></h3>
+    <div style="color:var(--txt2);font-size:12.5px;margin:4px 0 10px">Guarda o cenário de agora (quem fica, quem sai, chegadas, posições no campograma, vagas e escalação) com um nome. Abrir uma visão troca o planejamento atual por ela, para a equipe toda.</div>
+    <div class="linha"><input id="vNome" placeholder="nome da visão (ex: Cenário A — venda do Cabral)" onkeydown="if(event.key==='Enter')salvarVisao()"><button class="btn ouro" onclick="salvarVisao()">💾 Salvar a atual</button></div>
+    <div style="color:var(--txt3);font-size:11.5px;margin:-2px 0 10px">Agora: elenco <b style="color:#fff">${c.total}</b> · ficam <b style="color:var(--fica)">${c.fica}</b> · saem <b style="color:var(--sai)">${c.sai}</b> · chegam <b style="color:var(--chega)">${c.chega}</b></div>
+    <div class="res">${L.length?L.map(([id,x])=>`<div class="it" style="cursor:default"><div class="q"><b>${esc(x.nome)}</b><small>${new Date(x.em).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})} · elenco ${x.resumo?.total??'—'} · saem ${x.resumo?.sai??'—'} · chegam ${x.resumo?.chega??'—'}</small></div>
+      <div style="display:flex;gap:6px"><button class="btn ouro" onclick="abrirVisao('${id}')">Abrir</button><button class="btn" onclick="regravarVisao('${id}')" title="Troca o conteúdo desta visão pelo planejamento de agora">Atualizar</button><button class="btn" onclick="apagarVisao('${id}')" title="Apagar esta visão">✕</button></div></div>`).join(''):'<div class="vaz">Nenhuma visão salva ainda.</div>'}</div>
+  </div></div>`;
+  setTimeout(()=>document.getElementById('vNome')?.focus(),50);
+}
+function fotoVisao(){ const d={}; CAMPOS_VISAO.forEach(k=>{ if(P[k]!==undefined) d[k]=P[k]; }); return JSON.parse(JSON.stringify(d)); }
+async function salvarVisao(){
+  const nome=document.getElementById('vNome').value.trim(); if(!nome){ alert('Dê um nome para a visão.'); return; }
+  const c=contagem();
+  await db.ref('planejador_visoes/'+TIME.id).push({nome,em:new Date().toISOString(),dados:fotoVisao(),resumo:{total:c.total,sai:c.sai,chega:c.chega,fica:c.fica}});
+  janelaVisoes();
+}
+async function regravarVisao(id){
+  if(!confirm('Trocar o conteúdo desta visão pelo planejamento de agora?')) return;
+  const c=contagem();
+  await db.ref(`planejador_visoes/${TIME.id}/${id}`).update({em:new Date().toISOString(),dados:fotoVisao(),resumo:{total:c.total,sai:c.sai,chega:c.chega,fica:c.fica}});
+  janelaVisoes();
+}
+async function abrirVisao(id){
+  const x=(await db.ref(`planejador_visoes/${TIME.id}/${id}`).once('value')).val(); if(!x) return;
+  if(!confirm(`Abrir "${x.nome}"? O planejamento atual será trocado por esta visão (salve antes, se quiser guardar o de agora).`)) return;
+  const upd={}; CAMPOS_VISAO.forEach(k=>upd[k]=(x.dados||{})[k]??null);
+  upd.visaoAberta={id,nome:x.nome,em:new Date().toISOString()};
+  await db.ref('planejador/'+TIME.id).update(upd);
+  fecharPop();
+}
+async function apagarVisao(id){ if(!confirm('Apagar esta visão? (o planejamento atual não muda)')) return; await db.ref(`planejador_visoes/${TIME.id}/${id}`).remove(); janelaVisoes(); }
 function recomecar(){
   if(!confirm(`Apagar todas as decisões do ${TIME?.nome||'clube'} (fica, sai, chegadas, apelidos, mudanças de setor e escalação)? Vale para a equipe toda.`)) return;
   if(db) db.ref('planejador/'+TIME.id).remove().then(()=>importarElenco(true)); else { P={elenco:{}}; importarElenco(true); }
@@ -407,7 +448,7 @@ function cabecalho(){
     <div class="sub">${esc((LIGAS.find(l=>l[0]===LIGA)||[])[1]||'')} · elenco atual com <b>${c.atual}</b> jogadores${P.wyscout?' (lista do Wyscout de '+new Date(P.wyscout.em).toLocaleDateString('pt-BR')+')':''}${P.atualizado?' · SofaScore em '+new Date(P.atualizado).toLocaleDateString('pt-BR'):''}</div></div>
     <div class="conts"><div class="cont f"><b>${c.fica}</b><small>Ficam</small></div><div class="cont s"><b>${c.sai}</b><small>Saem</small></div>
     <div class="cont c"><b>${c.chega}</b><small>Chegam</small></div><div class="cont d"><b>${c.def}</b><small>A definir</small></div>
-    <div class="cont t"><b>${c.total}</b><small>Elenco ${ANO}</small></div></div></div>`;
+    <div class="cont t"><b>${c.total}</b><small>Elenco ${ANO}</small></div></div></div>${P.visaoAberta?`<div style="margin:-6px 0 10px;color:var(--gold);font-size:12px">📂 Visão aberta: <b>${esc(P.visaoAberta.nome)}</b> (mudanças feitas depois não alteram a visão salva — use "Atualizar" em 💾 Visões)</div>`:''}
 }
 function cardJog(j){
   const k=String(j.id), s=status(j), f=fotoJog(j.id), ida=idade(j.nasc);
@@ -679,7 +720,7 @@ function telaCampograma(){
   const c=contagem(), esc_=fotoTime(TIME?.id);
   return `<div class="cg-barra"><label class="chk" style="margin:0"><input type="checkbox" ${mostraSai?'checked':''} onchange="gravar('campoSai',this.checked)"> Mostrar quem sai</label>
       <span class="cg-leg"><i class="fica"></i>Fica <i class="sai"></i>Sai <i class="chega"></i>Chega <i class="def"></i>A definir <i class="vc"></i>Vaga de contratação <i class="vb"></i>Vaga da base</span>
-      <span style="color:var(--txt3);font-size:11.5px">Passe o mouse no jogador para Fica / Sai · clique nele para posição, apelido ou excluir · etiqueta vermelha troca o tipo de saída · ＋ contrata ou marca vaga</span>
+      <span style="color:var(--txt3);font-size:11.5px">Mouse no jogador: Fica / Sai · clique: posição e excluir · etiqueta vermelha: tipo de saída</span>
       <button class="btn ouro" style="margin-left:auto" onclick="baixarCampograma()">⬇ Imagem</button></div>
     <div id="cgWrap"><div id="cg"><div class="cg-campo">
       <div class="l" style="left:50%;top:0;bottom:0;border-width:0 0 0 2px"></div><div class="l" style="left:50%;top:50%;height:26%;aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%)"></div>
