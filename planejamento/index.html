@@ -135,23 +135,29 @@ main{padding:4px 16px 40px;max-width:1500px;margin:0 auto}
 @media (max-width:520px){main{padding:4px 10px 30px}.card{width:calc(50% - 5px)}.slot{width:70px}.slot .fto{width:40px;height:40px}}
 
 /* campograma */
-.cg-barra{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:0 0 8px}
+.cg-barra{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:6px 0 6px}
 .cg-leg{display:flex;align-items:center;gap:6px;color:var(--txt2);font-size:11.5px;flex-wrap:wrap}
 .cg-leg i{display:inline-block;width:12px;height:12px;border-radius:50%;border:3px solid;margin-left:6px}
 .cg-leg i.fica{border-color:#1f9d55}.cg-leg i.sai{border-color:#d64545;background:#f3c1bd}.cg-leg i.chega{border-color:#d4ad1f;background:#fbf0c4}.cg-leg i.def{border-color:#9aa0ab}
 .cg-leg i.vc{border-color:#2f6fd0;background:#3b7fe0}.cg-leg i.vb{border-color:#2f8a3a;background:#3a9a46}
 #cgWrap{overflow-x:auto}
-#cg{min-width:900px;width:min(100%,calc((100vh - 175px) * 1.66));margin:0 auto;background:#e9ede6;border-radius:12px;padding:12px 12px 8px}
+#cg{min-width:760px;width:min(100%,calc((100vh - 125px) * 1.62));margin:0 auto;background:#e9ede6;border-radius:12px;padding:12px 12px 8px}
 .cg-campo{position:relative;width:100%;aspect-ratio:16/9.4;border:2px solid #fff;border-radius:6px;background:linear-gradient(135deg,#dfe6dc,#eef1ea 40%,#dfe6dc);overflow:hidden}
 .cg-campo .l{position:absolute;border:2px solid rgba(255,255,255,.95)}
 .cg-j{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;width:96px;max-width:110px;pointer-events:auto}
-.cg-f{position:relative;width:46px;height:46px;border-radius:50%;background:#fff;border:3px solid #9aa0ab;overflow:visible;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 5px rgba(0,0,0,.18)}
+.cg-f{position:relative;width:42px;height:42px;border-radius:50%;background:#fff;border:3px solid #9aa0ab;overflow:visible;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 5px rgba(0,0,0,.18)}
 .cg-f img{width:100%;height:100%;border-radius:50%;object-fit:cover;object-position:top}
 .cg-f span{font-family:var(--cond);font-weight:800;color:#6f7482;font-size:16px}
 .cg-j.fica .cg-f{border-color:#1f9d55}
 .cg-j.sai .cg-f{border-color:#d64545;background:#f3c1bd}.cg-j.sai .cg-f img{opacity:.75}
 .cg-j.chega .cg-f{border-color:#d4ad1f;background:#fbf0c4}
 .cg-f.vaga{border:0;cursor:pointer}.cg-f.contratacao{background:#3b7fe0}.cg-f.base{background:#3a9a46}
+.cg-ac{display:flex;gap:2px;margin-top:2px}
+.cg-ac button{border:1px solid #c9ccd4;background:#fff;color:#5b6070;border-radius:4px;font:700 9.5px/1 -apple-system,Arial,sans-serif;padding:2px 5px;cursor:pointer}
+.cg-ac button.f.on{background:#1f9d55;border-color:#1f9d55;color:#fff}
+.cg-ac button.s{border-color:#e3a3a3;color:#c23b3b}.cg-ac button.s.on{background:#d64545;border-color:#d64545;color:#fff}
+.cg-ac button.x{border-color:#c9ccd4;color:#8a8f9c}
+#cg.foto .cg-ac{display:none}
 .cg-x{display:none;position:absolute;right:-8px;top:-8px;width:20px;height:20px;border-radius:50%;border:0;background:#d64545;color:#fff;font-size:14px;line-height:20px;font-weight:700;cursor:pointer;padding:0;z-index:3;box-shadow:0 1px 4px rgba(0,0,0,.3)}
 .cg-j:hover .cg-x{display:block}.cg-j:hover{z-index:5}
 #cg.foto .cg-x{display:none!important}
@@ -599,6 +605,13 @@ function menuCampo(ev,k){
   </div>`;
   setTimeout(()=>document.addEventListener('click',fecharPop,{once:true}),0);
 }
+// botões direto no campograma: Fica / Sai e, quando sai, o tipo (venda, empréstimo, fim de contrato)
+function acoesCampo(j,s){
+  const k=j.id, t=j.saida||'venda', p=(c,on,txt,fn,tit)=>`<button class="${c}${on?' on':''}" title="${tit}" onclick="event.stopPropagation();${fn}">${txt}</button>`;
+  return `<div class="cg-ac">${p('f',s==='fica','Fica',`campoStatus('${k}',${s==='fica'?"''":"'fica'"})`,s==='fica'?'Desmarcar':'Fica')}${
+    s==='sai'?SAIDAS.map(([v,n])=>p('s',t===v,{venda:'V',emprestimo:'E',fim:'F'}[v],`campoStatus('${k}','sai','${v}')`,'Sai · '+({venda:'venda',emprestimo:'empréstimo',fim:'fim de contrato'})[v])).join('')+p('x',false,'↺',`campoStatus('${k}','')`,'Voltar para a definir')
+    :p('s',false,'Sai',`campoStatus('${k}','sai','venda')`,'Sai')}</div>`;
+}
 function campoStatus(k,st,tipo){
   fecharPop();
   gravar(`elenco/${k}/status`,st||null);
@@ -610,7 +623,7 @@ function apagarCampo(k){
   if(confirm(`Excluir ${nomeDe(j)} do elenco atual? Ele vai para "Fora do elenco atual" (aba Elenco), de onde dá para voltar.`)) gravar(`elenco/${k}/removido`,true);
 }
 const ZONA_SETOR={GOL:'GOL',ZAG:'ZAG',LE:'LAT',LD:'LAT',VOL:'VOL',MC:'MEI',MO:'MEI',PE:'PON',PD:'PON',ATA:'ATA'};
-function contratarNoCampo(z,modo){ CT={setor:ZONA_SETOR[z]||'MEI',aba:'busca',modo,campo:z}; janelaContratar(); }
+function contratarNoCampo(z,modo){ CT={setor:ZONA_SETOR[z]||'MEI',aba:modo==='elenco'?'busca':'listas',modo,campo:z}; janelaContratar(); }
 function campoZona(k,z){ fecharPop(); gravar(`elenco/${k}/campo`,z); }
 function vaga(z,tipo,d){ const v=((P.vagas||{})[z]||{})[tipo]||0; gravar(`vagas/${z}/${tipo}`,Math.max(0,v+d)||null); }
 function menuVaga(ev,z){
@@ -653,10 +666,10 @@ function telaCampograma(){
     const j=it.j, s=status(j), f=fotoJog(j.id), aa=j.nasc?String(j.nasc).slice(2,4):'', bd=BANDEIRA(j.nac);
     return `<div class="cg-j ${s||'def'}" onclick="menuCampo(event,'${j.id}')" style="left:${it.x}%;top:${it.y}%;width:${it.w}%;cursor:pointer" title="${esc(j.nome)} · ${s==='sai'?'sai'+(j.saida?' ('+j.saida+')':''):s||'a definir'}">
       <div class="cg-f">${f?`<img src="${f}" alt="">`:`<span>${iniciais(nomeDe(j))}</span>`}${bd?`<i class="cg-b">${bd}</i>`:''}<button class="cg-x" onclick="event.stopPropagation();apagarCampo('${j.id}')" title="${j.origem==='chegada'?'Desfazer a contratação':'Excluir do elenco atual'}">×</button></div>
-      <div class="cg-n">${esc(curto(nomeDe(j)))}${aa?` (${aa})`:''}</div></div>`;
+      <div class="cg-n">${esc(curto(nomeDe(j)))}${aa?` (${aa})`:''}</div>${j.origem==='chegada'?'':acoesCampo(j,s)}</div>`;
   }).join('');
   const c=contagem(), esc_=fotoTime(TIME?.id);
-  return cabecalho()+`<div class="cg-barra"><label class="chk" style="margin:0"><input type="checkbox" ${mostraSai?'checked':''} onchange="gravar('campoSai',this.checked)"> Mostrar quem sai</label>
+  return `<div class="cg-barra"><label class="chk" style="margin:0"><input type="checkbox" ${mostraSai?'checked':''} onchange="gravar('campoSai',this.checked)"> Mostrar quem sai</label>
       <span class="cg-leg"><i class="fica"></i>Fica <i class="sai"></i>Sai <i class="chega"></i>Chega <i class="def"></i>A definir <i class="vc"></i>Vaga de contratação <i class="vb"></i>Vaga da base</span>
       <span style="color:var(--txt3);font-size:11.5px">Clique no jogador para marcar Fica / Sai, mudar a posição ou excluir · ＋ para contratar ou marcar vaga</span>
       <button class="btn ouro" style="margin-left:auto" onclick="baixarCampograma()">⬇ Imagem</button></div>
