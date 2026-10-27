@@ -152,7 +152,7 @@ body.campo main{max-width:none;padding:6px 10px 6px}
 .cg-leg i.vc{border-color:#2f6fd0;background:#3b7fe0}.cg-leg i.vb{border-color:#2f8a3a;background:#3a9a46}
 #cgWrap{overflow-x:auto}
 #cg{min-width:760px;width:100%;margin:0 auto;background:#e9ede6;border-radius:12px;padding:12px 12px 8px}
-.cg-campo{position:relative;width:100%;height:calc(100vh - 120px);min-height:480px;border:2px solid #fff;border-radius:6px;background:linear-gradient(135deg,#dfe6dc,#eef1ea 40%,#dfe6dc);overflow:hidden}
+.cg-campo{position:relative;width:100%;height:calc(100vh - 120px - var(--faixa,0px));min-height:480px;border:2px solid #fff;border-radius:6px;background:linear-gradient(135deg,#dfe6dc,#eef1ea 40%,#dfe6dc);overflow:hidden}
 .cg-campo .l{position:absolute;border:2px solid rgba(255,255,255,.95)}
 .cg-j{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;width:96px;max-width:150px;pointer-events:auto}
 .cg-f{position:relative;width:var(--f,54px);height:var(--f,54px);border-radius:50%;background:#fff;border:3px solid #9aa0ab;overflow:visible;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 5px rgba(0,0,0,.18)}
@@ -281,6 +281,7 @@ async function faixaVisao(){
   const el=document.getElementById('faixaVisao'); if(!el) return;
   el.innerHTML=`📂 Visão <b>${esc(nome)}</b> — o que você mudar aqui fica só nesta visão. <a href="./?liga=${LIGA}&time=${TIME.id}" target="_blank" rel="noopener">abrir o planejamento principal ↗</a>`;
   el.style.display='block';
+  document.body.style.setProperty('--faixa','31px'); if(ABA==='campo') render();
 }
 async function iniciar(){
   document.getElementById('selLiga').innerHTML=LIGAS.map(([u,n])=>`<option value="${u}">${n}</option>`).join('');
@@ -775,7 +776,7 @@ function telaCampograma(){
   const js=jogadores().filter(j=>mostraSai||status(j)!=='sai');
   const por={}; ZONAS.forEach(([z])=>por[z]=[]);
   js.forEach(j=>por[zonaDe(j)].push(j));
-  const H=Math.max(480,innerHeight-120), fotoPx=pc=>Math.max(30,Math.min(54,Math.round(pc/100*H-32)));
+  const H=Math.max(480,innerHeight-120-(VISAO?31:0)), fotoPx=pc=>Math.max(30,Math.min(54,Math.round(pc/100*H-32)));
   const itens=[], Ls={};
   ZONAS.forEach(([z])=>{
     // atuais primeiro (ordem fixa: marcar fica/sai não muda o lugar), contratações depois, na ordem em que entraram
