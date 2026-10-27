@@ -551,7 +551,7 @@ async function ctEscolher(p){
   const ant=P.elenco[p.id];
   if(ant&&!ant.removido){ alert(`${p.nome} já está no planejamento.`); return; }
   if(ant&&ant.removido&&ant.origem!=='chegada'&&CT.modo==='elenco'){ fecharPop(); voltar(p.id); return; }
-  const reg={id:p.id,nome:p.nome,setor:CT.setor,origem:CT.modo==='elenco'?'elenco':'chegada',incluidoAMao:CT.modo==='elenco'||null,clubeOrigem:p.clube||'',nasc:p.nasc||'',posDet:[],valor:0,criadoEm:new Date().toISOString()};
+  const reg={id:p.id,nome:p.nome,setor:CT.setor,campo:CT.campo||null,origem:CT.modo==='elenco'?'elenco':'chegada',incluidoAMao:CT.modo==='elenco'||null,clubeOrigem:p.clube||'',nasc:p.nasc||'',posDet:[],valor:0,criadoEm:new Date().toISOString()};
   fecharPop();
   if(/^\d+$/.test(p.id)&&EXT){ try{ const d=(await sofa('/player/'+p.id)).player; reg.posDet=d.positionsDetailed||[]; reg.nasc=d.dateOfBirthTimestamp?isoTs(d.dateOfBirthTimestamp):reg.nasc; reg.contrato=d.contractUntilTimestamp?isoTs(d.contractUntilTimestamp):''; reg.valor=d.proposedMarketValue||0; reg.clubeOrigem=d.team?.name||reg.clubeOrigem; }catch(e){} }
   await gravar('elenco/'+p.id,reg);
@@ -559,7 +559,7 @@ async function ctEscolher(p){
 function ctMao(){
   const g=id=>document.getElementById(id).value.trim(); const nome=g('mNome'); if(!nome){ alert('Informe o nome.'); return; }
   const id='m'+Date.now().toString(36);
-  gravar('elenco/'+id,{id,nome,setor:g('mSetor'),origem:CT.modo==='elenco'?'elenco':'chegada',clubeOrigem:g('mClube'),nasc:g('mNasc'),posDet:g('mPos')?[g('mPos').toUpperCase()]:[],valor:0,manual:true,criadoEm:new Date().toISOString()});
+  gravar('elenco/'+id,{id,nome,setor:g('mSetor'),campo:CT.campo||null,origem:CT.modo==='elenco'?'elenco':'chegada',clubeOrigem:g('mClube'),nasc:g('mNasc'),posDet:g('mPos')?[g('mPos').toUpperCase()]:[],valor:0,manual:true,criadoEm:new Date().toISOString()});
   fecharPop();
 }
 
@@ -586,12 +586,17 @@ function apagarCampo(k){
   if(j.origem==='chegada'){ if(confirm(`Desfazer a contratação de ${nomeDe(j)}?`)) gravar(`elenco/${k}`,null); return; }
   if(confirm(`Excluir ${nomeDe(j)} do elenco atual? Ele vai para "Fora do elenco atual" (aba Elenco), de onde dá para voltar.`)) gravar(`elenco/${k}/removido`,true);
 }
+const ZONA_SETOR={GOL:'GOL',ZAG:'ZAG',LE:'LAT',LD:'LAT',VOL:'VOL',MC:'MEI',MO:'MEI',PE:'PON',PD:'PON',ATA:'ATA'};
+function contratarNoCampo(z,modo){ CT={setor:ZONA_SETOR[z]||'MEI',aba:'busca',modo,campo:z}; janelaContratar(); }
 function campoZona(k,z){ fecharPop(); gravar(`elenco/${k}/campo`,z); }
 function vaga(z,tipo,d){ const v=((P.vagas||{})[z]||{})[tipo]||0; gravar(`vagas/${z}/${tipo}`,Math.max(0,v+d)||null); }
 function menuVaga(ev,z){
   ev.stopPropagation(); const r=ev.currentTarget.getBoundingClientRect();
   document.getElementById('camada').innerHTML=`<div class="pop" style="left:${Math.min(r.left,innerWidth-210)}px;top:${r.bottom+4}px" onclick="event.stopPropagation()">
     <div class="t">${(ZONAS.find(x=>x[0]===z)||[])[1]}</div>
+    <button onclick="fecharPop();contratarNoCampo('${z}','chegada')"><b>🔎 Contratar jogador</b> <span style="color:#8a8f9c">(digitar o nome)</span></button>
+    <button onclick="fecharPop();contratarNoCampo('${z}','elenco')">🔎 Incluir no elenco atual</button>
+    <div class="t">Só marcar a vaga</div>
     <button onclick="fecharPop();vaga('${z}','contratacao',1)">＋ Vaga de contratação</button><button onclick="fecharPop();vaga('${z}','base',1)">＋ Vaga para a base</button></div>`;
   setTimeout(()=>document.addEventListener('click',fecharPop,{once:true}),0);
 }
