@@ -144,7 +144,7 @@ main{padding:4px 16px 40px;max-width:1500px;margin:0 auto}
 #cg{min-width:900px;width:min(100%,calc((100vh - 175px) * 1.66));margin:0 auto;background:#e9ede6;border-radius:12px;padding:12px 12px 8px}
 .cg-campo{position:relative;width:100%;aspect-ratio:16/9.4;border:2px solid #fff;border-radius:6px;background:linear-gradient(135deg,#dfe6dc,#eef1ea 40%,#dfe6dc);overflow:hidden}
 .cg-campo .l{position:absolute;border:2px solid rgba(255,255,255,.95)}
-.cg-j{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;width:96px;pointer-events:auto}
+.cg-j{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;width:96px;max-width:110px;pointer-events:auto}
 .cg-f{position:relative;width:46px;height:46px;border-radius:50%;background:#fff;border:3px solid #9aa0ab;overflow:visible;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 5px rgba(0,0,0,.18)}
 .cg-f img{width:100%;height:100%;border-radius:50%;object-fit:cover;object-position:top}
 .cg-f span{font-family:var(--cond);font-weight:800;color:#6f7482;font-size:16px}
@@ -152,8 +152,11 @@ main{padding:4px 16px 40px;max-width:1500px;margin:0 auto}
 .cg-j.sai .cg-f{border-color:#d64545;background:#f3c1bd}.cg-j.sai .cg-f img{opacity:.75}
 .cg-j.chega .cg-f{border-color:#d4ad1f;background:#fbf0c4}
 .cg-f.vaga{border:0;cursor:pointer}.cg-f.contratacao{background:#3b7fe0}.cg-f.base{background:#3a9a46}
+.cg-x{display:none;position:absolute;right:-8px;top:-8px;width:20px;height:20px;border-radius:50%;border:0;background:#d64545;color:#fff;font-size:14px;line-height:20px;font-weight:700;cursor:pointer;padding:0;z-index:3;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.cg-j:hover .cg-x{display:block}.cg-j:hover{z-index:5}
+#cg.foto .cg-x{display:none!important}
 .cg-b{position:absolute;right:-7px;top:-5px;font-style:normal;font-size:14px;line-height:1}
-.cg-n{margin-top:3px;font-family:var(--cond);font-weight:800;font-size:11.5px;letter-spacing:.2px;color:#17181c;text-transform:uppercase;white-space:nowrap;text-align:center;text-shadow:0 0 3px #fff,0 0 3px #fff}
+.cg-n{margin-top:3px;font-family:var(--cond);font-weight:800;font-size:11px;line-height:1.05;letter-spacing:.1px;color:#17181c;text-transform:uppercase;white-space:normal;overflow-wrap:anywhere;max-width:100%;text-align:center;text-shadow:0 0 3px #fff,0 0 3px #fff}
 .cg-add{position:absolute;transform:translate(-50%,-50%);width:22px;height:22px;border-radius:50%;border:1.5px dashed #8a8f9c;background:rgba(255,255,255,.6);color:#6f7482;cursor:pointer;font-size:13px;line-height:1}
 .cg-add:hover{border-color:#15161a;color:#15161a}
 #cg.foto .cg-add{display:none}
@@ -578,6 +581,11 @@ function zonaDe(j){
   }
   return 'MC';
 }
+function apagarCampo(k){
+  const j=P.elenco[k]; if(!j) return;
+  if(j.origem==='chegada'){ if(confirm(`Desfazer a contratação de ${nomeDe(j)}?`)) gravar(`elenco/${k}`,null); return; }
+  if(confirm(`Excluir ${nomeDe(j)} do elenco atual? Ele vai para "Fora do elenco atual" (aba Elenco), de onde dá para voltar.`)) gravar(`elenco/${k}/removido`,true);
+}
 function campoZona(k,z){ fecharPop(); gravar(`elenco/${k}/campo`,z); }
 function vaga(z,tipo,d){ const v=((P.vagas||{})[z]||{})[tipo]||0; gravar(`vagas/${z}/${tipo}`,Math.max(0,v+d)||null); }
 function menuVaga(ev,z){
@@ -601,10 +609,10 @@ function telaCampograma(){
     if(tipo==='col'){
       const cols=n>7?2:1, porCol=Math.ceil(n/cols), passo=Math.min(12.5,66/Math.max(porCol-1,1));
       L.forEach((it,i)=>{ const c=Math.floor(i/porCol), r=i%porCol, nn=c<cols-1?porCol:n-porCol*(cols-1);
-        itens.push({...it,z,x:x+(cols>1?(c?3.6:-3.6):0),y:y+(r-(nn-1)/2)*passo}); });
+        itens.push({...it,z,w:cols>1?7:11,x:x+(cols>1?(c?3.6:-3.6):0),y:y+(r-(nn-1)/2)*passo}); });
     } else {
       const passo=Math.min(7.2,40/Math.max(n,1));
-      L.forEach((it,i)=>itens.push({...it,z,x:x+(i-(n-1)/2)*passo,y}));
+      L.forEach((it,i)=>itens.push({...it,z,w:passo*.96,x:x+(i-(n-1)/2)*passo,y}));
     }
     // botão "+" (vaga): na coluna, ao lado do primeiro jogador; na linha, no fim dela
     if(tipo==='col'){ const cols=n>7?2:1, porCol=Math.max(1,Math.ceil(n/cols)), passo=Math.min(12.5,66/Math.max(porCol-1,1));
@@ -613,10 +621,10 @@ function telaCampograma(){
   });
   const html=itens.map(it=>{
     if(it.add) return `<button class="cg-add" style="left:${it.x}%;top:${it.y}%" onclick="menuVaga(event,'${it.add}')" title="Marcar vaga de contratação ou de base">＋</button>`;
-    if(it.vaga) return `<div class="cg-j" style="left:${it.x}%;top:${it.y}%"><div class="cg-f vaga ${it.vaga}" onclick="vaga('${it.z}','${it.vaga}',-1)" title="Clique para tirar a vaga"></div><div class="cg-n">${it.vaga==='base'?'BASE':'CONTRATAÇÃO'}</div></div>`;
+    if(it.vaga) return `<div class="cg-j" style="left:${it.x}%;top:${it.y}%;width:${it.w}%"><div class="cg-f vaga ${it.vaga}" onclick="vaga('${it.z}','${it.vaga}',-1)" title="Clique para tirar a vaga"></div><div class="cg-n">${it.vaga==='base'?'BASE':'CONTRATAÇÃO'}</div></div>`;
     const j=it.j, s=status(j), f=fotoJog(j.id), aa=j.nasc?String(j.nasc).slice(2,4):'', bd=BANDEIRA(j.nac);
-    return `<div class="cg-j ${s||'def'}" style="left:${it.x}%;top:${it.y}%" title="${esc(j.nome)} · ${s==='sai'?'sai'+(j.saida?' ('+j.saida+')':''):s||'a definir'}">
-      <div class="cg-f">${f?`<img src="${f}" alt="">`:`<span>${iniciais(nomeDe(j))}</span>`}${bd?`<i class="cg-b">${bd}</i>`:''}</div>
+    return `<div class="cg-j ${s||'def'}" style="left:${it.x}%;top:${it.y}%;width:${it.w}%" title="${esc(j.nome)} · ${s==='sai'?'sai'+(j.saida?' ('+j.saida+')':''):s||'a definir'}">
+      <div class="cg-f">${f?`<img src="${f}" alt="">`:`<span>${iniciais(nomeDe(j))}</span>`}${bd?`<i class="cg-b">${bd}</i>`:''}<button class="cg-x" onclick="event.stopPropagation();apagarCampo('${j.id}')" title="${j.origem==='chegada'?'Desfazer a contratação':'Excluir do elenco atual'}">×</button></div>
       <div class="cg-n">${esc(curto(nomeDe(j)))}${aa?` (${aa})`:''}</div></div>`;
   }).join('');
   const c=contagem(), esc_=fotoTime(TIME?.id);
