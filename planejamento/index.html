@@ -581,6 +581,29 @@ function zonaDe(j){
   }
   return 'MC';
 }
+function menuCampo(ev,k){
+  ev.stopPropagation(); const j=P.elenco[k]; if(!j) return;
+  const s=status(j), r=ev.currentTarget.getBoundingClientRect(), chega=j.origem==='chegada';
+  const b=(on,txt,fn,cor)=>`<button onclick="${fn}" style="${on?`background:${cor};color:#fff;font-weight:700`:''}">${txt}</button>`;
+  document.getElementById('camada').innerHTML=`<div class="pop" style="left:${Math.min(r.right+4,innerWidth-220)}px;top:${Math.min(r.top,innerHeight-380)}px;min-width:210px" onclick="event.stopPropagation()">
+    <div class="t" style="color:#17181c;font-size:12px;letter-spacing:0;text-transform:none">${esc(j.nome)}${chega?' · chega':''}</div>
+    ${chega?`<div style="padding:4px 9px;color:#8a8f9c">Contratação planejada${j.clubeOrigem?' (de '+esc(j.clubeOrigem)+')':''}</div>`:
+      b(s==='fica','✓ Fica',`campoStatus('${k}','fica')`,'#1f9d55')+
+      `<div class="t">Sai</div>`+SAIDAS.map(([t,n])=>b(s==='sai'&&(j.saida||'venda')===t,'↗ Sai · '+({venda:'venda',emprestimo:'empréstimo',fim:'fim de contrato'})[t],`campoStatus('${k}','sai','${t}')`,'#d64545')).join('')+
+      b(!s,'○ A definir',`campoStatus('${k}','')`,'#6f7482')}
+    <div class="t">Posição no campograma</div>
+    <div style="display:flex;flex-wrap:wrap;gap:3px;padding:2px 6px 4px">${ZONAS.map(([z,n])=>`<button style="width:auto;padding:3px 7px;border:1px solid #e3e5ea;${zonaDe(j)===z?'background:#15161a;color:#fff':''}" title="${n}" onclick="campoZona('${k}','${z}')">${z}</button>`).join('')}</div>
+    <div class="t"></div>
+    <button onclick="fecharPop();apelido('${k}')">✎ Apelido</button>
+    <button class="vm" onclick="fecharPop();apagarCampo('${k}')">✕ ${chega?'Desfazer contratação':'Excluir do elenco atual'}</button>
+  </div>`;
+  setTimeout(()=>document.addEventListener('click',fecharPop,{once:true}),0);
+}
+function campoStatus(k,st,tipo){
+  fecharPop();
+  gravar(`elenco/${k}/status`,st||null);
+  if(st==='sai') gravar(`elenco/${k}/saida`,tipo||'venda');
+}
 function apagarCampo(k){
   const j=P.elenco[k]; if(!j) return;
   if(j.origem==='chegada'){ if(confirm(`Desfazer a contratação de ${nomeDe(j)}?`)) gravar(`elenco/${k}`,null); return; }
@@ -628,14 +651,14 @@ function telaCampograma(){
     if(it.add) return `<button class="cg-add" style="left:${it.x}%;top:${it.y}%" onclick="menuVaga(event,'${it.add}')" title="Marcar vaga de contratação ou de base">＋</button>`;
     if(it.vaga) return `<div class="cg-j" style="left:${it.x}%;top:${it.y}%;width:${it.w}%"><div class="cg-f vaga ${it.vaga}" onclick="vaga('${it.z}','${it.vaga}',-1)" title="Clique para tirar a vaga"></div><div class="cg-n">${it.vaga==='base'?'BASE':'CONTRATAÇÃO'}</div></div>`;
     const j=it.j, s=status(j), f=fotoJog(j.id), aa=j.nasc?String(j.nasc).slice(2,4):'', bd=BANDEIRA(j.nac);
-    return `<div class="cg-j ${s||'def'}" style="left:${it.x}%;top:${it.y}%;width:${it.w}%" title="${esc(j.nome)} · ${s==='sai'?'sai'+(j.saida?' ('+j.saida+')':''):s||'a definir'}">
+    return `<div class="cg-j ${s||'def'}" onclick="menuCampo(event,'${j.id}')" style="left:${it.x}%;top:${it.y}%;width:${it.w}%;cursor:pointer" title="${esc(j.nome)} · ${s==='sai'?'sai'+(j.saida?' ('+j.saida+')':''):s||'a definir'}">
       <div class="cg-f">${f?`<img src="${f}" alt="">`:`<span>${iniciais(nomeDe(j))}</span>`}${bd?`<i class="cg-b">${bd}</i>`:''}<button class="cg-x" onclick="event.stopPropagation();apagarCampo('${j.id}')" title="${j.origem==='chegada'?'Desfazer a contratação':'Excluir do elenco atual'}">×</button></div>
       <div class="cg-n">${esc(curto(nomeDe(j)))}${aa?` (${aa})`:''}</div></div>`;
   }).join('');
   const c=contagem(), esc_=fotoTime(TIME?.id);
   return cabecalho()+`<div class="cg-barra"><label class="chk" style="margin:0"><input type="checkbox" ${mostraSai?'checked':''} onchange="gravar('campoSai',this.checked)"> Mostrar quem sai</label>
       <span class="cg-leg"><i class="fica"></i>Fica <i class="sai"></i>Sai <i class="chega"></i>Chega <i class="def"></i>A definir <i class="vc"></i>Vaga de contratação <i class="vb"></i>Vaga da base</span>
-      <span style="color:var(--txt3);font-size:11.5px">Posição errada? ⋯ no card da aba Elenco → Posição no campograma</span>
+      <span style="color:var(--txt3);font-size:11.5px">Clique no jogador para marcar Fica / Sai, mudar a posição ou excluir · ＋ para contratar ou marcar vaga</span>
       <button class="btn ouro" style="margin-left:auto" onclick="baixarCampograma()">⬇ Imagem</button></div>
     <div id="cgWrap"><div id="cg"><div class="cg-campo">
       <div class="l" style="left:50%;top:0;bottom:0;border-width:0 0 0 2px"></div><div class="l" style="left:50%;top:50%;height:26%;aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%)"></div>
