@@ -182,6 +182,10 @@ body.campo main{max-width:none;padding:6px 10px 6px}
 #cg.foto .cg-x{display:none!important}
 .cg-b{position:absolute;right:-7px;top:-5px;font-style:normal;font-size:14px;line-height:1}
 .cg-n{margin-top:3px;font-family:var(--cond);font-weight:800;font-size:12px;line-height:1.1;letter-spacing:-.1px;color:#17181c;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;text-align:center;text-shadow:0 0 3px #fff,0 0 3px #fff}
+.cg-q{position:absolute;border:1.5px dashed rgba(23,24,28,.22);border-radius:12px;background:rgba(255,255,255,.18);pointer-events:none}
+.cg-qn{position:absolute;left:8px;top:4px;font-family:var(--cond);font-weight:800;font-size:11px;letter-spacing:1.2px;color:rgba(23,24,28,.5);text-transform:uppercase}
+.cg-q .cg-add{position:absolute;left:auto;right:4px;top:3px;transform:none;pointer-events:auto}
+#cg.foto .cg-q{border-color:rgba(23,24,28,.15)}
 .cg-add{position:absolute;transform:translate(-50%,-50%);width:22px;height:22px;border-radius:50%;border:1.5px dashed #8a8f9c;background:rgba(255,255,255,.6);color:#6f7482;cursor:pointer;font-size:13px;line-height:1}
 .cg-add:hover{border-color:#15161a;color:#15161a}
 #cg.foto .cg-add{display:none}
@@ -647,7 +651,7 @@ function ctMao(){
    cinza = a definir. Vagas "Contratação" e "Base" marcadas por posição (P.vagas). */
 const ZONAS=[['GOL','Goleiros'],['ZAG','Zagueiros'],['LE','Lateral esquerdo'],['LD','Lateral direito'],['VOL','Volantes'],['MC','Meio-campistas'],['MO','Meias ofensivos'],['PE','Ponta esquerda'],['PD','Ponta direita'],['ATA','Atacantes']];
 // col = coluna em pé (x fixo, centrada em y) · row = linha deitada (y fixo, centrada em x)
-const ZONA_POS={GOL:['col',6,55],ZAG:['col',21,54],LE:['row',27,10],LD:['row',34,91],VOL:['col',37,55],MC:['col',51,52],MO:['col',65,55],PE:['row',72,10],PD:['row',67,91],ATA:['col',93,54]};
+const ZONA_POS={GOL:['col',6,56],ZAG:['col',20,55],LE:['row',25,11],LD:['row',33,90],VOL:['col',35.5,56],MC:['col',51,55],MO:['col',71,56],PE:['row',73,11],PD:['row',66,90],ATA:['col',93,56]};
 const BANDEIRA=a=>a&&a.length===2&&a.toUpperCase()!=='BR'?String.fromCodePoint(...[...a.toUpperCase()].map(c=>127397+c.charCodeAt(0))):'';
 function zonaDe(j){
   if(j.campo) return j.campo;
@@ -753,12 +757,17 @@ function telaCampograma(){
       const passo=Math.min(7.4,40/Math.max(n,1));
       L.forEach((it,i)=>itens.push({...it,z,f:54,w:passo*.96,x:x+(i-(n-1)/2)*passo,y}));
     }
-    // botão "+" (vaga): na coluna, ao lado do primeiro jogador; na linha, no fim dela
-    if(tipo==='col'){ const cols=n>7?2:1, porCol=Math.max(1,Math.ceil(n/cols)), passo=Math.min(13,72/Math.max(porCol-1,1));
-      itens.push({add:z,x:x+(cols>1?7.2:3.8),y:n?y-((porCol-1)/2)*passo:y}); }
-    else itens.push({add:z,x:x+(n?((n-1)/2)*Math.min(7.4,40/Math.max(n,1))+4.6:0),y});
   });
   const fUnico=Math.min(54,...itens.filter(i=>i.f).map(i=>i.f)); itens.forEach(i=>{ if(i.f) i.f=fUnico; });
+  // quadro de cada posição (nome em cima à esquerda, ＋ em cima à direita), em volta de quem está nela
+  const W=Math.max(700,innerWidth-40), mx=(fUnico/2+44)/W*100, myC=(fUnico/2+8)/H*100, myB=(fUnico/2+30)/H*100;
+  const quadros=ZONAS.map(([z,nome])=>{
+    const its=itens.filter(i=>i.z===z), [,x0,y0]=ZONA_POS[z];
+    const xs=its.length?its.map(i=>i.x):[x0], ys=its.length?its.map(i=>i.y):[y0];
+    const l=Math.max(.4,Math.min(...xs)-mx), r=Math.min(99.6,Math.max(...xs)+mx), t=Math.max(.6,Math.min(...ys)-myC-3.2), b=Math.min(99.4,Math.max(...ys)+myB);
+    return `<div class="cg-q" style="left:${l}%;top:${t}%;width:${r-l}%;height:${b-t}%"><span class="cg-qn">${nome}</span>
+      <button class="cg-add" data-z="${z}" ondragover="arrSobre(event)" ondragleave="this.classList.remove('alvo')" ondrop="arrSolta(event)" onclick="menuVaga(event,'${z}')" title="Contratar, incluir ou marcar vaga em ${nome.toLowerCase()} (solte um jogador aqui para mandar para o fim)">＋</button></div>`;
+  }).join('');
   const html=itens.map(it=>{
  if(it.add) return `<button class="cg-add" data-z="${it.add}" ondragover="arrSobre(event)" ondragleave="this.classList.remove('alvo')" ondrop="arrSolta(event)" style="left:${it.x}%;top:${it.y}%" onclick="menuVaga(event,'${it.add}')" title="Marcar vaga de contratação ou de base">＋</button>`;
     if(it.vaga) return `<div class="cg-j" style="left:${it.x}%;top:${it.y}%;width:${it.w}%;--f:${it.f||54}px"><div class="cg-f vaga ${it.vaga}" onclick="vaga('${it.z}','${it.vaga}',-1)" title="Clique para tirar a vaga"></div><div class="cg-n">${it.vaga==='base'?'BASE':'CONTRATAÇÃO'}</div></div>`;
@@ -776,7 +785,7 @@ function telaCampograma(){
       <div class="l" style="left:50%;top:0;bottom:0;border-width:0 0 0 2px"></div><div class="l" style="left:50%;top:50%;height:26%;aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%)"></div>
       <div class="l" style="left:0;top:22%;bottom:22%;width:15%;border-left:0"></div><div class="l" style="right:0;top:22%;bottom:22%;width:15%;border-right:0"></div>
       <div class="l" style="left:0;top:37%;bottom:37%;width:5%;border-left:0"></div><div class="l" style="right:0;top:37%;bottom:37%;width:5%;border-right:0"></div>
-      ${html}</div>
+      ${quadros}${html}</div>
       <div class="cg-rod"><span>${esc_?`<img src="${esc_}" alt="">`:''}${esc(TIME?.nome||'')} <b>${ANO}</b> · elenco <b>${c.total}</b> · saem <b style="color:#c23b3b">${c.sai}</b> · chegam <b style="color:#b8860b">${c.chega}</b></span><span>Scout System · Botafogo</span></div></div></div>`;
 }
 async function baixarCampograma(){
