@@ -145,7 +145,7 @@ body.campo main{max-width:none;padding:6px 10px 6px}
 .cg-barra{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:4px 0 4px}
 .cg-leg{display:flex;align-items:center;gap:6px;color:var(--txt2);font-size:11.5px;flex-wrap:wrap}
 .cg-leg i{display:inline-block;width:12px;height:12px;border-radius:50%;border:3px solid;margin-left:6px}
-.cg-leg i.fica{border-color:#1f9d55}.cg-leg i.sai{border-color:#d64545;background:#f3c1bd}.cg-leg i.chega{border-color:#d4ad1f;background:#fbf0c4}.cg-leg i.def{border-color:#9aa0ab}
+.cg-leg i.fica{border-color:#1f9d55}.cg-leg i.sai{border-color:#d64545;background:#f3c1bd}.cg-leg i.chega{border-color:#2f6fd0;background:#dbe8fb}.cg-leg i.def{border-color:#9aa0ab}
 .cg-leg i.vc{border-color:#2f6fd0;background:#3b7fe0}.cg-leg i.vb{border-color:#2f8a3a;background:#3a9a46}
 #cgWrap{overflow-x:auto}
 #cg{min-width:760px;width:100%;margin:0 auto;background:#e9ede6;border-radius:12px;padding:12px 12px 8px}
@@ -157,7 +157,8 @@ body.campo main{max-width:none;padding:6px 10px 6px}
 .cg-f span{font-family:var(--cond);font-weight:800;color:#6f7482;font-size:16px}
 .cg-j.fica .cg-f{border-color:#1f9d55}
 .cg-j.sai .cg-f{border-color:#d64545;background:#f3c1bd}.cg-j.sai .cg-f img{opacity:.75}
-.cg-j.chega .cg-f{border-color:#d4ad1f;background:#fbf0c4}
+.cg-j.chega .cg-f{border-color:#2f6fd0;background:#dbe8fb}
+.cg-tag-ch{margin-top:1px;background:#2f6fd0;color:#fff;border-radius:3px;font:700 8.5px/1 -apple-system,Arial,sans-serif;letter-spacing:.2px;padding:2px 4px;white-space:nowrap}
 .cg-f.vaga{border:0;cursor:pointer}.cg-f.contratacao{background:#3b7fe0}.cg-f.base{background:#3a9a46}
 .cg-ac{display:none;position:absolute;left:50%;top:100%;margin-top:1px;transform:translateX(-50%);gap:2px;z-index:4;white-space:nowrap}
 .cg-j:hover .cg-ac{display:flex}
@@ -697,7 +698,7 @@ function acoesCampo(j,s){
 // etiqueta do tipo de saída (clique troca: venda → empréstimo → fim de contrato)
 function tipoCampo(j){
   const t=j.saida||'venda', ord=SAIDAS.map(x=>x[0]), prox=ord[(ord.indexOf(t)+1)%ord.length];
-  return `<button class="cg-tipo" title="Sai por ${({venda:'venda',emprestimo:'empréstimo',fim:'fim de contrato'})[t]} · clique para trocar" onclick="event.stopPropagation();campoStatus('${j.id}','sai','${prox}')">${({venda:'VENDA',emprestimo:'EMPRÉST.',fim:'FIM'})[t]} ▸</button>`;
+  return `<button class="cg-tipo" title="Sai por ${({venda:'venda',emprestimo:'empréstimo',fim:'fim de contrato'})[t]} · clique para trocar" onclick="event.stopPropagation();campoStatus('${j.id}','sai','${prox}')">${({venda:'VENDA',emprestimo:'EMPRÉSTIMO',fim:'FIM DE CONTRATO'})[t]} ▸</button>`;
 }
 function campoStatus(k,st,tipo){
   fecharPop();
@@ -754,7 +755,7 @@ function telaCampograma(){
     const j=it.j, s=status(j), f=fotoJog(j.id), aa=j.nasc?String(j.nasc).slice(2,4):'', bd=BANDEIRA(j.nac);
     return `<div class="cg-j ${s||'def'}${it.c2?' c2':''}" draggable="true" data-id="${j.id}" data-z="${it.z}" ondragstart="arrIni(event)" ondragover="arrSobre(event)" ondragleave="this.classList.remove('alvo')" ondrop="arrSolta(event)" ondragend="arrFim()" onclick="menuCampo(event,'${j.id}')" style="left:${it.x}%;top:${it.y}%;width:${it.w}%;cursor:pointer" title="${esc(j.nome)} · ${s==='sai'?'sai'+(j.saida?' ('+j.saida+')':''):s||'a definir'}">
       <div class="cg-f">${f?`<img src="${f}" alt="">`:`<span>${iniciais(nomeDe(j))}</span>`}${bd?`<i class="cg-b">${bd}</i>`:''}<button class="cg-x" onclick="event.stopPropagation();apagarCampo('${j.id}')" title="${j.origem==='chegada'?'Desfazer a contratação':'Excluir do elenco atual'}">×</button></div>
-      <div class="cg-n">${esc(nomeCampo(j))}${aa?` (${aa})`:''}</div>${s==='sai'?tipoCampo(j):''}${j.origem==='chegada'?'':acoesCampo(j,s)}</div>`;
+      <div class="cg-n">${esc(nomeCampo(j))}${aa?` (${aa})`:''}</div>${s==='sai'?tipoCampo(j):s==='chega'?'<span class="cg-tag-ch">CONTRATAÇÃO</span>':''}${j.origem==='chegada'?'':acoesCampo(j,s)}</div>`;
   }).join('');
   const c=contagem(), esc_=fotoTime(TIME?.id);
   document.getElementById('barraExtra').innerHTML=`<label class="chk" style="margin:0"><input type="checkbox" ${mostraSai?'checked':''} onchange="gravar('campoSai',this.checked)"> Quem sai</label>
