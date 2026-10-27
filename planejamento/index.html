@@ -707,7 +707,8 @@ function telaCampograma(){
   const peso={fica:0,chega:1,'':2,sai:3};
   const itens=[];
   ZONAS.forEach(([z])=>{
-    const L=por[z].sort((a,b)=>(peso[status(a)]-peso[status(b)])||((b.valor||0)-(a.valor||0)))
+    // atuais primeiro (ordem fixa: marcar fica/sai não muda o lugar), contratações depois, na ordem em que entraram
+    const L=por[z].sort((a,b)=>((a.origem==='chegada')-(b.origem==='chegada'))||(a.origem==='chegada'?String(a.criadoEm||'').localeCompare(String(b.criadoEm||'')):((b.valor||0)-(a.valor||0))||nomeDe(a).localeCompare(nomeDe(b))))
       .map(j=>({j})).concat(Array.from({length:((P.vagas||{})[z]||{}).contratacao||0},()=>({vaga:'contratacao'})),Array.from({length:((P.vagas||{})[z]||{}).base||0},()=>({vaga:'base'})));
     const [tipo,x,y]=ZONA_POS[z], n=L.length;
     if(tipo==='col'){
