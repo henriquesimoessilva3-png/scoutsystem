@@ -183,6 +183,8 @@ body.campo main{max-width:none;padding:6px 10px 6px}
 #cg.foto .cg-x{display:none!important}
 .cg-b{position:absolute;right:-7px;top:-5px;font-style:normal;font-size:14px;line-height:1}
 .cg-n{margin-top:3px;font-family:var(--cond);font-weight:800;font-size:12px;line-height:1.1;letter-spacing:-.1px;color:#17181c;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;text-align:center;text-shadow:0 0 3px #fff,0 0 3px #fff}
+.nomes-p .cg-n{font-size:10.5px}
+.nomes-p .cg-tipo,.nomes-p .cg-tag-ch{font-size:7.5px}
 .cg-q{position:absolute;border:1.5px dashed rgba(23,24,28,.22);border-radius:12px;background:rgba(255,255,255,.18);pointer-events:none}
 .cg-qn{position:absolute;left:9px;top:5px;line-height:1;font-family:var(--cond);font-weight:800;font-size:11px;letter-spacing:1.2px;color:rgba(23,24,28,.5);text-transform:uppercase}
 .cg-q .cg-add{position:absolute;left:auto;right:5px;top:3px;width:20px;height:20px;font-size:12px;transform:none;pointer-events:auto}
@@ -320,6 +322,9 @@ function abrirTime(id){
       const ids=Object.keys(P.elenco).filter(k=>/^\d+$/.test(k)).concat(['t'+id]);
       await Promise.all(ids.filter(k=>FOTOS[k]===undefined).map(async k=>{ const v=(await db.ref('planejador_fotos/'+k).once('value')).val(); if(v) FOTOS[k]=v; }));
       if(!Object.keys(P.elenco).length) importarElenco(true);
+      // contratações antigas sem país (bandeira): busca no SofaScore uma vez
+      if(EXT) Object.values(P.elenco).filter(j=>j.origem==='chegada'&&/^\d+$/.test(String(j.id))&&j.nac===undefined).forEach(async j=>{
+        try{ const d=(await sofa('/player/'+j.id)).player; gravar(`elenco/${j.id}/nac`,(d.country&&d.country.alpha2)||''); }catch(e){} });
     }
     render();
   });
@@ -645,7 +650,7 @@ async function ctEscolher(p){
   if(ant&&ant.removido&&ant.origem!=='chegada'&&CT.modo==='elenco'){ fecharPop(); voltar(p.id); return; }
   const reg={id:p.id,nome:p.nome,setor:CT.setor,campo:CT.campo||null,origem:CT.modo==='elenco'?'elenco':'chegada',incluidoAMao:CT.modo==='elenco'||null,clubeOrigem:p.clube||'',nasc:p.nasc||'',posDet:[],valor:0,criadoEm:new Date().toISOString()};
   fecharPop();
-  if(/^\d+$/.test(p.id)&&EXT){ try{ const d=(await sofa('/player/'+p.id)).player; reg.posDet=d.positionsDetailed||[]; reg.nasc=d.dateOfBirthTimestamp?isoTs(d.dateOfBirthTimestamp):reg.nasc; reg.contrato=d.contractUntilTimestamp?isoTs(d.contractUntilTimestamp):''; reg.valor=d.proposedMarketValue||0; reg.clubeOrigem=d.team?.name||reg.clubeOrigem; }catch(e){} }
+  if(/^\d+$/.test(p.id)&&EXT){ try{ const d=(await sofa('/player/'+p.id)).player; reg.posDet=d.positionsDetailed||[]; reg.nac=(d.country&&d.country.alpha2)||''; reg.nasc=d.dateOfBirthTimestamp?isoTs(d.dateOfBirthTimestamp):reg.nasc; reg.contrato=d.contractUntilTimestamp?isoTs(d.contractUntilTimestamp):''; reg.valor=d.proposedMarketValue||0; reg.clubeOrigem=d.team?.name||reg.clubeOrigem; }catch(e){} }
   await gravar('elenco/'+p.id,reg);
 }
 function ctMao(){
@@ -753,28 +758,41 @@ function telaCampograma(){
   const por={}; ZONAS.forEach(([z])=>por[z]=[]);
   js.forEach(j=>por[zonaDe(j)].push(j));
   const H=Math.max(480,innerHeight-120), fotoPx=pc=>Math.max(30,Math.min(54,Math.round(pc/100*H-32)));
-  const itens=[];
+  const itens=[], Ls={};
   ZONAS.forEach(([z])=>{
     // atuais primeiro (ordem fixa: marcar fica/sai não muda o lugar), contratações depois, na ordem em que entraram
-    const L=por[z].sort((a,b)=>((a.ordem??1e6)-(b.ordem??1e6))||((a.origem==='chegada')-(b.origem==='chegada'))||(a.origem==='chegada'?String(a.criadoEm||'').localeCompare(String(b.criadoEm||'')):((b.valor||0)-(a.valor||0))||nomeDe(a).localeCompare(nomeDe(b))))
+    Ls[z]=por[z].sort((a,b)=>((a.ordem??1e6)-(b.ordem??1e6))||((a.origem==='chegada')-(b.origem==='chegada'))||(a.origem==='chegada'?String(a.criadoEm||'').localeCompare(String(b.criadoEm||'')):((b.valor||0)-(a.valor||0))||nomeDe(a).localeCompare(nomeDe(b))))
       .map(j=>({j})).concat(Array.from({length:((P.vagas||{})[z]||{}).contratacao||0},()=>({vaga:'contratacao'})),Array.from({length:((P.vagas||{})[z]||{}).base||0},()=>({vaga:'base'})));
-    const [tipo,x,y]=ZONA_POS[z], n=L.length;
-    if(tipo==='col'){
-      const cols=n>4?2:1, porCol=Math.ceil(n/cols), passo=Math.min(12.3,48/Math.max(porCol-1,1));
-      L.forEach((it,i)=>{ const c=Math.floor(i/porCol), r=i%porCol, nn=c<cols-1?porCol:n-porCol*(cols-1);
-        itens.push({...it,z,c2:cols>1,f:fotoPx(passo),w:cols>1?8:11,x:x+(cols>1?(c?4.2:-4.2):0),y:y+(r-(nn-1)/2)*passo}); });
-    } else {
-      const passo=Math.min(7.6,42/Math.max(n,1));
-      L.forEach((it,i)=>itens.push({...it,z,f:54,w:passo*.96,x:x+(i-(n-1)/2)*passo,y}));
-    }
   });
-  const fUnico=Math.min(54,...itens.filter(i=>i.f).map(i=>i.f)); itens.forEach(i=>{ if(i.f) i.f=fUnico; });
+  /* Colunas do meio (goleiros → atacantes) arrumadas da esquerda para a direita pela largura de cada uma (1 ou 2 filas),
+     sempre com espaço entre os quadros. Se não couber tudo, os cards encolhem — nunca encavalam. */
+  const W=Math.max(700,innerWidth-48), COLS=['GOL','ZAG','VOL','MC','MO','ATA'], info={};
+  COLS.forEach(z=>{ const n=Ls[z].length, cols=n>4?2:1, porCol=Math.max(1,Math.ceil(n/cols)); info[z]={n,cols,porCol,passo:Math.min(12.3,48/Math.max(porCol-1,1))}; });
+  const fUnico=Math.min(54,...COLS.map(z=>fotoPx(info[z].passo)));
+  const pad=12, gapMin=10, margem=6, nCol=COLS.reduce((t,z)=>t+info[z].cols,0);
+  let itemPx=Math.max(fUnico+66,128);
+  const cabe=W-margem*2-gapMin*(COLS.length-1)-pad*2*COLS.length;
+  if(nCol*itemPx>cabe) itemPx=Math.max(78,Math.floor(cabe/nCol));
+  const larg=z=>info[z].cols*itemPx+pad*2, soma=COLS.reduce((t,z)=>t+larg(z),0);
+  const g=Math.max(gapMin,(W-margem*2-soma)/(COLS.length-1));
+  const caixa={}; let xp=margem; COLS.forEach(z=>{ caixa[z]=[xp/W*100,(xp+larg(z))/W*100]; xp+=larg(z)+g; });
+  const pct=px=>px/W*100;
+  COLS.forEach(z=>{
+    const {n,cols,porCol,passo}=info[z], y=ZONA_POS[z][2];
+    Ls[z].forEach((it,i)=>{ const c=Math.floor(i/porCol), r=i%porCol, nn=c<cols-1?porCol:n-porCol*(cols-1);
+      itens.push({...it,z,c2:cols>1,f:fUnico,w:pct(itemPx),x:caixa[z][0]+pct(pad+itemPx*(c+.5)),y:y+(r-(nn-1)/2)*passo}); });
+  });
+  ['LE','LD','PE','PD'].forEach(z=>{
+    const L=Ls[z], n=L.length, [,x,y]=ZONA_POS[z], passo=Math.min(7.6,42/Math.max(n,1));
+    L.forEach((it,i)=>itens.push({...it,z,f:fUnico,w:passo*.96,x:x+(i-(n-1)/2)*passo,y}));
+  });
+  const nomePequeno=itemPx<112;
   // quadro de cada posição (nome em cima à esquerda, ＋ em cima à direita), em volta de quem está nela
-  const W=Math.max(700,innerWidth-40), hd=26/H*100, mx=(fUnico/2+44)/W*100, myC=(fUnico/2+12)/H*100, myB=(fUnico/2+30)/H*100;
+  const hd=26/H*100, mx=(fUnico/2+44)/W*100, myC=(fUnico/2+12)/H*100, myB=(fUnico/2+30)/H*100;
   const quadros=ZONAS.map(([z,nome])=>{
     const its=itens.filter(i=>i.z===z), [,x0,y0]=ZONA_POS[z];
     const xs=its.length?its.map(i=>i.x):[x0], ys=its.length?its.map(i=>i.y):[y0];
-    const fx=FAIXA_LINHA[z], l=fx?fx[0]:Math.max(.4,Math.min(...xs)-mx), r=fx?fx[1]:Math.min(99.6,Math.max(...xs)+mx), t=Math.max(.6,Math.min(...ys)-myC-hd), b=Math.min(99.4,Math.max(...ys)+myB);
+    const fx=FAIXA_LINHA[z]||caixa[z], l=fx?fx[0]:Math.max(.4,Math.min(...xs)-mx), r=fx?fx[1]:Math.min(99.6,Math.max(...xs)+mx), t=Math.max(.6,Math.min(...ys)-myC-hd), b=Math.min(99.4,Math.max(...ys)+myB);
     return `<div class="cg-q" style="left:${l}%;top:${t}%;width:${r-l}%;height:${b-t}%"><span class="cg-qn">${nome}</span>
       <button class="cg-add" data-z="${z}" ondragover="arrSobre(event)" ondragleave="this.classList.remove('alvo')" ondrop="arrSolta(event)" onclick="menuVaga(event,'${z}')" title="Contratar, incluir ou marcar vaga em ${nome.toLowerCase()} (solte um jogador aqui para mandar para o fim)">＋</button></div>`;
   }).join('');
@@ -791,7 +809,7 @@ function telaCampograma(){
       <span class="cg-leg"><i class="fica"></i>Fica <i class="sai"></i>Sai <i class="chega"></i>Chega <i class="def"></i>A definir <i class="vc"></i>Contratação <i class="vb"></i>Base</span>
       <span class="dica" title="Arraste o jogador para mudar a ordem ou a posição (solte em cima de outro ou no ＋) · Mouse no jogador: Fica / Sai · clique no jogador: posição, apelido ou excluir · etiqueta vermelha: troca o tipo de saída · ＋: contratar ou marcar vaga">ⓘ</span>
       <button class="btn" onclick="baixarCampograma()">⬇ Imagem</button>`;
-  return `<div id="cgWrap"><div id="cg"><div class="cg-campo">
+  return `<div id="cgWrap"><div id="cg" class="${nomePequeno?'nomes-p':''}"><div class="cg-campo">
       <div class="l" style="left:50%;top:0;bottom:0;border-width:0 0 0 2px"></div><div class="l" style="left:50%;top:50%;height:26%;aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%)"></div>
       <div class="l" style="left:0;top:22%;bottom:22%;width:15%;border-left:0"></div><div class="l" style="right:0;top:22%;bottom:22%;width:15%;border-right:0"></div>
       <div class="l" style="left:0;top:37%;bottom:37%;width:5%;border-left:0"></div><div class="l" style="right:0;top:37%;bottom:37%;width:5%;border-right:0"></div>
