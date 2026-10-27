@@ -108,13 +108,13 @@ main{padding:4px 16px 40px;max-width:1500px;margin:0 auto}
 .form{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .form label{display:flex;flex-direction:column;gap:3px;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--txt3)}
 /* escalação */
-.esc{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:14px;align-items:start}
+.esc{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:14px;align-items:start}
 #campoWrap{background:var(--ink2);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;justify-content:center}
-#campo{width:min(560px,100%,calc((100vh - 150px) * .66));background:#101114;border-radius:10px;padding:14px 14px 10px;position:relative}
-.gram{position:relative;width:100%;aspect-ratio:68/100;border:2px solid #2f333c;border-radius:6px;background:repeating-linear-gradient(0deg,#15171c 0 10%,#17191f 10% 20%)}
+#campo{width:min(100%,calc((100vh - 150px) * 1.4));background:#101114;border-radius:10px;padding:14px 14px 10px;position:relative}
+.gram{position:relative;width:100%;aspect-ratio:100/64;border:2px solid #2f333c;border-radius:6px;background:repeating-linear-gradient(90deg,#15171c 0 10%,#17191f 10% 20%)}
 .gram .l{position:absolute;border:2px solid #2f333c}
-.slot{position:absolute;transform:translate(-50%,-50%);width:94px;display:flex;flex-direction:column;align-items:center;gap:2px}
-.slot .fto{width:56px;height:56px;border-radius:9px;object-fit:cover;background:#3a3d46;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-family:var(--cond);font-size:20px;color:#8a8f9c}
+.slot{position:absolute;transform:translate(-50%,-50%);width:104px;display:flex;flex-direction:column;align-items:center;gap:2px}
+.slot .fto{width:50px;height:50px;border-radius:9px;object-fit:cover;background:#3a3d46;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-family:var(--cond);font-size:20px;color:#8a8f9c}
 .slot .fto.chega{border-color:var(--gold)}
 .slot .ti{background:#fff;color:#111;font-family:var(--cond);font-weight:800;font-size:13px;letter-spacing:.3px;padding:1px 6px;border-radius:4px;text-transform:uppercase;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .slot .rs{font-size:9.5px;color:#c9ccd4;background:rgba(255,255,255,.07);padding:0 5px;border-radius:3px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;text-transform:uppercase}
@@ -713,12 +713,12 @@ function telaEscalacao(){
   const disp=disponiveis().sort((a,b)=>SETORES.findIndex(s=>s[0]===a.setor)-SETORES.findIndex(s=>s[0]===b.setor)||nomeDe(a).localeCompare(nomeDe(b)));
   const opc=v=>`<option value="">—</option>`+SETORES.map(([s,n])=>`<optgroup label="${n}">${disp.filter(j=>j.setor===s).map(j=>`<option value="${j.id}" ${String(j.id)===v?'selected':''}>${esc(nomeDe(j))}${status(j)==='chega'?' (chega)':''}</option>`).join('')}</optgroup>`).join('');
   const slots=ESQUEMAS[esq].map(([g,x,y],i)=>{ const [t,r1,r2]=e[i], j=J[t]; const f=j?fotoJog(j.id):'';
-    return `<div class="slot" style="left:${x}%;top:${y}%">${j?(f?`<img class="fto ${status(j)==='chega'?'chega':''}" src="${f}" alt="">`:`<div class="fto ${status(j)==='chega'?'chega':''}">${iniciais(nomeDe(j))}</div>`):`<div class="fto">${g}</div>`}
+    return `<div class="slot" style="left:${100-y}%;top:${x}%">${j?(f?`<img class="fto ${status(j)==='chega'?'chega':''}" src="${f}" alt="">`:`<div class="fto ${status(j)==='chega'?'chega':''}">${iniciais(nomeDe(j))}</div>`):`<div class="fto">${g}</div>`}
       <div class="ti">${j?esc(curto(nomeDe(j))):'—'}</div>${mostra?[r1,r2].filter(v=>J[v]).map(v=>`<div class="rs">${esc(curto(nomeDe(J[v])))}</div>`).join(''):''}</div>`; }).join('');
   const escudo=fotoTime(TIME?.id);
   return `<div class="esc"><div id="campoWrap"><div id="campo">
-      <div class="gram"><div class="l" style="left:0;right:0;top:50%;border-width:2px 0 0"></div><div class="l" style="left:50%;top:50%;width:18%;aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%)"></div>
-        <div class="l" style="left:22%;right:22%;bottom:0;height:15%;border-bottom:0"></div><div class="l" style="left:22%;right:22%;top:0;height:15%;border-top:0"></div>${slots}</div>
+      <div class="gram"><div class="l" style="top:0;bottom:0;left:50%;border-width:0 0 0 2px"></div><div class="l" style="left:50%;top:50%;height:26%;aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%)"></div>
+        <div class="l" style="top:22%;bottom:22%;left:0;width:15%;border-left:0"></div><div class="l" style="top:22%;bottom:22%;right:0;width:15%;border-right:0"></div>${slots}</div>
       <div class="rodape-campo"><span style="color:var(--txt3);font-size:13px">Scout System · Botafogo</span><span>${escudo?`<img src="${escudo}" alt="">`:''}${esc(TIME?.nome||'')} <b>${ANO}</b> · ${esq}</span></div>
     </div></div>
     <div class="painel"><h4>Esquema</h4><div class="esqs">${Object.keys(ESQUEMAS).map(s=>`<button class="${s===esq?'on':''}" onclick="setEsquema('${s}')">${s}</button>`).join('')}</div>
