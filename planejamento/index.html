@@ -594,7 +594,7 @@ async function ctListas(){
     .sort((a,b)=>((b.setor===CT.setor)-(a.setor===CT.setor))||nomeDe(a).localeCompare(nomeDe(b)));
   const blocoEx=ex.length?`<div style="font-family:var(--cond);font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#ff8a7a;margin:8px 2px 2px">Excluídos do ${esc(TIME?.nome||'clube')} <span style="color:var(--txt3);font-family:inherit;font-weight:600;letter-spacing:0;text-transform:none;font-size:11px">· clique para voltar ao elenco atual</span></div>`+
     ex.map(j=>{ const f=fotoJog(j.id); return `<div class="it" onclick="voltarDaLista('${j.id}')">${f?`<img src="${f}" alt="">`:'<div class="sem"></div>'}<div class="q"><b>${esc(nomeDe(j))}</b><small>${esc(NOME_SETOR[j.setor]||'')}${j.nasc?' · '+idade(j.nasc)+' anos':''} · ${j.foraWyscout?'não está no Wyscout':'excluído à mão'}</small></div><div class="n"><b style="font-size:12px;color:var(--fica)">↺ voltar</b></div></div>`; }).join(''):'';
-  r.innerHTML=(blocos||`<div class="vaz">Nenhum jogador deste setor na Main, Backup ou Youth List.</div>`)+blocoEx;
+  r.innerHTML=blocoEx+(blocos||`<div class="vaz">Nenhum jogador deste setor na Main, Backup ou Youth List.</div>`);
 }
 function voltarDaLista(k){ fecharPop(); voltar(k); if(CT.campo) gravar(`elenco/${k}/campo`,CT.campo); }
 async function ctObs(d){
