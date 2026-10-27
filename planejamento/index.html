@@ -368,7 +368,7 @@ async function importarElenco(auto){
     const upd={}; let novos=0;
     for(const p of ps){
       const k=String(p.id), ant=(P.elenco||{})[k];
-      const base={id:p.id,nome:p.name,curto:p.shortName||'',nac:(p.country&&p.country.alpha2)||'',posDet:p.positionsDetailed||[],pos:p.position||'',nasc:p.dateOfBirthTimestamp?isoTs(p.dateOfBirthTimestamp):'',
+      const base={id:p.id,nome:p.name,curto:p.shortName||'',pe:p.preferredFoot||'',nac:(p.country&&p.country.alpha2)||'',posDet:p.positionsDetailed||[],pos:p.position||'',nasc:p.dateOfBirthTimestamp?isoTs(p.dateOfBirthTimestamp):'',
         contrato:p.contractUntilTimestamp?isoTs(p.contractUntilTimestamp):'',valor:p.proposedMarketValue||0,origem:ant?.origem||'elenco'};
       if(!ant){ base.setor=setorDe(p.positionsDetailed,p.position); novos++; upd[`elenco/${k}`]=base; }
       else Object.entries(base).forEach(([c,v])=>upd[`elenco/${k}/${c}`]=v);
@@ -470,10 +470,8 @@ function menu(ev,k){
   const c=document.getElementById('camada'), r=ev.currentTarget.getBoundingClientRect();
   c.innerHTML=`<div class="pop" style="left:${Math.min(r.left,innerWidth-210)}px;top:${r.bottom+4}px" onclick="event.stopPropagation()">
     <button onclick="apelido('${k}')">✎ Apelido no planejamento</button>
-    <div class="t">Posição no campograma</div>
-    <div style="display:flex;flex-wrap:wrap;gap:3px;padding:2px 6px 4px">${ZONAS.map(([z,n])=>`<button style="width:auto;padding:3px 7px;border:1px solid #e3e5ea;${zonaDe(j)===z?'background:#15161a;color:#fff':''}" title="${n}" onclick="campoZona('${k}','${z}')">${z}</button>`).join('')}</div>
-    <div class="t">Mover para</div>
-    ${SETORES.filter(([s])=>s!==j.setor).map(([s,n])=>`<button onclick="mover('${k}','${s}')">${n}</button>`).join('')}
+    <div class="t">Posição</div>
+    ${ZONAS.map(([z,n])=>`<button onclick="campoZona('${k}','${z}')" style="${zonaDe(j)===z?'font-weight:700;background:#f0f1f4':''}">${zonaDe(j)===z?'✓ ':''}${n}</button>`).join('')}
     <div class="t"></div>
     ${j.origem==='chegada'?`<button class="vm" onclick="tirar('${k}')">✕ Desfazer contratação</button>`:`<button class="vm" onclick="tirar('${k}')">✕ Excluir do elenco atual</button>`}
   </div>`;
@@ -521,11 +519,11 @@ function ordem(a,b){ return ((a.origem==='chegada')-(b.origem==='chegada'))||((b
 function telaElenco(){
   const js=jogadores();
   if(!js.length) return cabecalho()+`<div class="vaz">${EXT?'Buscando o elenco no SofaScore…':'Sem elenco salvo para este clube. Instale a extensão para buscar no SofaScore.'}</div>`;
-  return cabecalho()+SETORES.map(([s,n])=>{
-    const g=js.filter(j=>(j.setor||'MEI')===s).sort(ordem);
+  return cabecalho()+ZONAS.map(([s,n])=>{
+    const g=js.filter(j=>zonaDe(j)===s).sort(ordem);
     const sai=g.filter(j=>status(j)==='sai').length, ch=g.filter(j=>status(j)==='chega').length, atual=g.length-ch;
     return `<section class="setor"><div class="setor-cab"><h2>${n}</h2><span class="q">hoje <b>${atual}</b>${sai?` · saem <b style="color:var(--sai)">${sai}</b>`:''}${ch?` · chegam <b style="color:var(--chega)">${ch}</b>`:''} · em ${ANO} <b>${g.length-sai}</b></span></div>
-      <div class="cards">${g.map(cardJog).join('')}<div class="card novo" onclick="contratar('${s}')"><i>＋</i>CONTRATAR</div><div class="card novo inc" onclick="contratar('${s}','elenco')" title="Jogador que já é do clube e não apareceu na lista"><i>＋</i>INCLUIR NO<br>ELENCO ATUAL</div></div></section>`;
+      <div class="cards">${g.map(cardJog).join('')}<div class="card novo" onclick="contratarNoCampo('${s}','chegada')"><i>＋</i>CONTRATAR</div><div class="card novo inc" onclick="contratarNoCampo('${s}','elenco')" title="Jogador que já é do clube e não apareceu na lista"><i>＋</i>INCLUIR NO<br>ELENCO ATUAL</div></div></section>`;
   }).join('')+telaExcluidos();
 }
 function telaExcluidos(){
@@ -602,7 +600,7 @@ async function ctLiga(){
 }
 /* Sugestões = Lista de Observação do Scout System (Main, Backup, Youth do TransferRoom), pelo setor. */
 // do campograma: cada quadro puxa a sua caixa da Lista de Observação (Meio-campistas = Médio, Meias ofensivos = Meia)
-const ZONA_CAIXAS={GOL:['GOL'],ZAG:['ZC','ZD'],LE:['LE'],LD:['LD'],VOL:['VOL'],MC:['MED'],MO:['MEI'],PE:['EE'],PD:['ED'],ATA:['ATA']};
+const ZONA_CAIXAS={GOL:['GOL'],ZE:['ZC'],ZD:['ZD'],LE:['LE'],LD:['LD'],VOL:['VOL'],MC:['MED'],MO:['MEI'],PE:['EE'],PD:['ED'],ATA:['ATA']};
 const CAIXA_SETOR={GOL:'GOL',LE:'LAT',LD:'LAT',ZC:'ZAG',ZD:'ZAG',MED:'VOL',VOL:'VOL',MEI:'MEI',EE:'PON',ED:'PON',ATA:'ATA'};
 const CAIXA_NOME={GOL:'Goleiro',LE:'Lateral esquerdo',LD:'Lateral direito',ZC:'Zagueiro canhoto',ZD:'Zagueiro destro',MED:'Médio',VOL:'Volante',MEI:'Meia',EE:'Extremo esquerdo',ED:'Extremo direito',ATA:'Atacante'};
 const LISTAS_OBS=[['MAIN','Main List'],['BACKUP','Backup List'],['YOUTH','Youth List']];
@@ -669,7 +667,7 @@ async function ctEscolher(p){
   if(ant&&ant.removido&&ant.origem!=='chegada'&&CT.modo==='elenco'){ fecharPop(); voltar(p.id); return; }
   const reg={id:p.id,nome:p.nome,setor:CT.setor,campo:CT.campo||null,origem:CT.modo==='elenco'?'elenco':'chegada',incluidoAMao:CT.modo==='elenco'||null,clubeOrigem:p.clube||'',nasc:p.nasc||'',posDet:[],valor:0,criadoEm:new Date().toISOString()};
   fecharPop();
-  if(/^\d+$/.test(p.id)&&EXT){ try{ const d=(await sofa('/player/'+p.id)).player; reg.posDet=d.positionsDetailed||[]; reg.nac=(d.country&&d.country.alpha2)||''; reg.nasc=d.dateOfBirthTimestamp?isoTs(d.dateOfBirthTimestamp):reg.nasc; reg.contrato=d.contractUntilTimestamp?isoTs(d.contractUntilTimestamp):''; reg.valor=d.proposedMarketValue||0; reg.clubeOrigem=d.team?.name||reg.clubeOrigem; }catch(e){} }
+  if(/^\d+$/.test(p.id)&&EXT){ try{ const d=(await sofa('/player/'+p.id)).player; reg.posDet=d.positionsDetailed||[]; reg.pe=d.preferredFoot||''; reg.nac=(d.country&&d.country.alpha2)||''; reg.nasc=d.dateOfBirthTimestamp?isoTs(d.dateOfBirthTimestamp):reg.nasc; reg.contrato=d.contractUntilTimestamp?isoTs(d.contractUntilTimestamp):''; reg.valor=d.proposedMarketValue||0; reg.clubeOrigem=d.team?.name||reg.clubeOrigem; }catch(e){} }
   await gravar('elenco/'+p.id,reg);
 }
 function ctMao(){
@@ -682,15 +680,15 @@ function ctMao(){
 /* ═══ campograma (pedido do Brunno, 26/10): o elenco inteiro no campo deitado, por posição ═══
    Ataque para a direita: lado esquerdo do time em cima. Contorno verde = fica, vermelho = sai, dourado = chega,
    cinza = a definir. Vagas "Contratação" e "Base" marcadas por posição (P.vagas). */
-const ZONAS=[['GOL','Goleiros'],['ZAG','Zagueiros'],['LE','Lateral esquerdo'],['LD','Lateral direito'],['VOL','Volantes'],['MC','Meio-campistas'],['MO','Meias ofensivos'],['PE','Ponta esquerda'],['PD','Ponta direita'],['ATA','Atacantes']];
+const ZONAS=[['GOL','Goleiros'],['LD','Laterais direitos'],['ZD','Zagueiros pela direita'],['ZE','Zagueiros pela esquerda'],['LE','Laterais esquerdos'],['VOL','Volantes'],['MC','Médios'],['MO','Meias'],['PD','Extremos direitos'],['PE','Extremos esquerdos'],['ATA','Atacantes']];
 // col = coluna em pé (x fixo, centrada em y) · row = linha deitada (y fixo, centrada em x)
-const ZONA_POS={GOL:['col',7,50.5],ZAG:['col',21,50.5],LE:['row',25,11],LD:['row',25,89.5],VOL:['col',36,50.5],MC:['col',51,50.5],MO:['col',70,50.5],PE:['row',75,11],PD:['row',75,89.5],ATA:['col',91,50.5]};
+const ZONA_POS={GOL:['col',7,50.5],ZE:['col',21,35],ZD:['col',21,66],LE:['row',25,11],LD:['row',25,89.5],VOL:['col',36,50.5],MC:['col',51,50.5],MO:['col',70,50.5],PE:['row',75,11],PD:['row',75,89.5],ATA:['col',91,50.5]};
 const BANDEIRA=a=>a&&a.length===2&&a.toUpperCase()!=='BR'?String.fromCodePoint(...[...a.toUpperCase()].map(c=>127397+c.charCodeAt(0))):'';
 function zonaDe(j){
-  if(j.campo) return j.campo;
+  if(j.campo&&ZONA_POS[j.campo]) return j.campo;
   const pd=(j.posDet||[]).join(' '), lado=ladoDe(j);
   switch(j.setor){
-    case 'GOL': return 'GOL'; case 'ZAG': return 'ZAG'; case 'VOL': return 'VOL'; case 'ATA': return 'ATA';
+    case 'GOL': return 'GOL'; case 'ZAG': return j.pe==='Left'?'ZE':'ZD'; case 'VOL': return 'VOL'; case 'ATA': return 'ATA';
     case 'LAT': return lado==='D'?'LD':'LE';
     case 'PON': return lado==='D'?'PD':'PE';
     case 'MEI': return /\bAM\b/.test(pd)&&!/\bMC\b/.test(pd.split(' ')[0])?'MO':'MC';
@@ -757,9 +755,9 @@ function apagarCampo(k){
   if(confirm(`Excluir ${nomeDe(j)} do elenco atual? Ele vai para "Fora do elenco atual" (aba Elenco), de onde dá para voltar.`)) gravar(`elenco/${k}/removido`,true);
 }
 const FAIXA_LINHA={LE:[2.5,47.5],LD:[2.5,47.5],PE:[52.5,97.5],PD:[52.5,97.5]};
-const ZONA_SETOR={GOL:'GOL',ZAG:'ZAG',LE:'LAT',LD:'LAT',VOL:'VOL',MC:'MEI',MO:'MEI',PE:'PON',PD:'PON',ATA:'ATA'};
+const ZONA_SETOR={GOL:'GOL',ZE:'ZAG',ZD:'ZAG',LE:'LAT',LD:'LAT',VOL:'VOL',MC:'MEI',MO:'MEI',PE:'PON',PD:'PON',ATA:'ATA'};
 function contratarNoCampo(z,modo){ CT={setor:ZONA_SETOR[z]||'MEI',aba:modo==='elenco'?'busca':'listas',modo,campo:z}; janelaContratar(); }
-function campoZona(k,z){ fecharPop(); gravar(`elenco/${k}/campo`,z); }
+function campoZona(k,z){ fecharPop(); gravar(`elenco/${k}/campo`,z); if(ZONA_SETOR[z]) gravar(`elenco/${k}/setor`,ZONA_SETOR[z]); }
 function vaga(z,tipo,d){ const v=((P.vagas||{})[z]||{})[tipo]||0; gravar(`vagas/${z}/${tipo}`,Math.max(0,v+d)||null); }
 function menuVaga(ev,z){
   ev.stopPropagation(); const r=ev.currentTarget.getBoundingClientRect();
@@ -785,21 +783,27 @@ function telaCampograma(){
   });
   /* Colunas do meio (goleiros → atacantes) arrumadas da esquerda para a direita pela largura de cada uma (1 ou 2 filas),
      sempre com espaço entre os quadros. Se não couber tudo, os cards encolhem — nunca encavalam. */
-  const W=Math.max(700,innerWidth-48), COLS=['GOL','ZAG','VOL','MC','MO','ATA'], info={};
-  COLS.forEach(z=>{ const n=Ls[z].length, cols=n>4?2:1, porCol=Math.max(1,Math.ceil(n/cols)); info[z]={n,cols,porCol,passo:Math.min(12.3,48/Math.max(porCol-1,1))}; });
-  const fUnico=Math.min(54,...COLS.map(z=>fotoPx(info[z].passo)));
-  const pad=12, gapMin=10, margem=6, nCol=COLS.reduce((t,z)=>t+info[z].cols,0);
+  const W=Math.max(700,innerWidth-48), CADEIA=[['GOL'],['ZE','ZD'],['VOL'],['MC'],['MO'],['ATA']], info={}, INTEIRAS=['GOL','VOL','MC','MO','ATA'];
+  INTEIRAS.forEach(z=>{ const n=Ls[z].length, cols=n>4?2:1, porCol=Math.max(1,Math.ceil(n/cols)); info[z]={n,cols,porCol,passo:Math.min(12.3,48/Math.max(porCol-1,1))}; });
+  const fUnico=Math.min(54,...INTEIRAS.map(z=>fotoPx(info[z].passo)));
+  const hd=26/H*100, myC=(fUnico/2+12)/H*100, myB=(fUnico/2+30)/H*100;
+  // zagueiros: metade de cima (pela esquerda) e de baixo (pela direita), entre as faixas dos laterais
+  const zTopo=ZONA_POS.LE[2]+myB+1.2, zBase=ZONA_POS.LD[2]-myC-hd-1.2, zMeio=(zTopo+zBase)/2, faixaZ={ZE:[zTopo,zMeio-.6],ZD:[zMeio+.6,zBase]};
+  ['ZE','ZD'].forEach(z=>{ const [a,b]=faixaZ[z], ini=a+hd+myC, fim=b-myB, n=Ls[z].length, cabe2=(fim-ini)/100*H>=fUnico+34;
+    const porCol=cabe2&&n>1?2:1, cols=Math.max(1,Math.ceil(n/porCol)); info[z]={n,cols,porCol,passo:porCol>1?fim-ini:0,yc:(ini+fim)/2}; });
+  const ZS=CADEIA.flat();
+  const pad=12, gapMin=10, margem=6, colsDe=grp=>Math.max(...grp.map(z=>info[z].cols)), nCol=CADEIA.reduce((t,g)=>t+colsDe(g),0);
   let itemPx=Math.max(fUnico+66,128);
-  const cabe=W-margem*2-gapMin*(COLS.length-1)-pad*2*COLS.length;
+  const cabe=W-margem*2-gapMin*(CADEIA.length-1)-pad*2*CADEIA.length;
   if(nCol*itemPx>cabe) itemPx=Math.max(78,Math.floor(cabe/nCol));
-  const larg=z=>info[z].cols*itemPx+pad*2, soma=COLS.reduce((t,z)=>t+larg(z),0);
-  const g=Math.max(gapMin,(W-margem*2-soma)/(COLS.length-1));
-  const caixa={}; let xp=margem; COLS.forEach(z=>{ caixa[z]=[xp/W*100,(xp+larg(z))/W*100]; xp+=larg(z)+g; });
+  const largG=grp=>colsDe(grp)*itemPx+pad*2, soma=CADEIA.reduce((t,g)=>t+largG(g),0);
+  const g=Math.max(gapMin,(W-margem*2-soma)/(CADEIA.length-1));
+  const caixa={}; let xp=margem; CADEIA.forEach(grp=>{ const lg=largG(grp); grp.forEach(z=>caixa[z]=[xp/W*100,(xp+lg)/W*100]); xp+=lg+g; });
   const pct=px=>px/W*100;
-  COLS.forEach(z=>{
-    const {n,cols,porCol,passo}=info[z], y=ZONA_POS[z][2];
+  ZS.forEach(z=>{
+    const {n,cols,porCol,passo}=info[z], y=info[z].yc??ZONA_POS[z][2], lg=(caixa[z][1]-caixa[z][0])/100*W, x0=caixa[z][0]+pct((lg-cols*itemPx)/2);
     Ls[z].forEach((it,i)=>{ const c=Math.floor(i/porCol), r=i%porCol, nn=c<cols-1?porCol:n-porCol*(cols-1);
-      itens.push({...it,z,c2:cols>1,f:fUnico,w:pct(itemPx),x:caixa[z][0]+pct(pad+itemPx*(c+.5)),y:y+(r-(nn-1)/2)*passo}); });
+      itens.push({...it,z,c2:cols>1,f:fUnico,w:pct(itemPx),x:x0+pct(itemPx*(c+.5)),y:y+(r-(nn-1)/2)*passo}); });
   });
   ['LE','LD','PE','PD'].forEach(z=>{
     const L=Ls[z], n=L.length, [,x,y]=ZONA_POS[z], passo=Math.min(7.6,42/Math.max(n,1));
@@ -807,7 +811,7 @@ function telaCampograma(){
   });
   const nomePequeno=itemPx<112;
   // quadro de cada posição (nome em cima à esquerda, ＋ em cima à direita), em volta de quem está nela
-  const hd=26/H*100, mx=(fUnico/2+44)/W*100, myC=(fUnico/2+12)/H*100, myB=(fUnico/2+30)/H*100;
+  const mx=(fUnico/2+44)/W*100;
   const quadros=ZONAS.map(([z,nome])=>{
     const its=itens.filter(i=>i.z===z), [,x0,y0]=ZONA_POS[z];
     const xs=its.length?its.map(i=>i.x):[x0], ys=its.length?its.map(i=>i.y):[y0];
