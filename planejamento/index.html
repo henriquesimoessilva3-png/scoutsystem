@@ -38,6 +38,7 @@ button,select,input{font:inherit}
 .aviso a{color:var(--gold)}
 #log{color:var(--txt3);font-size:11.5px;padding:3px 16px;min-height:20px}
 main{padding:4px 16px 40px;max-width:1900px;margin:0 auto}
+body.campo main{max-width:none;padding:2px 10px 6px}
 /* cabeçalho do clube */
 .clube{display:flex;align-items:center;gap:14px;margin:6px 0 12px;flex-wrap:wrap}
 .clube img{width:58px;height:58px;object-fit:contain}
@@ -136,14 +137,14 @@ main{padding:4px 16px 40px;max-width:1900px;margin:0 auto}
 @media (max-width:520px){main{padding:4px 10px 30px}.card{width:calc(50% - 5px)}.slot{width:70px}.slot .fto{width:40px;height:40px}}
 
 /* campograma */
-.cg-barra{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:6px 0 6px}
+.cg-barra{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:4px 0 4px}
 .cg-leg{display:flex;align-items:center;gap:6px;color:var(--txt2);font-size:11.5px;flex-wrap:wrap}
 .cg-leg i{display:inline-block;width:12px;height:12px;border-radius:50%;border:3px solid;margin-left:6px}
 .cg-leg i.fica{border-color:#1f9d55}.cg-leg i.sai{border-color:#d64545;background:#f3c1bd}.cg-leg i.chega{border-color:#d4ad1f;background:#fbf0c4}.cg-leg i.def{border-color:#9aa0ab}
 .cg-leg i.vc{border-color:#2f6fd0;background:#3b7fe0}.cg-leg i.vb{border-color:#2f8a3a;background:#3a9a46}
 #cgWrap{overflow-x:auto}
-#cg{min-width:760px;width:min(100%,calc((100vh - 182px) * 1.95));margin:0 auto;background:#e9ede6;border-radius:12px;padding:12px 12px 8px}
-.cg-campo{position:relative;width:100%;aspect-ratio:16/8.2;border:2px solid #fff;border-radius:6px;background:linear-gradient(135deg,#dfe6dc,#eef1ea 40%,#dfe6dc);overflow:hidden}
+#cg{min-width:760px;width:100%;margin:0 auto;background:#e9ede6;border-radius:12px;padding:12px 12px 8px}
+.cg-campo{position:relative;width:100%;height:calc(100vh - 150px);min-height:480px;border:2px solid #fff;border-radius:6px;background:linear-gradient(135deg,#dfe6dc,#eef1ea 40%,#dfe6dc);overflow:hidden}
 .cg-campo .l{position:absolute;border:2px solid rgba(255,255,255,.95)}
 .cg-j{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;width:96px;max-width:110px;pointer-events:auto}
 .cg-f{position:relative;width:42px;height:42px;border-radius:50%;background:#fff;border:3px solid #9aa0ab;overflow:visible;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 5px rgba(0,0,0,.18)}
@@ -659,7 +660,7 @@ function acoesCampo(j,s){
 // etiqueta do tipo de saída (clique troca: venda → empréstimo → fim de contrato)
 function tipoCampo(j){
   const t=j.saida||'venda', ord=SAIDAS.map(x=>x[0]), prox=ord[(ord.indexOf(t)+1)%ord.length];
-  return `<button class="cg-tipo" title="Sai por ${({venda:'venda',emprestimo:'empréstimo',fim:'fim de contrato'})[t]} · clique para trocar" onclick="event.stopPropagation();campoStatus('${j.id}','sai','${prox}')">${({venda:'VENDA',emprestimo:'EMPRÉSTIMO',fim:'FIM CONTR.'})[t]} ▸</button>`;
+  return `<button class="cg-tipo" title="Sai por ${({venda:'venda',emprestimo:'empréstimo',fim:'fim de contrato'})[t]} · clique para trocar" onclick="event.stopPropagation();campoStatus('${j.id}','sai','${prox}')">${({venda:'VENDA',emprestimo:'EMPRÉST.',fim:'FIM'})[t]} ▸</button>`;
 }
 function campoStatus(k,st,tipo){
   fecharPop();
@@ -701,13 +702,13 @@ function telaCampograma(){
       L.forEach((it,i)=>{ const c=Math.floor(i/porCol), r=i%porCol, nn=c<cols-1?porCol:n-porCol*(cols-1);
         itens.push({...it,z,c2:cols>1,w:cols>1?7:11,x:x+(cols>1?(c?3.6:-3.6):0),y:y+(r-(nn-1)/2)*passo}); });
     } else {
-      const passo=Math.min(7.8,46/Math.max(n,1));
+      const passo=Math.min(8.5,48/Math.max(n,1));
       L.forEach((it,i)=>itens.push({...it,z,w:passo*.96,x:x+(i-(n-1)/2)*passo,y}));
     }
     // botão "+" (vaga): na coluna, ao lado do primeiro jogador; na linha, no fim dela
     if(tipo==='col'){ const cols=n>7?2:1, porCol=Math.max(1,Math.ceil(n/cols)), passo=Math.min(13.5,76/Math.max(porCol-1,1));
       itens.push({add:z,x:x+(cols>1?7.2:3.8),y:n?y-((porCol-1)/2)*passo:y}); }
-    else itens.push({add:z,x:x+(n?((n-1)/2)*Math.min(7.8,46/Math.max(n,1))+4.4:0),y});
+    else itens.push({add:z,x:x+(n?((n-1)/2)*Math.min(8.5,48/Math.max(n,1))+4.4:0),y});
   });
   const html=itens.map(it=>{
     if(it.add) return `<button class="cg-add" style="left:${it.x}%;top:${it.y}%" onclick="menuVaga(event,'${it.add}')" title="Marcar vaga de contratação ou de base">＋</button>`;
@@ -720,7 +721,7 @@ function telaCampograma(){
   const c=contagem(), esc_=fotoTime(TIME?.id);
   return `<div class="cg-barra"><label class="chk" style="margin:0"><input type="checkbox" ${mostraSai?'checked':''} onchange="gravar('campoSai',this.checked)"> Mostrar quem sai</label>
       <span class="cg-leg"><i class="fica"></i>Fica <i class="sai"></i>Sai <i class="chega"></i>Chega <i class="def"></i>A definir <i class="vc"></i>Vaga de contratação <i class="vb"></i>Vaga da base</span>
-      <span style="color:var(--txt3);font-size:11.5px">Mouse no jogador: Fica / Sai · clique: posição e excluir · etiqueta vermelha: tipo de saída</span>
+      <span style="color:var(--txt3);font-size:11.5px">Mouse: Fica/Sai · clique: posição/excluir · etiqueta: tipo de saída</span>
       <button class="btn ouro" style="margin-left:auto" onclick="baixarCampograma()">⬇ Imagem</button></div>
     <div id="cgWrap"><div id="cg"><div class="cg-campo">
       <div class="l" style="left:50%;top:0;bottom:0;border-width:0 0 0 2px"></div><div class="l" style="left:50%;top:50%;height:26%;aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%)"></div>
@@ -796,7 +797,7 @@ async function baixarImagem(){
   const a=document.createElement('a'); a.download=`${(TIME?.nome||'elenco').replace(/\s+/g,'_')}_${ANO}_${(P.esquema||'4-3-3')}.png`; a.href=c.toDataURL('image/png'); a.click();
 }
 
-function render(){ document.getElementById('tela').innerHTML=ABA==='elenco'?telaElenco():ABA==='campo'?telaCampograma():telaEscalacao(); }
+function render(){ document.body.classList.toggle('campo',ABA==='campo'); document.getElementById('tela').innerHTML=ABA==='elenco'?telaElenco():ABA==='campo'?telaCampograma():telaEscalacao(); }
 iniciar();
 </script>
 </body>
