@@ -651,7 +651,7 @@ function ctMao(){
    cinza = a definir. Vagas "Contratação" e "Base" marcadas por posição (P.vagas). */
 const ZONAS=[['GOL','Goleiros'],['ZAG','Zagueiros'],['LE','Lateral esquerdo'],['LD','Lateral direito'],['VOL','Volantes'],['MC','Meio-campistas'],['MO','Meias ofensivos'],['PE','Ponta esquerda'],['PD','Ponta direita'],['ATA','Atacantes']];
 // col = coluna em pé (x fixo, centrada em y) · row = linha deitada (y fixo, centrada em x)
-const ZONA_POS={GOL:['col',7,56],ZAG:['col',21,55],LE:['row',25,11],LD:['row',29,90],VOL:['col',36,56],MC:['col',51,55],MO:['col',70,56],PE:['row',73,11],PD:['row',66,90],ATA:['col',91,56]};
+const ZONA_POS={GOL:['col',7,51],ZAG:['col',21,51],LE:['row',25,10],LD:['row',25,91],VOL:['col',36,51],MC:['col',51,51],MO:['col',70,51],PE:['row',75,10],PD:['row',75,91],ATA:['col',91,51]};
 const BANDEIRA=a=>a&&a.length===2&&a.toUpperCase()!=='BR'?String.fromCodePoint(...[...a.toUpperCase()].map(c=>127397+c.charCodeAt(0))):'';
 function zonaDe(j){
   if(j.campo) return j.campo;
@@ -723,6 +723,7 @@ function apagarCampo(k){
   if(j.origem==='chegada'){ if(confirm(`Desfazer a contratação de ${nomeDe(j)}?`)) gravar(`elenco/${k}`,null); return; }
   if(confirm(`Excluir ${nomeDe(j)} do elenco atual? Ele vai para "Fora do elenco atual" (aba Elenco), de onde dá para voltar.`)) gravar(`elenco/${k}/removido`,true);
 }
+const FAIXA_LINHA={LE:[2.5,47.5],LD:[2.5,47.5],PE:[52.5,97.5],PD:[52.5,97.5]};
 const ZONA_SETOR={GOL:'GOL',ZAG:'ZAG',LE:'LAT',LD:'LAT',VOL:'VOL',MC:'MEI',MO:'MEI',PE:'PON',PD:'PON',ATA:'ATA'};
 function contratarNoCampo(z,modo){ CT={setor:ZONA_SETOR[z]||'MEI',aba:modo==='elenco'?'busca':'listas',modo,campo:z}; janelaContratar(); }
 function campoZona(k,z){ fecharPop(); gravar(`elenco/${k}/campo`,z); }
@@ -750,11 +751,11 @@ function telaCampograma(){
       .map(j=>({j})).concat(Array.from({length:((P.vagas||{})[z]||{}).contratacao||0},()=>({vaga:'contratacao'})),Array.from({length:((P.vagas||{})[z]||{}).base||0},()=>({vaga:'base'})));
     const [tipo,x,y]=ZONA_POS[z], n=L.length;
     if(tipo==='col'){
-      const cols=n>4?2:1, porCol=Math.ceil(n/cols), passo=Math.min(14,66/Math.max(porCol-1,1));
+      const cols=n>4?2:1, porCol=Math.ceil(n/cols), passo=Math.min(13,52/Math.max(porCol-1,1));
       L.forEach((it,i)=>{ const c=Math.floor(i/porCol), r=i%porCol, nn=c<cols-1?porCol:n-porCol*(cols-1);
         itens.push({...it,z,c2:cols>1,f:fotoPx(passo),w:cols>1?8:11,x:x+(cols>1?(c?4.2:-4.2):0),y:y+(r-(nn-1)/2)*passo}); });
     } else {
-      const passo=Math.min(7.4,40/Math.max(n,1));
+      const passo=Math.min(7.6,42/Math.max(n,1));
       L.forEach((it,i)=>itens.push({...it,z,f:54,w:passo*.96,x:x+(i-(n-1)/2)*passo,y}));
     }
   });
@@ -764,7 +765,7 @@ function telaCampograma(){
   const quadros=ZONAS.map(([z,nome])=>{
     const its=itens.filter(i=>i.z===z), [,x0,y0]=ZONA_POS[z];
     const xs=its.length?its.map(i=>i.x):[x0], ys=its.length?its.map(i=>i.y):[y0];
-    const l=Math.max(.4,Math.min(...xs)-mx), r=Math.min(99.6,Math.max(...xs)+mx), t=Math.max(.6,Math.min(...ys)-myC-3.2), b=Math.min(99.4,Math.max(...ys)+myB);
+    const fx=FAIXA_LINHA[z], l=fx?fx[0]:Math.max(.4,Math.min(...xs)-mx), r=fx?fx[1]:Math.min(99.6,Math.max(...xs)+mx), t=Math.max(.6,Math.min(...ys)-myC-3.2), b=Math.min(99.4,Math.max(...ys)+myB);
     return `<div class="cg-q" style="left:${l}%;top:${t}%;width:${r-l}%;height:${b-t}%"><span class="cg-qn">${nome}</span>
       <button class="cg-add" data-z="${z}" ondragover="arrSobre(event)" ondragleave="this.classList.remove('alvo')" ondrop="arrSolta(event)" onclick="menuVaga(event,'${z}')" title="Contratar, incluir ou marcar vaga em ${nome.toLowerCase()} (solte um jogador aqui para mandar para o fim)">＋</button></div>`;
   }).join('');
