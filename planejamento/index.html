@@ -209,6 +209,7 @@ body.campo main{max-width:none;padding:6px 10px 6px}
     <button class="btn" onclick="menuMais(event)" title="Mais opções">⋯</button>
   </div>
 </div>
+<div id="faixaVisao" style="display:none;background:#3a3214;color:#f3e3a0;border-bottom:1px solid #5a4c1c;padding:6px 16px;font-size:12.5px"></div>
 <div id="avisos"></div>
 <div id="log"></div>
 <main id="tela"><div class="vaz">Carregando…</div></main>
@@ -226,6 +227,8 @@ const NOME_SETOR=Object.fromEntries(SETORES);
 const POS_PT={GK:'GOL',DL:'LE',DR:'LD',DC:'ZAG',DM:'VOL',MC:'MC',AM:'MEI',ML:'ME',MR:'MD',LW:'PE',RW:'PD',ST:'CA',WBL:'LE',WBR:'LD',CF:'CA',SS:'SA',LM:'ME',RM:'MD',CB:'ZAG',LB:'LE',RB:'LD',CM:'MC',CDM:'VOL',CAM:'MEI'};
 const SAIDAS=[['venda','Venda'],['emprestimo','Emprést.'],['fim','Fim']];
 
+const VISAO=new URLSearchParams(location.search).get('visao')||null;
+const BASE=()=>VISAO?`planejador_visoes/${TIME.id}/${VISAO}/dados`:`planejador/${TIME.id}`;
 let db=null, TIME=null, P={elenco:{}}, ABA='elenco', REF=null, LIGA=325, TIMES={}, FOTOS={}, EXT=false;
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const log=t=>{ document.getElementById('log').textContent=t||''; };
@@ -271,6 +274,14 @@ const fotoTime=id=>id?foto('t'+id,`https://img.sofascore.com/api/v1/team/${id}/i
 let tAg=null; const agendar=()=>{ clearTimeout(tAg); tAg=setTimeout(render,120); };
 
 /* ═══ início ═══ */
+async function faixaVisao(){
+  if(!VISAO||!db) return;
+  const nome=(await db.ref(`planejador_visoes/${TIME.id}/${VISAO}/nome`).once('value')).val()||'visão';
+  document.title='Visão · '+nome;
+  const el=document.getElementById('faixaVisao'); if(!el) return;
+  el.innerHTML=`📂 Visão <b>${esc(nome)}</b> — o que você mudar aqui fica só nesta visão. <a href="./?liga=${LIGA}&time=${TIME.id}" target="_blank" rel="noopener">abrir o planejamento principal ↗</a>`;
+  el.style.display='block';
+}
 async function iniciar(){
   document.getElementById('selLiga').innerHTML=LIGAS.map(([u,n])=>`<option value="${u}">${n}</option>`).join('');
   const q=new URLSearchParams(location.search);
@@ -285,6 +296,7 @@ async function iniciar(){
   await checarExtensao();
   await carregarTimes(LIGA,timeId);
   abrirTime(timeId);
+  faixaVisao();
 }
 async function carregarTimes(ut,escolher){
   const sel=document.getElementById('selClube');
@@ -314,10 +326,11 @@ function abrirTime(id){
   if(REF) REF.off();
   P={elenco:{}}; render();
   if(!db){ importarElenco(true); return; }
-  REF=db.ref('planejador/'+id);
+  REF=db.ref(VISAO?`planejador_visoes/${id}/${VISAO}/dados`:'planejador/'+id);
   let primeira=true;
   REF.on('value',async s=>{
     P=s.val()||{elenco:{}}; P.elenco=P.elenco||{};
+    if(VISAO){ const c=contagem(); db.ref(`planejador_visoes/${id}/${VISAO}`).update({resumo:{total:c.total,sai:c.sai,chega:c.chega,fica:c.fica},em:new Date().toISOString()}); }
     if(primeira){ primeira=false;
       const ids=Object.keys(P.elenco).filter(k=>/^\d+$/.test(k)).concat(['t'+id]);
       await Promise.all(ids.filter(k=>FOTOS[k]===undefined).map(async k=>{ const v=(await db.ref('planejador_fotos/'+k).once('value')).val(); if(v) FOTOS[k]=v; }));
@@ -329,7 +342,7 @@ function abrirTime(id){
     render();
   });
 }
-const gravar=(caminho,valor)=>db?db.ref(`planejador/${TIME.id}/${caminho}`).set(valor):Promise.resolve(alert('Sem conexão com o banco: a mudança não foi salva.'));
+const gravar=(caminho,valor)=>db?db.ref(`${BASE()}/${caminho}`).set(valor):Promise.resolve(alert('Sem conexão com o banco: a mudança não foi salva.'));
 
 /* ═══ elenco do SofaScore ═══ */
 function setorDe(pd,pos){
@@ -360,7 +373,7 @@ async function importarElenco(auto){
       else Object.entries(base).forEach(([c,v])=>upd[`elenco/${k}/${c}`]=v);
     }
     upd.atualizado=new Date().toISOString(); upd.clube=TIME.nome||''; upd.liga=LIGA;
-    if(db) await db.ref('planejador/'+TIME.id).update(upd); else { ps.forEach(p=>P.elenco[p.id]={...(P.elenco[p.id]||{}),...upd['elenco/'+p.id]}); render(); }
+    if(db) await db.ref(BASE()).update(upd); else { ps.forEach(p=>P.elenco[p.id]={...(P.elenco[p.id]||{}),...upd['elenco/'+p.id]}); render(); }
     log(auto?'':`✓ elenco atualizado (${ps.length} jogadores${novos?', '+novos+' novos':''})`);
   }catch(e){ log('⚠ '+e.message); if(!auto) alert('Não deu para buscar o elenco: '+e.message); }
 }
@@ -386,7 +399,7 @@ async function aplicarWyscout(lista){
   faltam.forEach((w,i)=>{ const id='w'+semAc(w.nome).replace(/[^a-z0-9]/g,'')+w.ano; if(P.elenco[id]) return;
     upd['elenco/'+id]={id,nome:w.nome,setor:SET[w.grupo]||'MEI',origem:'elenco',nasc:w.ano?w.ano+'-07-01':'',posDet:[],valor:0,manual:true,soWyscout:true,wy:{nome:w.nome,jogos:w.jogos||0}}; });
   upd.wyscout={em:new Date().toISOString(),total:lista.length,casados:Object.keys(casou).length,soWyscout:faltam.map(w=>w.nome)};
-  await db.ref('planejador/'+TIME.id).update(upd);
+  await db.ref(BASE()).update(upd);
   return {casados:Object.keys(casou).length,soWyscout:faltam.map(w=>w.nome+' ('+w.ano+')'),foraWyscout:sofaJ.filter(j=>!casou[j.id]).map(j=>j.nome)};
 }
 /* ═══ visões salvas (26/10): o cenário inteiro (fica/sai, chegadas, posições, vagas e escalação) guardado com um nome,
@@ -399,19 +412,23 @@ async function janelaVisoes(){
   const c=contagem();
   document.getElementById('camada').innerHTML=`<div class="fundo" onclick="if(event.target===this)fecharPop()"><div class="jan">
     <h3>Visões · <span>${esc(TIME?.nome||'')}</span><button class="x" onclick="fecharPop()">×</button></h3>
-    <div style="color:var(--txt2);font-size:12.5px;margin:4px 0 10px">Guarda o cenário de agora (quem fica, quem sai, chegadas, posições no campograma, vagas e escalação) com um nome. Abrir uma visão troca o planejamento atual por ela, para a equipe toda.</div>
-    <div class="linha"><input id="vNome" placeholder="nome da visão (ex: Cenário A — venda do Cabral)" onkeydown="if(event.key==='Enter')salvarVisao()"><button class="btn ouro" onclick="salvarVisao()">💾 Salvar a atual</button></div>
+    <div style="color:var(--txt2);font-size:12.5px;margin:4px 0 10px">Guarda o cenário de agora (quem fica, quem sai, chegadas, posições no campograma, vagas e escalação) com um nome. Cada visão abre na sua própria aba do navegador e pode ser mexida lá sem mudar o planejamento principal. "Usar no principal" copia a visão para o principal.</div>
+    <div class="linha"><input id="vNome" placeholder="nome da nova visão (ex: Cenário A — venda do Cabral)" onkeydown="if(event.key==='Enter')salvarVisao(true)"><button class="btn ouro" onclick="salvarVisao(true)" title="Cria a visão a partir do que está na tela e abre numa aba nova do navegador">＋ Nova visão</button><button class="btn" onclick="salvarVisao(false)" title="Só guarda, sem abrir">💾 Só salvar</button></div>
     <div style="color:var(--txt3);font-size:11.5px;margin:-2px 0 10px">Agora: elenco <b style="color:#fff">${c.total}</b> · ficam <b style="color:var(--fica)">${c.fica}</b> · saem <b style="color:var(--sai)">${c.sai}</b> · chegam <b style="color:var(--chega)">${c.chega}</b></div>
     <div class="res">${L.length?L.map(([id,x])=>`<div class="it" style="cursor:default"><div class="q"><b>${esc(x.nome)}</b><small>${new Date(x.em).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})} · elenco ${x.resumo?.total??'—'} · saem ${x.resumo?.sai??'—'} · chegam ${x.resumo?.chega??'—'}</small></div>
-      <div style="display:flex;gap:6px"><button class="btn ouro" onclick="abrirVisao('${id}')">Abrir</button><button class="btn" onclick="regravarVisao('${id}')" title="Troca o conteúdo desta visão pelo planejamento de agora">Atualizar</button><button class="btn" onclick="apagarVisao('${id}')" title="Apagar esta visão">✕</button></div></div>`).join(''):'<div class="vaz">Nenhuma visão salva ainda.</div>'}</div>
+      <div style="display:flex;gap:6px"><button class="btn ouro" onclick="abrirVisaoAba('${id}')" title="Abre esta visão numa aba nova; o que mudar lá fica só nela">↗ Abrir em nova aba</button><button class="btn" onclick="abrirVisao('${id}')" title="Copia esta visão para o planejamento principal">Usar no principal</button><button class="btn" onclick="regravarVisao('${id}')" title="Troca o conteúdo desta visão pelo planejamento de agora">Atualizar</button><button class="btn" onclick="apagarVisao('${id}')" title="Apagar esta visão">✕</button></div></div>`).join(''):'<div class="vaz">Nenhuma visão salva ainda.</div>'}</div>
   </div></div>`;
   setTimeout(()=>document.getElementById('vNome')?.focus(),50);
 }
 function fotoVisao(){ const d={}; CAMPOS_VISAO.forEach(k=>{ if(P[k]!==undefined) d[k]=P[k]; }); return JSON.parse(JSON.stringify(d)); }
-async function salvarVisao(){
+const urlVisao=id=>`./?liga=${LIGA}&time=${TIME.id}&visao=${encodeURIComponent(id)}`;
+function abrirVisaoAba(id){ window.open(urlVisao(id),'_blank','noopener'); }
+async function salvarVisao(abrir){
   const nome=document.getElementById('vNome').value.trim(); if(!nome){ alert('Dê um nome para a visão.'); return; }
   const c=contagem();
-  await db.ref('planejador_visoes/'+TIME.id).push({nome,em:new Date().toISOString(),dados:fotoVisao(),resumo:{total:c.total,sai:c.sai,chega:c.chega,fica:c.fica}});
+  const aba=abrir?window.open('about:blank','_blank'):null;   // abre já (o navegador bloqueia janela aberta depois de esperar o banco)
+  const ref=await db.ref('planejador_visoes/'+TIME.id).push({nome,em:new Date().toISOString(),dados:fotoVisao(),resumo:{total:c.total,sai:c.sai,chega:c.chega,fica:c.fica}});
+  if(aba) aba.location.href=new URL(urlVisao(ref.key),location.href).href;
   janelaVisoes();
 }
 async function regravarVisao(id){
@@ -422,10 +439,11 @@ async function regravarVisao(id){
 }
 async function abrirVisao(id){
   const x=(await db.ref(`planejador_visoes/${TIME.id}/${id}`).once('value')).val(); if(!x) return;
-  if(!confirm(`Abrir "${x.nome}"? O planejamento atual será trocado por esta visão (salve antes, se quiser guardar o de agora).`)) return;
+  if(!confirm(`Usar "${x.nome}" no planejamento principal? O principal será trocado por esta visão (salve o de agora como visão antes, se quiser guardar).`)) return;
   const upd={}; CAMPOS_VISAO.forEach(k=>upd[k]=(x.dados||{})[k]??null);
   upd.visaoAberta={id,nome:x.nome,em:new Date().toISOString()};
-  await db.ref('planejador/'+TIME.id).update(upd);
+  await db.ref('planejador/'+TIME.id).update(upd);   // sempre no planejamento principal
+  if(VISAO){ fecharPop(); alert('Visão copiada para o planejamento principal.'); return; }
   fecharPop();
 }
 async function apagarVisao(id){ if(!confirm('Apagar esta visão? (o planejamento atual não muda)')) return; await db.ref(`planejador_visoes/${TIME.id}/${id}`).remove(); janelaVisoes(); }
@@ -438,7 +456,7 @@ function menuMais(ev){
 }
 function recomecar(){
   if(!confirm(`Apagar todas as decisões do ${TIME?.nome||'clube'} (fica, sai, chegadas, apelidos, mudanças de setor e escalação)? Vale para a equipe toda.`)) return;
-  if(db) db.ref('planejador/'+TIME.id).remove().then(()=>importarElenco(true)); else { P={elenco:{}}; importarElenco(true); }
+  if(db) db.ref(BASE()).remove().then(()=>importarElenco(true)); else { P={elenco:{}}; importarElenco(true); }
 }
 
 /* ═══ decisões ═══ */
@@ -715,7 +733,7 @@ function arrSolta(ev){
   atual.splice(i,0,de);
   const upd={}; atual.forEach((id,n)=>upd[`elenco/${id}/ordem`]=n);
   upd[`elenco/${de}/campo`]=z;
-  db.ref('planejador/'+TIME.id).update(upd);
+  db.ref(BASE()).update(upd);
 }
 function nomeCampo(j){ const n=nomeDe(j); return j.apelido||n.length<=15?n:curto(n); }
 function acoesCampo(j,s){
