@@ -70,7 +70,8 @@ main{padding:4px 16px 40px;max-width:1500px;margin:0 auto}
 .acoes button{flex:1;border:1px solid var(--line);background:var(--ink2);color:var(--txt2);border-radius:6px;padding:4px 0;font-size:11px;font-weight:700;cursor:pointer}
 .acoes button.f.on{background:var(--fica);border-color:var(--fica);color:#fff}
 .acoes button.s.on{background:var(--sai);border-color:var(--sai);color:#fff}
-.tipos{display:flex;gap:3px;padding:0 6px 6px}
+.tipos{display:flex;padding:0 6px 7px}
+.tipos select{width:100%;background:#4a1f1f;color:#ffd9d6;border:1px solid #7a2b2b;border-radius:6px;padding:4px 6px;font-size:11.5px;font-weight:700;cursor:pointer}
 .tipos button{flex:1;min-width:0;letter-spacing:-.2px;border:1px solid #5a2a2a;background:transparent;color:#e3a3a3;border-radius:5px;padding:2px 0;font-size:9.5px;font-weight:700;cursor:pointer;text-transform:uppercase}
 .tipos button.on{background:#7a2b2b;color:#fff}
 .card.novo{border:2px dashed #4a4e59;background:transparent;align-items:center;justify-content:center;cursor:pointer;color:var(--txt3);min-height:200px;font-weight:700;letter-spacing:.08em;font-size:11px;gap:8px}
@@ -418,7 +419,7 @@ function cardJog(j){
     <div class="ct ${fimC?'alerta':''}" title="${j.nasc?'nascido em '+j.nasc.split('-').reverse().join('/'):''}">${fimC?'⚠ ':''}${ct}</div>
     ${j.origem==='chegada'?`<div class="acoes"><button onclick="tirar('${k}')">✕ Desfazer</button></div>`:
       `<div class="acoes"><button class="f ${s==='fica'?'on':''}" onclick="marcar('${k}','fica')">Fica</button><button class="s ${s==='sai'?'on':''}" onclick="marcar('${k}','sai')">Sai</button></div>
-      ${s==='sai'?`<div class="tipos">${SAIDAS.map(([t,n])=>`<button class="${(j.saida||'venda')===t?'on':''}" onclick="tipoSaida('${k}','${t}')">${n}</button>`).join('')}</div>`:''}`}
+      ${s==='sai'?`<div class="tipos"><select onchange="tipoSaida('${k}',this.value)" title="Tipo de saída">${SAIDAS.map(([t])=>`<option value="${t}" ${(j.saida||'venda')===t?'selected':''}>${{venda:'Venda',emprestimo:'Empréstimo',fim:'Fim de contrato'}[t]}</option>`).join('')}</select></div>`:''}`}
   </div>`;
 }
 function ordem(a,b){ return ((a.origem==='chegada')-(b.origem==='chegada'))||((b.valor||0)-(a.valor||0))||nomeDe(a).localeCompare(nomeDe(b)); }
@@ -609,8 +610,9 @@ function menuCampo(ev,k){
 function acoesCampo(j,s){
   const k=j.id, t=j.saida||'venda', p=(c,on,txt,fn,tit)=>`<button class="${c}${on?' on':''}" title="${tit}" onclick="event.stopPropagation();${fn}">${txt}</button>`;
   return `<div class="cg-ac">${p('f',s==='fica','Fica',`campoStatus('${k}',${s==='fica'?"''":"'fica'"})`,s==='fica'?'Desmarcar':'Fica')}${
-    s==='sai'?SAIDAS.map(([v,n])=>p('s',t===v,{venda:'V',emprestimo:'E',fim:'F'}[v],`campoStatus('${k}','sai','${v}')`,'Sai · '+({venda:'venda',emprestimo:'empréstimo',fim:'fim de contrato'})[v])).join('')+p('x',false,'↺',`campoStatus('${k}','')`,'Voltar para a definir')
-    :p('s',false,'Sai',`campoStatus('${k}','sai','venda')`,'Sai')}</div>`;
+    s==='sai'?(()=>{ const ord=SAIDAS.map(x=>x[0]), prox=ord[(ord.indexOf(t)+1)%ord.length];
+      return p('s',true,({venda:'Venda',emprestimo:'Emprést.',fim:'Fim'})[t]+' ▸',`campoStatus('${k}','sai','${prox}')`,'Sai por '+({venda:'venda',emprestimo:'empréstimo',fim:'fim de contrato'})[t]+' · clique para trocar o tipo'); })()
+    :p('s',false,'Sai',`campoStatus('${k}','sai','venda')`,'Sai')}</div>`;   // para desfazer o "sai": clique em Fica ou no jogador → A definir
 }
 function campoStatus(k,st,tipo){
   fecharPop();
@@ -652,13 +654,13 @@ function telaCampograma(){
       L.forEach((it,i)=>{ const c=Math.floor(i/porCol), r=i%porCol, nn=c<cols-1?porCol:n-porCol*(cols-1);
         itens.push({...it,z,w:cols>1?7:11,x:x+(cols>1?(c?3.6:-3.6):0),y:y+(r-(nn-1)/2)*passo}); });
     } else {
-      const passo=Math.min(7.2,40/Math.max(n,1));
+      const passo=Math.min(7.8,46/Math.max(n,1));
       L.forEach((it,i)=>itens.push({...it,z,w:passo*.96,x:x+(i-(n-1)/2)*passo,y}));
     }
     // botão "+" (vaga): na coluna, ao lado do primeiro jogador; na linha, no fim dela
     if(tipo==='col'){ const cols=n>7?2:1, porCol=Math.max(1,Math.ceil(n/cols)), passo=Math.min(12.5,66/Math.max(porCol-1,1));
       itens.push({add:z,x:x+(cols>1?7.2:3.8),y:n?y-((porCol-1)/2)*passo:y}); }
-    else itens.push({add:z,x:x+(n?((n-1)/2)*Math.min(7.2,40/Math.max(n,1))+4.2:0),y});
+    else itens.push({add:z,x:x+(n?((n-1)/2)*Math.min(7.8,46/Math.max(n,1))+4.4:0),y});
   });
   const html=itens.map(it=>{
     if(it.add) return `<button class="cg-add" style="left:${it.x}%;top:${it.y}%" onclick="menuVaga(event,'${it.add}')" title="Marcar vaga de contratação ou de base">＋</button>`;
