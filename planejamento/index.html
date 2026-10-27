@@ -161,6 +161,7 @@ body.campo main{max-width:none;padding:6px 10px 6px}
 .cg-j.fica .cg-f{border-color:#1f9d55}
 .cg-j.sai .cg-f{border-color:#d64545;background:#f3c1bd}.cg-j.sai .cg-f img{opacity:.75}
 .cg-j.chega .cg-f{border-color:#2f6fd0;background:#dbe8fb}
+.cg-tag-ch.fica{background:#1f9d55}
 .cg-tag-ch{margin-top:1px;background:#2f6fd0;color:#fff;border-radius:3px;font:700 8.5px/1 -apple-system,Arial,sans-serif;letter-spacing:.2px;padding:2px 4px;white-space:nowrap}
 .cg-f.vaga{border:0;cursor:pointer}.cg-f.contratacao{background:#3b7fe0}.cg-f.base{background:#3a9a46}
 .cg-ac{display:none;position:absolute;left:calc(50% + var(--f,54px)/2 + 3px);top:calc(var(--f,54px)/2);transform:translateY(-50%);flex-direction:column;gap:2px;z-index:6;white-space:nowrap}
@@ -781,7 +782,7 @@ function telaCampograma(){
     const j=it.j, s=status(j), f=fotoJog(j.id), aa=j.nasc?String(j.nasc).slice(2,4):'', bd=BANDEIRA(j.nac);
     return `<div class="cg-j ${s||'def'}${it.c2?' c2':''}" draggable="true" data-id="${j.id}" data-z="${it.z}" ondragstart="arrIni(event)" ondragover="arrSobre(event)" ondragleave="this.classList.remove('alvo')" ondrop="arrSolta(event)" ondragend="arrFim()" onclick="menuCampo(event,'${j.id}')" style="left:${it.x}%;top:${it.y}%;width:${it.w}%;cursor:pointer;--f:${it.f||54}px" title="${esc(j.nome)} · ${s==='sai'?'sai'+(j.saida?' ('+j.saida+')':''):s||'a definir'}">
       <div class="cg-f">${f?`<img src="${f}" alt="">`:`<span>${iniciais(nomeDe(j))}</span>`}${bd?`<i class="cg-b">${bd}</i>`:''}<button class="cg-x" onclick="event.stopPropagation();apagarCampo('${j.id}')" title="${j.origem==='chegada'?'Desfazer a contratação':'Excluir do elenco atual'}">×</button></div>
-      <div class="cg-n">${esc(nomeCampo(j))}${aa?` (${aa})`:''}</div>${s==='sai'?tipoCampo(j):s==='chega'?'<span class="cg-tag-ch">CONTRATAÇÃO</span>':''}${j.origem==='chegada'?'':acoesCampo(j,s)}</div>`;
+      <div class="cg-n">${esc(nomeCampo(j))}${aa?` (${aa})`:''}</div>${s==='sai'?tipoCampo(j):s==='chega'?'<span class="cg-tag-ch">CONTRATAÇÃO</span>':s==='fica'?'<span class="cg-tag-ch fica">FICA</span>':''}${j.origem==='chegada'?'':acoesCampo(j,s)}</div>`;
   }).join('');
   const c=contagem(), esc_=fotoTime(TIME?.id);
   document.getElementById('barraExtra').innerHTML=`<label class="chk" style="margin:0"><input type="checkbox" ${mostraSai?'checked':''} onchange="gravar('campoSai',this.checked)"> Quem sai</label>
