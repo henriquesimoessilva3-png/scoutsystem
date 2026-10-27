@@ -651,7 +651,7 @@ function ctMao(){
    cinza = a definir. Vagas "Contratação" e "Base" marcadas por posição (P.vagas). */
 const ZONAS=[['GOL','Goleiros'],['ZAG','Zagueiros'],['LE','Lateral esquerdo'],['LD','Lateral direito'],['VOL','Volantes'],['MC','Meio-campistas'],['MO','Meias ofensivos'],['PE','Ponta esquerda'],['PD','Ponta direita'],['ATA','Atacantes']];
 // col = coluna em pé (x fixo, centrada em y) · row = linha deitada (y fixo, centrada em x)
-const ZONA_POS={GOL:['col',6,56],ZAG:['col',20,55],LE:['row',25,11],LD:['row',33,90],VOL:['col',35.5,56],MC:['col',51,55],MO:['col',71,56],PE:['row',73,11],PD:['row',66,90],ATA:['col',93,56]};
+const ZONA_POS={GOL:['col',7,56],ZAG:['col',21,55],LE:['row',25,11],LD:['row',33,90],VOL:['col',36,56],MC:['col',51,55],MO:['col',70,56],PE:['row',73,11],PD:['row',66,90],ATA:['col',91,56]};
 const BANDEIRA=a=>a&&a.length===2&&a.toUpperCase()!=='BR'?String.fromCodePoint(...[...a.toUpperCase()].map(c=>127397+c.charCodeAt(0))):'';
 function zonaDe(j){
   if(j.campo) return j.campo;
@@ -750,9 +750,9 @@ function telaCampograma(){
       .map(j=>({j})).concat(Array.from({length:((P.vagas||{})[z]||{}).contratacao||0},()=>({vaga:'contratacao'})),Array.from({length:((P.vagas||{})[z]||{}).base||0},()=>({vaga:'base'})));
     const [tipo,x,y]=ZONA_POS[z], n=L.length;
     if(tipo==='col'){
-      const cols=n>7?2:1, porCol=Math.ceil(n/cols), passo=Math.min(13,72/Math.max(porCol-1,1));
+      const cols=n>4?2:1, porCol=Math.ceil(n/cols), passo=Math.min(14,66/Math.max(porCol-1,1));
       L.forEach((it,i)=>{ const c=Math.floor(i/porCol), r=i%porCol, nn=c<cols-1?porCol:n-porCol*(cols-1);
-        itens.push({...it,z,c2:cols>1,f:fotoPx(passo),w:cols>1?7.5:11,x:x+(cols>1?(c?3.8:-3.8):0),y:y+(r-(nn-1)/2)*passo}); });
+        itens.push({...it,z,c2:cols>1,f:fotoPx(passo),w:cols>1?8:11,x:x+(cols>1?(c?4.2:-4.2):0),y:y+(r-(nn-1)/2)*passo}); });
     } else {
       const passo=Math.min(7.4,40/Math.max(n,1));
       L.forEach((it,i)=>itens.push({...it,z,f:54,w:passo*.96,x:x+(i-(n-1)/2)*passo,y}));
