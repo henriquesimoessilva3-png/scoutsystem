@@ -522,7 +522,7 @@ function janelaContratar(){
   const c=document.getElementById('camada');
   const abas=[['listas','⭐ Main · Backup · Youth'],['busca','Buscar'],['liga','Minutos na liga'],['scout','Indicados'],['mao','À mão'],['excl',`${esc(TIME?.nome||'Clube')} · excluídos`]];
   c.innerHTML=`<div class="fundo" onclick="if(event.target===this)fecharPop()"><div class="jan">
-    <h3>${CT.modo==='elenco'?'Incluir no elenco atual':'Contratar'} · <span>${NOME_SETOR[CT.setor]}</span><button class="x" onclick="fecharPop()">×</button></h3>
+    <h3>${CT.modo==='elenco'?'Incluir no elenco atual':'Contratar'} · <span>${CT.campo?(ZONAS.find(z=>z[0]===CT.campo)||[])[1]:NOME_SETOR[CT.setor]}</span><button class="x" onclick="fecharPop()">×</button></h3>
     <div class="abas">${abas.map(([a,n])=>`<button class="${CT.aba===a?'on':''}" onclick="CT.aba='${a}';janelaContratar()">${n}</button>`).join('')}</div>
     <div id="ctCorpo"></div></div></div>`;
   const b=document.getElementById('ctCorpo');
@@ -577,6 +577,8 @@ async function ctLiga(){
   }catch(e){ r.innerHTML=`<div class="vaz">⚠ ${esc(e.message)}</div>`; }
 }
 /* Sugestões = Lista de Observação do Scout System (Main, Backup, Youth do TransferRoom), pelo setor. */
+// do campograma: cada quadro puxa a sua caixa da Lista de Observação (Meio-campistas = Médio, Meias ofensivos = Meia)
+const ZONA_CAIXAS={GOL:['GOL'],ZAG:['ZC','ZD'],LE:['LE'],LD:['LD'],VOL:['VOL'],MC:['MED'],MO:['MEI'],PE:['EE'],PD:['ED'],ATA:['ATA']};
 const CAIXA_SETOR={GOL:'GOL',LE:'LAT',LD:'LAT',ZC:'ZAG',ZD:'ZAG',MED:'VOL',VOL:'VOL',MEI:'MEI',EE:'PON',ED:'PON',ATA:'ATA'};
 const CAIXA_NOME={GOL:'Goleiro',LE:'Lateral esquerdo',LD:'Lateral direito',ZC:'Zagueiro canhoto',ZD:'Zagueiro destro',MED:'Médio',VOL:'Volante',MEI:'Meia',EE:'Extremo esquerdo',ED:'Extremo direito',ATA:'Atacante'};
 const LISTAS_OBS=[['MAIN','Main List'],['BACKUP','Backup List'],['YOUTH','Youth List']];
@@ -592,7 +594,7 @@ async function ctListas(){
   }
   const blocos=LISTAS_OBS.map(([k,n])=>{
     const cx=(OBS.L[k]||{}).caixas||{};
-    const ids=Object.entries(cx).filter(([c])=>CAIXA_SETOR[c]===CT.setor).flatMap(([c,l])=>(l||[]).map(id=>[c,id]));
+    const ids=Object.entries(cx).filter(([c])=>CT.campo&&ZONA_CAIXAS[CT.campo]?ZONA_CAIXAS[CT.campo].includes(c):CAIXA_SETOR[c]===CT.setor).flatMap(([c,l])=>(l||[]).map(id=>[c,id]));
     if(!ids.length) return '';
     return `<div style="font-family:var(--cond);font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--gold);margin:8px 2px 2px">${n} <span style="color:var(--txt3);font-family:inherit;font-weight:600;letter-spacing:0;text-transform:none;font-size:11px">· atualizada em ${esc(String((OBS.L[k]||{}).atualizado||'—').slice(0,10).split('-').reverse().join('/'))}</span></div>`+
       ids.map(([c,id])=>{ const j=OBS.J[id]; if(!j) return '';
