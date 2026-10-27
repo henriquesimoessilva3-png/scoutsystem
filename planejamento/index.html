@@ -519,13 +519,19 @@ const SOFA_POS={GOL:'G',LAT:'D',ZAG:'D',VOL:'M',MEI:'M',PON:'F',ATA:'F'};
 function contratar(s,modo){ CT={setor:s,aba:modo==='elenco'?'busca':'listas',modo:modo||'chegada'}; janelaContratar(); }
 function janelaContratar(){
   const c=document.getElementById('camada');
-  const abas=[['listas','⭐ Main · Backup · Youth'],['busca','Buscar'],['liga','Minutos na liga'],['scout','Indicados'],['mao','À mão']];
+  const abas=[['listas','⭐ Main · Backup · Youth'],['busca','Buscar'],['liga','Minutos na liga'],['scout','Indicados'],['mao','À mão'],['excl',`${esc(TIME?.nome||'Clube')} · excluídos`]];
   c.innerHTML=`<div class="fundo" onclick="if(event.target===this)fecharPop()"><div class="jan">
     <h3>${CT.modo==='elenco'?'Incluir no elenco atual':'Contratar'} · <span>${NOME_SETOR[CT.setor]}</span><button class="x" onclick="fecharPop()">×</button></h3>
     <div class="abas">${abas.map(([a,n])=>`<button class="${CT.aba===a?'on':''}" onclick="CT.aba='${a}';janelaContratar()">${n}</button>`).join('')}</div>
     <div id="ctCorpo"></div></div></div>`;
   const b=document.getElementById('ctCorpo');
-  if(CT.aba==='listas'){
+  if(CT.aba==='excl'){
+    b.innerHTML=`<div class="res" id="ctRes" style="max-height:60vh"></div>`;
+    const ex=Object.values(P.elenco||{}).filter(j=>j.removido&&j.origem!=='chegada')
+      .sort((a,b)=>((b.setor===CT.setor)-(a.setor===CT.setor))||nomeDe(a).localeCompare(nomeDe(b)));
+    document.getElementById('ctRes').innerHTML=ex.length?`<div style="color:var(--txt3);font-size:12px;margin:0 2px 6px">Jogadores do ${esc(TIME?.nome||'clube')} que foram excluídos do elenco atual. Clique para voltar (os de ${NOME_SETOR[CT.setor].toLowerCase()} primeiro).</div>`+
+      ex.map(j=>{ const f=fotoJog(j.id); return `<div class="it" onclick="voltarDaLista('${j.id}')">${f?`<img src="${f}" alt="">`:'<div class="sem"></div>'}<div class="q"><b>${esc(nomeDe(j))}</b><small>${esc(NOME_SETOR[j.setor]||'')}${j.nasc?' · '+idade(j.nasc)+' anos':''} · ${j.foraWyscout?'não está no Wyscout':'excluído à mão'}</small></div><div class="n"><b style="font-size:12px;color:var(--fica)">↺ voltar</b></div></div>`; }).join(''):'<div class="vaz">Nenhum jogador excluído.</div>';
+  } else if(CT.aba==='listas'){
     b.innerHTML=`<div class="res" id="ctRes" style="max-height:60vh"><div class="vaz">Carregando a Lista de Observação…</div></div>`;
     ctListas();
   } else if(CT.aba==='busca'){
@@ -601,7 +607,7 @@ async function ctListas(){
     .sort((a,b)=>((b.setor===CT.setor)-(a.setor===CT.setor))||nomeDe(a).localeCompare(nomeDe(b)));
   const blocoEx=ex.length?`<div style="font-family:var(--cond);font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#ff8a7a;margin:8px 2px 2px">Excluídos do ${esc(TIME?.nome||'clube')} <span style="color:var(--txt3);font-family:inherit;font-weight:600;letter-spacing:0;text-transform:none;font-size:11px">· clique para voltar ao elenco atual</span></div>`+
     ex.map(j=>{ const f=fotoJog(j.id); return `<div class="it" onclick="voltarDaLista('${j.id}')">${f?`<img src="${f}" alt="">`:'<div class="sem"></div>'}<div class="q"><b>${esc(nomeDe(j))}</b><small>${esc(NOME_SETOR[j.setor]||'')}${j.nasc?' · '+idade(j.nasc)+' anos':''} · ${j.foraWyscout?'não está no Wyscout':'excluído à mão'}</small></div><div class="n"><b style="font-size:12px;color:var(--fica)">↺ voltar</b></div></div>`; }).join(''):'';
-  r.innerHTML=blocoEx+(blocos||`<div class="vaz">Nenhum jogador deste setor na Main, Backup ou Youth List.</div>`);
+  r.innerHTML=(blocos||`<div class="vaz">Nenhum jogador deste setor na Main, Backup ou Youth List.</div>`);
 }
 function voltarDaLista(k){ fecharPop(); voltar(k); if(CT.campo) gravar(`elenco/${k}/campo`,CT.campo); }
 async function ctObs(d){
