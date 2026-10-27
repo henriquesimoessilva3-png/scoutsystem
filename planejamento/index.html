@@ -27,6 +27,7 @@ button,select,input{font:inherit}
 .extra{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px}
 .extra:empty{display:none}
 .dica{cursor:help;color:var(--txt3);font-size:14px}
+.barra .dir{margin-left:auto;flex-wrap:nowrap}
 .barra{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 16px;background:var(--ink2);border-bottom:1px solid var(--line)}
 .barra select{background:var(--ink3);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:6px 9px}
 .seg{display:flex;background:var(--ink3);border:1px solid var(--line);border-radius:9px;padding:3px}
@@ -148,7 +149,7 @@ body.campo main{max-width:none;padding:6px 10px 6px}
 .cg-leg i.vc{border-color:#2f6fd0;background:#3b7fe0}.cg-leg i.vb{border-color:#2f8a3a;background:#3a9a46}
 #cgWrap{overflow-x:auto}
 #cg{min-width:760px;width:100%;margin:0 auto;background:#e9ede6;border-radius:12px;padding:12px 12px 8px}
-.cg-campo{position:relative;width:100%;height:calc(100vh - 100px);min-height:480px;border:2px solid #fff;border-radius:6px;background:linear-gradient(135deg,#dfe6dc,#eef1ea 40%,#dfe6dc);overflow:hidden}
+.cg-campo{position:relative;width:100%;height:calc(100vh - 120px);min-height:480px;border:2px solid #fff;border-radius:6px;background:linear-gradient(135deg,#dfe6dc,#eef1ea 40%,#dfe6dc);overflow:hidden}
 .cg-campo .l{position:absolute;border:2px solid rgba(255,255,255,.95)}
 .cg-j{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;width:96px;max-width:110px;pointer-events:auto}
 .cg-f{position:relative;width:42px;height:42px;border-radius:50%;background:#fff;border:3px solid #9aa0ab;overflow:visible;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 5px rgba(0,0,0,.18)}
@@ -730,8 +731,8 @@ function telaCampograma(){
       <div class="cg-n">${esc(curto(nomeDe(j)))}${aa?` (${aa})`:''}</div>${s==='sai'?tipoCampo(j):''}</div>`;
   }).join('');
   const c=contagem(), esc_=fotoTime(TIME?.id);
-  document.getElementById('barraExtra').innerHTML=`<label class="chk" style="margin:0"><input type="checkbox" ${mostraSai?'checked':''} onchange="gravar('campoSai',this.checked)"> Mostrar quem sai</label>
-      <span class="cg-leg"><i class="fica"></i>Fica <i class="sai"></i>Sai <i class="chega"></i>Chega <i class="def"></i>A definir <i class="vc"></i>Vaga de contratação <i class="vb"></i>Vaga da base</span>
+  document.getElementById('barraExtra').innerHTML=`<label class="chk" style="margin:0"><input type="checkbox" ${mostraSai?'checked':''} onchange="gravar('campoSai',this.checked)"> Quem sai</label>
+      <span class="cg-leg"><i class="fica"></i>Fica <i class="sai"></i>Sai <i class="chega"></i>Chega <i class="def"></i>A definir <i class="vc"></i>Contratação <i class="vb"></i>Base</span>
       <span class="dica" title="Mouse no jogador: Fica / Sai · clique no jogador: posição, apelido ou excluir · etiqueta vermelha: troca o tipo de saída · ＋: contratar ou marcar vaga">ⓘ</span>
       <button class="btn" onclick="baixarCampograma()">⬇ Imagem</button>`;
   return `<div id="cgWrap"><div id="cg"><div class="cg-campo">
