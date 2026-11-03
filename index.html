@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="app-versao" content="2026-10-27 00:20"><!-- AO PUBLICAR MUDANÇA, TROQUE ESTA DATA-HORA: as abas abertas mostram o aviso de versão nova -->
+<meta name="app-versao" content="2026-11-03 10:00"><!-- AO PUBLICAR MUDANÇA, TROQUE ESTA DATA-HORA: as abas abertas mostram o aviso de versão nova -->
 <title>Scout System 2026</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
@@ -1587,7 +1587,7 @@ function renderScoutView(scout){
 const IND_POSITIONS=['1 - GK','2 - RB','3 - LB','4 - RCB/LCB','5 - DM','6 - CM','7 - AM','8 - RW/LW','9 - CF'];
 const IND_AVAL_AGRUP=['APROVADO - A Team','APROVADO - Squad Player','APROVADO - Time B/RWD','APROVADO - Youth Player','APROVADO U20','Em Avaliação','Monitorando/Monitorar','Descartado'];
 // Responsáveis = scouts do cadastro (botão "+ Scout") + os fixos de sempre
-const IND_RESP_BASE=['Brunno','Cristian','Gabriel','Humberto','Base'];
+const IND_RESP_BASE=['Brunno','Cristian','Gabriel','Humberto','Juninho','Base'];
 function indResponsaveis(){ const l=[...(typeof SCOUTS!=='undefined'?SCOUTS:[]),...IND_RESP_BASE]; return [...new Set(l.filter(Boolean))]; }
 const IND_ANOS=Array.from({length:new Date().getFullYear()-2020},(_,i)=>String(2022+i));
 
