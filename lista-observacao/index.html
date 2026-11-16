@@ -172,7 +172,7 @@ body{font-family:"BFR",sans-serif;-webkit-print-color-adjust:exact;print-color-a
   <span id="abas"></span>
   <span class="info" id="infoLista"></span>
   <span class="dir">
-    <button class="acao" onclick="abrirModal()" title="Carregar o print do Squad View do TransferRoom e gerar a lista de novo">📷 Atualizar pelo print</button>
+    <button class="acao" onclick="abrirModal()" title="Puxar a lista direto do TransferRoom ou carregar o print do Squad View">🔄 Atualizar lista</button>
     <button onclick="abrirModal(true)" title="Incluir, tirar ou reordenar jogadores à mão, sem print">✎ Editar jogadores</button>
     <button class="pdf" onclick="baixarPDF()" title="Abre a impressão: escolha 'Salvar como PDF'">⬇ PDF</button>
     <span class="info" id="infoBanco">conectando…</span>
@@ -184,9 +184,12 @@ body{font-family:"BFR",sans-serif;-webkit-print-color-adjust:exact;print-color-a
 <div id="lixo"></div>
 <div id="modal">
   <div class="jan">
-    <h2>Atualizar a <span id="mLista"></span> pelo print do TransferRoom</h2>
+    <h2>Atualizar a <span id="mLista"></span></h2>
     <div class="sub">Abra o <b>Squad View</b> no TransferRoom Scout com a lista certa (modo <b>Full</b>) e tire o print do campo. Pode colar (Ctrl/⌘+V), arrastar ou escolher o arquivo. Se o campo não couber numa tela, mande mais de um print.</div>
     <div class="drop" id="drop" onclick="document.getElementById('arq').click()">Arraste o(s) print(s) aqui, cole com Ctrl/⌘+V ou clique para escolher<input type="file" id="arq" accept="image/*" multiple style="display:none"></div>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap"><b>ou</b>
+      <button class="btn" style="background:#1a6e3a;border-color:#1a6e3a;color:#fff" onclick="lerDoTR()" title="Lê a lista direto do Squad View do TransferRoom Scout (precisa estar logado nele neste Chrome)">🔄 Puxar direto do TransferRoom</button>
+      <select id="trLista" style="font:12px system-ui;padding:5px;display:none"></select><span id="trInfo" style="color:#666;font-size:12px"></span></div>
     <div class="prints" id="prints"></div>
     <div class="log" id="log" style="display:none"></div>
     <div id="revisao"></div>
@@ -635,7 +638,8 @@ function casarBase(nome,caixa){
 /* ═════════════ janela de atualização ═════════════ */
 let REV=null;   // {caixa: [{texto, id|null, cand:[...], status}]}
 function abrirModal(aMao){
-  PRINTS=[]; REV=null;
+  PRINTS=[]; REV=null; TR_LISTAS=null;
+  { const sl=document.getElementById('trLista'); sl.style.display='none'; sl.innerHTML=''; document.getElementById('trInfo').textContent=''; }
   document.getElementById('mLista').textContent=LISTAS[LISTA_ATUAL].nome;
   document.getElementById('prints').innerHTML=''; document.getElementById('revisao').innerHTML='';
   const lg=document.getElementById('log'); lg.style.display='none'; lg.textContent='';
@@ -697,6 +701,39 @@ function mudarNome(k,i,v){ REV[k][i]=linhaNova(v.trim(),k); desenharRevisao(); b
 function escolherCand(k,i,v){ REV[k][i].esc=+v; }
 function moverLinha(k,i,d){ const a=REV[k]; if(i+d<0) return; [a[i],a[i+d]]=[a[i+d],a[i]]; desenharRevisao(); }
 function tirarLinha(k,i){ REV[k].splice(i,1); desenharRevisao(); }
+/* atualizar direto do TransferRoom (16/11): lê as listas do Squad View pela extensão, os 5 primeiros de cada caixa (modo Compact) */
+let TR_LISTAS=null;
+async function lerDoTR(){
+  const sel=document.getElementById('trLista'), info=document.getElementById('trInfo');
+  if(!await checarExtensao()) return alert('Precisa da extensão BFR Relatório Jogadores 1.5 neste Chrome.');
+  try{
+    if(!TR_LISTAS||sel.style.display==='none'){
+      info.textContent='lendo o TransferRoom…';
+      TR_LISTAS=(await extPedido({tipo:'tr_listas',nomes:null},90000,t=>{info.textContent=t;})).dados||{};
+      const nomes=Object.keys(TR_LISTAS);
+      if(!nomes.length){ info.textContent='não achei listas no Squad View.'; return; }
+      const v=LISTAS[LISTA_ATUAL], alvo=sem(v.tr||v.nome);
+      const pref=nomes.find(n=>sem(n)===alvo)||nomes.find(n=>sem(n).startsWith(alvo)||alvo.startsWith(sem(n)))||(v.criada?'':nomes[0]);
+      sel.innerHTML=(pref?'':'<option value="">— escolha a lista do TransferRoom —</option>')+nomes.map(n=>`<option${n===pref?' selected':''}>${esc(n)}</option>`).join('');
+      sel.style.display=''; sel.onchange=()=>usarListaTR(sel.value);
+      if(!pref){ info.textContent='escolha qual lista do TransferRoom usar.'; return; }
+    }
+    usarListaTR(sel.value);
+  }catch(e){ info.textContent=e.message; }
+}
+function usarListaTR(nome){
+  const info=document.getElementById('trInfo'); if(!nome||!TR_LISTAS[nome]) return;
+  REV={}; for(const k of Object.keys(POSICOES)) REV[k]=[];
+  let n=0;
+  for(const p of TR_LISTAS[nome]){
+    const k=CODIGO_CAIXA[String(p.caixa).toLowerCase()]; if(!k) continue;
+    for(const x of (p.jogadores||[]).slice(0,MAX_POR_POSICAO)){ n++;
+      REV[k].push(J[x.id]?{texto:J[x.id].nome||x.nome,id:x.id,status:'base'}:{texto:x.nome,id:null,status:'novo',cand:[x],esc:0,escolhido:true}); }
+  }
+  info.textContent=`${n} jogadores lidos de "${nome}" — confira e clique em Gerar.`;
+  desenharRevisao();
+}
+
 /* busca de jogador (16/11): base da Lista + TransferRoom inteiro, com foto, clube, idade e posição — clica e entra */
 const BJ={};   // por caixa: {seq, timer, itens}
 const fotoJ=j=>j&&(j.foto||'');
