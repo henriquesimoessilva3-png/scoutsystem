@@ -83,7 +83,9 @@ body{font-family:"BFR",sans-serif;-webkit-print-color-adjust:exact;print-color-a
 .cl{position:absolute;left:72px;top:73px;color:#fff;font-size:20px;line-height:1.1;text-transform:uppercase;white-space:nowrap}
 .fesc{position:absolute;left:227px;top:107px;width:152px;height:152px;object-fit:contain}
 .foto{position:absolute;left:109px;top:95px;width:162px;height:162px;object-fit:contain;object-position:bottom}
-.btn-rec{position:absolute;left:120px;z-index:3;font:600 14px system-ui;padding:5px 10px;border-radius:6px;border:1px solid #e8c84a;background:#e8c84a;color:#1f1e1b;cursor:pointer}
+.fotobt{position:absolute;left:96px;z-index:3;display:flex;gap:5px}
+.fotobt button{font:600 13px system-ui;padding:4px 8px;border-radius:6px;border:1px solid #e8c84a;background:#e8c84a;color:#1f1e1b;cursor:pointer}
+.fotobt button:last-child:not(:first-child){background:#333;border-color:#555;color:#fff}
 .lin{position:relative}
 .tira{position:absolute;right:-30px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;border:0;background:#8B1A2E;color:#fff;font:700 12px/22px system-ui;cursor:pointer;padding:0;opacity:0;transition:opacity .15s;z-index:4}
 .lin:hover .tira{opacity:1}
@@ -215,7 +217,7 @@ body{font-family:"BFR",sans-serif;-webkit-print-color-adjust:exact;print-color-a
 /* ═════════════ configuração ═════════════ */
 const FIREBASE_CONFIG={apiKey:"AIzaSyBi4pOl1hkP8t-NcIMAhYuTGWtMcm290HE",authDomain:"scout-system-2026.firebaseapp.com",databaseURL:"https://scout-system-2026-default-rtdb.firebaseio.com",projectId:"scout-system-2026",storageBucket:"scout-system-2026.firebasestorage.app",messagingSenderId:"152294931768",appId:"1:152294931768:web:91362c2bb38ad25acd55cd"};
 const RJ_EXT_ID='ohjijihiclegbdhbpphaofkjicenplla';
-const EXT_ZIP='extensao-bfr-relatorio-jogadores-1.5.1.zip';
+const EXT_ZIP='extensao-bfr-relatorio-jogadores-1.5.2.zip';
 const RAIZ='lista_obs';
 const LISTAS={   // as 3 do TransferRoom; as criadas pela equipe (botão ＋ Criar lista) entram aqui ao ler lista_obs/criadas
   MAIN:{nome:'Lista Principal',titulo:'LISTA PRINCIPAL',sub:'PRINCIPAIS ALVOS POR POSIÇÃO',tr:'MAIN LIST'},
@@ -353,7 +355,8 @@ async function checarExtensao(){
   const av=document.getElementById('avisos');
   const v=EXT_VERSAO&&EXT_VERSAO.split('.').map(Number);
   const ok=v&&(v[0]>1||(v[0]===1&&v[1]>=5));
-  av.innerHTML=ok?'':`<div class="aviso">Para atualizar a lista pelo print, este Chrome precisa da extensão <b>BFR Relatório Jogadores 1.5</b> (ela busca TransferRoom, SofaScore e as fotos)${EXT_VERSAO?` — a instalada é a ${esc(EXT_VERSAO)}`:''}. <a href="${EXT_ZIP}">Baixe aqui</a>, troque os arquivos na pasta da extensão e clique ↻ em chrome://extensions. Ver, escrever as avaliações e baixar o PDF funcionam sem ela.</div>`;
+  const velha=ok&&v[0]===1&&v[1]===5&&(v[2]||0)<2;
+  av.innerHTML=ok?(velha?`<div class="aviso">A extensão BFR Relatório Jogadores instalada é a ${esc(EXT_VERSAO)}: para as fotos recortadas do sortitoutsi voltarem, atualize para a <b>1.5.2</b> — <a href="${EXT_ZIP}">baixe aqui</a>, troque os arquivos na pasta da extensão e clique ↻ em chrome://extensions.</div>`:''):`<div class="aviso">Para atualizar a lista pelo print, este Chrome precisa da extensão <b>BFR Relatório Jogadores 1.5</b> (ela busca TransferRoom, SofaScore e as fotos)${EXT_VERSAO?` — a instalada é a ${esc(EXT_VERSAO)}`:''}. <a href="${EXT_ZIP}">Baixe aqui</a>, troque os arquivos na pasta da extensão e clique ↻ em chrome://extensions. Ver, escrever as avaliações e baixar o PDF funcionam sem ela.</div>`;
   return ok;
 }
 const sofa=async caminho=>JSON.parse((await extPedido({tipo:'baixar',url:'https://www.sofascore.com/api/v1'+caminho,como:'json'},30000)).texto);
@@ -463,7 +466,11 @@ function cartao(C,j,i){
     <div class="nm" style="top:${y0+16}px">${esc(j.nome)}</div><div class="cl" style="top:${y0+73}px">${esc(j.clube&&j.clube.nome||"")}</div>
     ${e?`<img class="fesc" referrerpolicy="no-referrer" style="top:${y0+107}px" src="${esc(e)}" alt="">`:""}
     ${j.foto?`<img class="foto" referrerpolicy="no-referrer" style="top:${y0+95}px" src="${esc(j.foto)}" alt="" onerror="this.outerHTML='<div class=&quot;semfoto&quot; style=&quot;top:${y0+105}px&quot;>${ini}</div>'">`:`<div class="semfoto" style="top:${y0+105}px">${ini}</div>`}
-    ${j.fotoFonte!=='sortitoutsi'&&j.fotoFonte!=='recorte'&&j.foto&&/^https:/.test(j.foto)&&!/firebasestorage/.test(j.foto)?`<button class="nao-imprime btn-rec" data-recorte="${esc(j.id)}" style="top:${y0+262}px" onclick="recortarFotoDoCard('${esc(j.id)}')" title="Busca a foto recortada (sortitoutsi) ou tira o fundo desta foto">✂ Recortar foto</button>`:''}
+    <div class="nao-imprime fotobt" style="top:${y0+262}px" ondragover="event.preventDefault()" ondrop="soltarFoto(event,'${esc(j.id)}')">
+      ${j.fotoFonte!=='sortitoutsi'&&j.fotoFonte!=='recorte'&&j.fotoFonte!=='manual'?`<button data-recorte="${esc(j.id)}" onclick="recortarFotoDoCard('${esc(j.id)}')" title="Busca a foto recortada (sortitoutsi) ou tira o fundo da foto atual">✂ Recortar</button>`:''}
+      <button onclick="escolherFoto('${esc(j.id)}')" title="Escolher uma imagem do computador (ou arraste a imagem para cima da foto)">📷 Trocar</button>
+      ${j.foto?`<button onclick="tirarFoto('${esc(j.id)}')" title="Tirar a foto deste jogador">✕</button>`:''}</div>
+    <div class="nao-imprime" style="position:absolute;left:100px;top:${y0+90}px;width:180px;height:170px;z-index:2" ondragover="event.preventDefault();this.style.outline='3px dashed #e8c84a'" ondragleave="this.style.outline=''" ondrop="this.style.outline='';soltarFoto(event,'${esc(j.id)}')"></div>
     <div class="bar" style="left:${473.7+dx}px;top:${y0+10.5}px;width:430px">INFORMAÇÕES DO JOGADOR</div>
     ${cp("NACIONALIDADE",esc(nac),0)}${cp("IDADE",j.idade!=null?`${j.idade} ANOS`:"–",1)}${cp("VALOR DE MERCADO",v,2)}${cp("CONTRATO",contrato,3)}
     ${campinho(j,764+dx,y0+54)}
@@ -1015,6 +1022,31 @@ async function recortarFundo(dataurl){
   const out=document.createElement('canvas'); out.width=x1-x0+1; out.height=y1-y0+1;
   out.getContext('2d').drawImage(cv,x0,y0,out.width,out.height,0,0,out.width,out.height);
   return out.toDataURL('image/png');
+}
+/* foto à mão (16/11, pedido do Pedro): escolher/arrastar uma imagem — se tiver fundo liso, o fundo sai sozinho — ou tirar a foto */
+function escolherFoto(id){
+  const i=document.createElement('input'); i.type='file'; i.accept='image/*';
+  i.onchange=()=>{ if(i.files[0]) usarFotoManual(id,i.files[0]); }; i.click();
+}
+function soltarFoto(ev,id){ ev.preventDefault(); const f=[...(ev.dataTransfer&&ev.dataTransfer.files||[])].find(f=>/^image\//.test(f.type)); if(f) usarFotoManual(id,f); }
+async function usarFotoManual(id,arq){
+  const j=J[id]; if(!j||!db) return alert('Sem conexão com o banco.');
+  try{
+    const du=await new Promise((ok,er)=>{ const f=new FileReader(); f.onload=()=>ok(f.result); f.onerror=er; f.readAsDataURL(arq); });
+    let fin=du; try{ fin=(await recortarFundo(du))||du; }catch(e){}
+    // reduz para no máximo 500 px (a foto do card tem 162 px)
+    const im=await new Promise(ok=>{ const i=new Image(); i.onload=()=>ok(i); i.src=fin; });
+    const k=Math.min(1,500/Math.max(im.width,im.height));
+    if(k<1){ const c=document.createElement('canvas'); c.width=Math.round(im.width*k); c.height=Math.round(im.height*k); c.getContext('2d').drawImage(im,0,0,c.width,c.height); fin=c.toDataURL('image/png'); }
+    j.foto=await guardarFoto(id,fin); j.fotoFonte='manual';
+    await db.ref(`${RAIZ}/jogadores/${chaveFB(id)}`).update({foto:j.foto,fotoFonte:'manual'});
+    agendarRender();
+  }catch(e){ alert('Não deu para usar essa imagem: '+e.message); }
+}
+async function tirarFoto(id){
+  const j=J[id]; if(!j||!db) return;
+  if(!confirm(`Tirar a foto de ${j.nome}?`)) return;
+  try{ await db.ref(`${RAIZ}/jogadores/${chaveFB(id)}`).update({foto:null,fotoFonte:'removida'}); }catch(e){ alert('Não deu: '+e.message); }
 }
 async function recortarFotoDoCard(id){
   const j=J[id]; if(!j) return;
