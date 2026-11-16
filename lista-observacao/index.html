@@ -83,6 +83,11 @@ body{font-family:"BFR",sans-serif;-webkit-print-color-adjust:exact;print-color-a
 .cl{position:absolute;left:72px;top:73px;color:#fff;font-size:20px;line-height:1.1;text-transform:uppercase;white-space:nowrap}
 .fesc{position:absolute;left:227px;top:107px;width:152px;height:152px;object-fit:contain}
 .foto{position:absolute;left:109px;top:95px;width:162px;height:162px;object-fit:contain;object-position:bottom}
+.btn-rec{position:absolute;left:120px;z-index:3;font:600 14px system-ui;padding:5px 10px;border-radius:6px;border:1px solid #e8c84a;background:#e8c84a;color:#1f1e1b;cursor:pointer}
+.mais-cx{position:absolute;right:-12px;top:-12px;box-shadow:0 1px 4px rgba(0,0,0,.4);width:26px;height:26px;border-radius:50%;border:0;background:#e8c84a;color:#1f1e1b;font:700 20px/26px system-ui;cursor:pointer;padding:0}
+.caixa.vazia{opacity:.55}.caixa.vazia:hover{opacity:1}
+#rapido{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:42;display:none;align-items:flex-start;justify-content:center;padding:90px 12px;font:13px system-ui,sans-serif}
+#rapido.on{display:flex}
 .semfoto{position:absolute;left:115px;top:105px;width:150px;height:150px;border-radius:50%;background:#333;color:#bbb;font-family:"BFRC";font-weight:700;font-size:56px;display:flex;align-items:center;justify-content:center}
 .bar{position:absolute;height:30.2px;background:#000;color:#fff;font-size:20px;line-height:30px;padding-left:12px;white-space:nowrap}
 .rot{position:absolute;font-weight:700;font-size:18px;line-height:1.1;white-space:nowrap}
@@ -113,7 +118,7 @@ body{font-family:"BFR",sans-serif;-webkit-print-color-adjust:exact;print-color-a
 .ed.salvo{box-shadow:0 0 0 2px #21b36b}
 @media print{
   html,body{background:#fff}
-  .app,.aviso,#modal,#lixo,.nao-imprime{display:none!important}
+  .app,.aviso,#modal,#lixo,#rapido,.nao-imprime{display:none!important}
   #doc{padding:0;zoom:1!important}
   .ed{background:none!important;box-shadow:none!important}
   .ed:empty:before{content:""}
@@ -182,6 +187,7 @@ body{font-family:"BFR",sans-serif;-webkit-print-color-adjust:exact;print-color-a
 <div id="doc"><div class="vazio-doc">Carregando…</div></div>
 
 <div id="lixo"></div>
+<div id="rapido"></div>
 <div id="modal">
   <div class="jan">
     <h2>Atualizar a <span id="mLista"></span></h2>
@@ -304,7 +310,7 @@ function abrirLixeira(){
   document.getElementById('lixo').innerHTML=`<div class="jan" style="width:min(560px,100%)"><h2>Listas criadas</h2>
     <div class="sub">As três do TransferRoom (Principal, Backup e Youth) não saem daqui.</div>
     ${ativas.length?ativas.map(([k,v])=>lin(k,v,`<button class="btn" style="background:#8B1A2E;border-color:#8B1A2E;color:#fff" onclick="apagarLista('${k}')">🗑 Apagar</button>`)).join(''):'<div class="sub">Nenhuma lista criada.</div>'}
-    ${apag.length?`<h2 style="margin-top:16px;font-size:15px">Apagadas</h2>`+apag.map(([k,v])=>lin(k,v,`<button class="btn" style="background:#1a6e3a;border-color:#1a6e3a;color:#fff" onclick="voltarLista('${k}')">↩ Voltar</button>`)).join(''):''}
+    ${apag.length?`<h2 style="margin-top:16px;font-size:15px">Apagadas</h2>`+apag.map(([k,v])=>lin(k,v,`<span style="display:flex;gap:6px"><button class="btn" style="background:#1a6e3a;border-color:#1a6e3a;color:#fff" onclick="voltarLista('${k}')">↩ Voltar</button><button class="btn cinza" style="color:#8B1A2E;border-color:#e3b9c0" onclick="apagarDeVez('${k}')" title="Some para sempre: não dá para voltar">✕ Apagar de vez</button></span>`)).join(''):''}
     <div class="rodape-jan"><button class="btn cinza" onclick="document.getElementById('lixo').classList.remove('on')">Fechar</button></div></div>`;
   document.getElementById('lixo').classList.add('on');
 }
@@ -312,6 +318,13 @@ async function apagarLista(k){
   const v=CRIADAS[k]; if(!v||!db) return;
   if(!confirm(`Apagar a lista "${v.nome}"? Dá para voltar com ela depois, neste mesmo botão 🗑.`)) return;
   try{ await db.ref(`${RAIZ}/criadas/${k}`).update({apagada:true,apagadaEm:new Date().toISOString()}); if(LISTA_ATUAL===k){ LISTA_ATUAL='MAIN'; try{localStorage.setItem('lo_lista','MAIN');}catch(e){} } agendarRender(); setTimeout(abrirLixeira,300); }catch(e){ alert('Não deu para apagar: '+e.message); }
+}
+async function apagarDeVez(k){
+  const v=CRIADAS[k]; if(!v||!db) return;
+  if(!confirm(`Apagar DE VEZ a lista "${v.nome}"?\n\nEla some para sempre, junto com as avaliações escritas nela, e não dá para voltar.`)) return;
+  const t=prompt(`Para confirmar, digite o nome da lista: ${v.nome}`); if(t==null) return;
+  if(sem(t)!==sem(v.nome)) return alert('O nome não bateu. Nada foi apagado.');
+  try{ await db.ref(RAIZ).update({[`criadas/${k}`]:null,[`listas/${k}`]:null,[`textos/${k}`]:null}); setTimeout(abrirLixeira,300); }catch(e){ alert('Não deu para apagar: '+e.message); }
 }
 async function voltarLista(k){
   if(!db) return;
@@ -393,12 +406,13 @@ function capa(){
 const cabecalho=(C,rel)=>`<img class="cab-escudo" src="assets/escudo_botafogo.png" alt="">
   <div class="cab-tit">${esc(C.titulo)}</div><div class="cab-sub">${esc(C.sub)}</div>
   <div class="cab-marca">${rel?'<div class="rel">RELATÓRIO<br>DE SCOUT</div>':''}${marca}</div>`;
+const maisCx=k=>`<button class="mais-cx nao-imprime" onclick="abrirRapido('${k}')" title="Incluir jogador nesta posição">+</button>`;
 function folhaCampo(C){
   const caixas=Object.keys(CAIXA_X).map(k=>{
-    const js=C.caixas[k]||[]; if(!js.length) return "";
+    const js=C.caixas[k]||[]; if(!js.length) return `<div class="caixa nao-imprime vazia" style="left:${CAIXA_X[k]}px;top:${(CAIXA_CY[k]-21).toFixed(1)}px;height:42.3px"><h3>${esc(POSICOES[k])}</h3>${maisCx(k)}</div>`;
     const h=42.3+33.77*js.length, top=CAIXA_CY[k]-h/2;
     const linhas=js.map((j,i)=>{ const e=escudoDe(j); return `<div class="lin" style="background:${CINZAS[Math.min(i,4)]}"><span class="n">${esc(String(j.nome||'').toUpperCase())}</span><span class="i">${j.idade??"–"}</span><span class="e">${e?`<img referrerpolicy="no-referrer" src="${esc(e)}" alt="">`:""}</span><span class="s">${esc(siglaClube(j.clube))}</span></div>`; }).join("");
-    return `<div class="caixa" style="left:${CAIXA_X[k]}px;top:${top.toFixed(1)}px;height:${h.toFixed(1)}px"><h3>${esc(POSICOES[k])}</h3>${linhas}</div>`;
+    return `<div class="caixa" style="left:${CAIXA_X[k]}px;top:${top.toFixed(1)}px;height:${h.toFixed(1)}px"><h3>${esc(POSICOES[k])}</h3>${linhas}${js.length<MAX_POR_POSICAO?maisCx(k):''}</div>`;
   }).join("");
   return `<section class="folha fundo">${cabecalho(C,true)}<div class="campo"></div>${caixas}<div class="rodape">Última atualização: ${esc(C.atualizado)}</div></section>`;
 }
@@ -438,6 +452,7 @@ function cartao(C,j,i){
     <div class="nm" style="top:${y0+16}px">${esc(j.nome)}</div><div class="cl" style="top:${y0+73}px">${esc(j.clube&&j.clube.nome||"")}</div>
     ${e?`<img class="fesc" referrerpolicy="no-referrer" style="top:${y0+107}px" src="${esc(e)}" alt="">`:""}
     ${j.foto?`<img class="foto" referrerpolicy="no-referrer" style="top:${y0+95}px" src="${esc(j.foto)}" alt="" onerror="this.outerHTML='<div class=&quot;semfoto&quot; style=&quot;top:${y0+105}px&quot;>${ini}</div>'">`:`<div class="semfoto" style="top:${y0+105}px">${ini}</div>`}
+    ${j.fotoFonte!=='sortitoutsi'&&j.fotoFonte!=='recorte'&&j.foto&&/^https:/.test(j.foto)&&!/firebasestorage/.test(j.foto)?`<button class="nao-imprime btn-rec" data-recorte="${esc(j.id)}" style="top:${y0+262}px" onclick="recortarFotoDoCard('${esc(j.id)}')" title="Busca a foto recortada (sortitoutsi) ou tira o fundo desta foto">✂ Recortar foto</button>`:''}
     <div class="bar" style="left:${473.7+dx}px;top:${y0+10.5}px;width:430px">INFORMAÇÕES DO JOGADOR</div>
     ${cp("NACIONALIDADE",esc(nac),0)}${cp("IDADE",j.idade!=null?`${j.idade} ANOS`:"–",1)}${cp("VALOR DE MERCADO",v,2)}${cp("CONTRATO",contrato,3)}
     ${campinho(j,764+dx,y0+54)}
@@ -484,7 +499,7 @@ function render(){
   const l=L[LISTA_ATUAL]||{};
   document.getElementById('infoLista').textContent=tot?`${tot} jogadores · atualizada em ${C.atualizado||'—'}${l.por?` · ${l.por}`:''}`:'';
   const doc=document.getElementById('doc');
-  if(!tot){ doc.innerHTML=`<div class="vazio-doc">Esta lista ainda não tem jogadores.<br><br><button class="btn" onclick="abrirModal()">📷 Montar pelo print</button><button class="btn" onclick="abrirModal(true)">✎ Montar digitando os nomes</button></div>`; return; }
+  if(!tot){ doc.innerHTML=`<div class="vazio-doc">Esta lista ainda não tem jogadores.<br><br><button class="btn" onclick="abrirModal()">📷 Montar pelo print</button><button class="btn" onclick="abrirModal(true)">✎ Montar digitando os nomes</button><br><small>ou use o <b>+</b> de cada posição no campo abaixo</small></div>`+folhaCampo(C); ajustarZoom(); return; }
   const sy=window.scrollY;
   doc.innerHTML=capa()+folhaCampo(C)+folhasCards(C);
   ajustarZoom();
@@ -654,7 +669,8 @@ function abrirModal(aMao){
   }
 }
 function fecharModal(){ document.getElementById('modal').classList.remove('on'); }
-function log(t){ const lg=document.getElementById('log'); lg.style.display='block'; lg.textContent+=t+'\n'; lg.scrollTop=lg.scrollHeight; }
+let LOG_ALVO=null;
+function log(t){ if(LOG_ALVO){ const u=String(t).trim(); if(u) LOG_ALVO.textContent=u; } const lg=document.getElementById('log'); lg.style.display='block'; lg.textContent+=t+'\n'; lg.scrollTop=lg.scrollHeight; }
 async function receberArquivos(arqs){
   arqs=[...arqs].filter(f=>/^image\//.test(f.type)); if(!arqs.length) return;
   for(const f of arqs){ PRINTS.push(f); const im=document.createElement('img'); im.src=URL.createObjectURL(f); document.getElementById('prints').appendChild(im); }
@@ -734,6 +750,30 @@ function usarListaTR(nome){
   desenharRevisao();
 }
 
+/* "+" do campograma (16/11): incluir jogador direto na posição, sem abrir a janela de atualizar */
+let MODO_RAPIDO=null;
+function abrirRapido(k){
+  const l=L[LISTA_ATUAL]||{}; REV={};
+  for(const c of Object.keys(POSICOES)) REV[c]=((l.caixas||{})[c]||[]).filter(id=>J[id]).map(id=>({texto:J[id].nome||J[id].nomeTR||'',id,status:'base'}));
+  MODO_RAPIDO=k; BJ[k]={seq:0,itens:[]};
+  const R=document.getElementById('rapido');
+  R.innerHTML=`<div class="jan" style="width:min(520px,100%)"><h2>Incluir em ${esc(POSICOES[k])}</h2>
+    <div class="sub">${esc(LISTAS[LISTA_ATUAL].nome)} · ${REV[k].length}/${MAX_POR_POSICAO} nesta posição. Busque na nossa base ou no TransferRoom e clique no jogador.</div>
+    <div class="bj"><input id="bj_${k}" placeholder="🔎 Buscar jogador…" autocomplete="off" oninput="buscaJog('${k}')" onkeydown="teclaBusca(event,'${k}')"><div class="sug" id="sug_${k}" style="position:static;box-shadow:none;margin-top:6px"></div></div>
+    <div id="rapEst" style="margin-top:10px;color:#555;min-height:18px"></div>
+    <div class="rodape-jan"><button class="btn cinza" onclick="fecharRapido()">Fechar</button></div></div>`;
+  R.classList.add('on'); checarExtensao(); focarBusca(k);
+}
+function fecharRapido(){ MODO_RAPIDO=null; document.getElementById('rapido').classList.remove('on'); document.getElementById('rapido').innerHTML=''; REV=null; }
+async function salvarRapido(k){
+  const est=document.getElementById('rapEst'), l=REV[k][REV[k].length-1];
+  const inp=document.getElementById('bj_'+k); if(inp){ inp.disabled=true; inp.value=''; } fecharSug(k);
+  est.textContent=`Incluindo ${l.texto}…`; LOG_ALVO=est;
+  try{ await gerarLista({tr:false,ss:false,rapido:true}); LOG_ALVO=null; est.textContent=`✓ ${l.texto} incluído.`;
+    if(REV[k].length<MAX_POR_POSICAO&&inp){ inp.disabled=false; focarBusca(k); } else setTimeout(fecharRapido,800);
+  }catch(e){ LOG_ALVO=null; est.textContent='Não deu: '+e.message; REV[k].pop(); if(inp) inp.disabled=false; }
+}
+
 /* busca de jogador (16/11): base da Lista + TransferRoom inteiro, com foto, clube, idade e posição — clica e entra */
 const BJ={};   // por caixa: {seq, timer, itens}
 const fotoJ=j=>j&&(j.foto||'');
@@ -782,7 +822,7 @@ function teclaBusca(ev,k){
   const box=document.getElementById('sug_'+k), ops=box?[...box.querySelectorAll('.op')]:[];
   let i=ops.findIndex(o=>o.classList.contains('sel'));
   if(ev.key==='ArrowDown'||ev.key==='ArrowUp'){ ev.preventDefault(); if(!ops.length) return; ops.forEach(o=>o.classList.remove('sel')); i=ev.key==='ArrowDown'?Math.min(ops.length-1,i+1):Math.max(0,i-1); ops[i].classList.add('sel'); ops[i].scrollIntoView({block:'nearest'}); }
-  else if(ev.key==='Enter'){ ev.preventDefault(); if(i>=0) pegarSug(k,+ops[i].dataset.i); else { const n=ev.target.value.trim(); if(n){ REV[k].push(linhaNova(n,k)); desenharRevisao(); buscarCandidatosNovos(); focarBusca(k); } } }
+  else if(ev.key==='Enter'){ ev.preventDefault(); if(i>=0) pegarSug(k,+ops[i].dataset.i); else { const n=ev.target.value.trim(); if(n){ REV[k].push(linhaNova(n,k)); if(MODO_RAPIDO===k) return salvarRapido(k); desenharRevisao(); buscarCandidatosNovos(); focarBusca(k); } } }
   else if(ev.key==='Escape') fecharSug(k);
 }
 function focarBusca(k){ setTimeout(()=>{ const i=document.getElementById('bj_'+k); if(i) i.focus(); },30); }
@@ -790,7 +830,9 @@ function pegarSug(k,i){
   const it=(BJ[k]||{}).itens[i]; if(!it) return;
   if(it.fonte==='base') REV[k].push({texto:it.nome||it.nomeTR,id:it.id,status:'base'});
   else { const {fonte,caixa,...c}=it; REV[k].push(J[c.id]?{texto:c.nome,id:c.id,status:'base'}:{texto:c.nome,id:null,status:'novo',cand:[c],esc:0,escolhido:true}); }
-  BJ[k]={seq:0,itens:[]}; desenharRevisao(); focarBusca(k);
+  BJ[k]={seq:0,itens:[]};
+  if(MODO_RAPIDO===k) return salvarRapido(k);
+  desenharRevisao(); focarBusca(k);
 }
 function maisLinha(k){ const n=prompt('Nome do jogador (como está no TransferRoom):'); if(!n) return; REV[k].push(linhaNova(n.trim(),k)); desenharRevisao(); buscarCandidatosNovos(); }
 async function buscarCandidatosNovos(){
@@ -822,7 +864,7 @@ const toks=s=>sem(s).split(' ').filter(t=>t.length>2&&!STOP.has(t));
 const clubeBate=(a,b)=>{ const ta=toks(a), tb=toks(b); return ta.some(t=>tb.includes(t)); };
 function deTR(p){   // jogador do TransferRoom -> formato da base
   return {id:p.id,nomeTR:p.nome,nomeCompleto:p.nomeCompleto||null,idade:p.idade??idadeDe(p.nasc),nasc:p.nasc||null,pos1:p.pos1||null,pos2:p.pos2||null,pe:p.pe??null,altura:p.altura||null,
-    valor:p.valor||null,contrato:p.contrato||null,nota:p.nota||null,potencial:p.potencial||null,
+    valor:p.valor||null,contrato:p.contrato||null,nota:p.nota||null,potencial:p.potencial||null,fotoTR:p.foto||null,
     clube:p.clube?{id:p.clube.id,nome:p.clube.nome,curto:p.clube.curto,escudoTR:p.clube.escudo}:null,
     origem:p.origem&&p.clube&&p.origem.id!==p.clube.id?{id:p.origem.id,nome:p.origem.nome,escudoTR:p.origem.escudo}:null};
 }
@@ -888,6 +930,66 @@ async function fotoSorti(j,lg){
   const r=await extPedido({tipo:'baixar',url,como:'bytes'},60000);
   return {fmid:c.fmid,versao:c.versao,dataurl:r.dataurl,conferido:c.okC?'idade, nacionalidade e clube':'idade e nacionalidade (único)'};
 }
+async function trocarFoto(id,j){
+  try{
+    log(`    ${j.nome}: procurando a foto recortada no sortitoutsi…`);
+    const f=await fotoSorti(j,log);
+    if(f){ j.foto=await guardarFoto(id,f.dataurl); j.fotoFonte='sortitoutsi'; j.fmid=f.fmid; log(`    foto ok (conferido: ${f.conferido})`); return true; }
+  }catch(e){ log('    sortitoutsi: '+e.message); }
+  // sem foto recortada que bata: tira o fundo da foto do SofaScore (ou do TransferRoom)
+  const fontes=[j.ss&&j.ss.sid&&`https://img.sofascore.com/api/v1/player/${j.ss.sid}/image`,j.fotoTR,/^https:/.test(j.foto||'')&&!/firebasestorage/.test(j.foto)?j.foto:null].filter(Boolean);
+  for(const u of [...new Set(fontes)]){
+    try{
+      const r=await extPedido({tipo:'baixar',url:u,como:'bytes'},60000);
+      const rec=await recortarFundo(r.dataurl);
+      if(rec){ j.foto=await guardarFoto(id,rec); j.fotoFonte='recorte'; log('    sem foto no sortitoutsi — recortei o fundo da foto do '+(/sofascore/.test(u)?'SofaScore':'TransferRoom')); return true; }
+      if(!j.foto){ j.foto=u; j.fotoFonte='sofascore'; }
+    }catch(e){ log('    foto: '+e.message); }
+  }
+  log('    não deu para recortar a foto (fundo não é liso)'); return false;
+}
+/* tira o fundo liso (branco/cinza claro) que encosta na borda da foto: preenche a partir das bordas, suaviza o contorno e corta o vazio */
+async function recortarFundo(dataurl){
+  const im=await new Promise((ok,er)=>{ const i=new Image(); i.onload=()=>ok(i); i.onerror=()=>er(new Error('imagem inválida')); i.src=dataurl; });
+  const W=im.naturalWidth, H=im.naturalHeight; if(!W||!H) return null;
+  const cv=document.createElement('canvas'); cv.width=W; cv.height=H; const cx=cv.getContext('2d'); cx.drawImage(im,0,0);
+  const d=cx.getImageData(0,0,W,H), px=d.data;
+  if([...Array(20)].some((_,k)=>px[((k*W/20|0))*4+3]<20)) return null;   // já tem transparência: não mexe
+  // cor do fundo = mediana da borda de cima e dos lados (a de baixo costuma ser a camisa)
+  const bord=[]; for(let x=0;x<W;x+=2) bord.push(0*W+x); for(let y=0;y<H*0.7;y+=2){ bord.push(y*W); bord.push(y*W+W-1); }
+  const med=c=>{ const v=bord.map(i=>px[i*4+c]).sort((a,b)=>a-b); return v[v.length>>1]; };
+  const bg=[med(0),med(1),med(2)];
+  const dist=i=>Math.hypot(px[i*4]-bg[0],px[i*4+1]-bg[1],px[i*4+2]-bg[2]);
+  if(bord.filter(i=>dist(i)<40).length<bord.length*0.6) return null;   // borda não é um fundo liso
+  const TOL=42, fora=new Uint8Array(W*H), fila=new Int32Array(W*H); let a=0,b=0;
+  const pos=i=>{ if(!fora[i]&&dist(i)<TOL){ fora[i]=1; fila[b++]=i; } };
+  for(let x=0;x<W;x++){ pos(x); pos((H-1)*W+x); } for(let y=0;y<H;y++){ pos(y*W); pos(y*W+W-1); }
+  while(a<b){ const i=fila[a++], x=i%W, y=(i/W)|0; if(x>0) pos(i-1); if(x<W-1) pos(i+1); if(y>0) pos(i-W); if(y<H-1) pos(i+W); }
+  let n=0; for(let i=0;i<W*H;i++) if(fora[i]){ px[i*4+3]=0; n++; }
+  if(n<W*H*0.08) return null;   // quase nada de fundo: melhor não arriscar
+  // contorno: pixel da pessoa encostado no fundo fica semitransparente conforme a cor se parece com o fundo
+  for(let y=1;y<H-1;y++) for(let x=1;x<W-1;x++){ const i=y*W+x; if(fora[i]) continue;
+    if(fora[i-1]||fora[i+1]||fora[i-W]||fora[i+W]){ const t=Math.min(1,dist(i)/(TOL*2.2)); px[i*4+3]=Math.round(255*Math.max(.15,t)); } }
+  cx.putImageData(d,0,0);
+  let x0=W,y0=H,x1=0,y1=0; for(let y=0;y<H;y++) for(let x=0;x<W;x++) if(px[(y*W+x)*4+3]>10){ if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; }
+  if(x1<=x0||y1<=y0) return null;
+  const out=document.createElement('canvas'); out.width=x1-x0+1; out.height=y1-y0+1;
+  out.getContext('2d').drawImage(cv,x0,y0,out.width,out.height,0,0,out.width,out.height);
+  return out.toDataURL('image/png');
+}
+async function recortarFotoDoCard(id){
+  const j=J[id]; if(!j) return;
+  if(!await checarExtensao()) return alert('Precisa da extensão BFR Relatório Jogadores 1.5 neste Chrome.');
+  const bt=document.querySelector(`[data-recorte="${CSS.escape(id)}"]`); if(bt){ bt.disabled=true; bt.textContent='recortando…'; }
+  LOG_ALVO=bt;
+  try{
+    if(!j.ss||!j.ss.sid){ const p=await sofaAchar(j); if(p) j.ss={...(j.ss||{}),sid:p.id}; }
+    const ok=await trocarFoto(id,j);
+    if(ok&&db) await db.ref(`${RAIZ}/jogadores/${chaveFB(id)}`).update({foto:j.foto,fotoFonte:j.fotoFonte,fmid:j.fmid||null,ss:limpar(j.ss||null)});
+    if(!ok) alert('Não consegui uma foto recortada para '+j.nome+'.');
+  }catch(e){ alert('Foto: '+e.message); }
+  LOG_ALVO=null; agendarRender();
+}
 async function guardarFoto(id,dataurl){
   if(!storage) return dataurl;
   const blob=await (await fetch(dataurl)).blob();
@@ -897,7 +999,8 @@ async function guardarFoto(id,dataurl){
 }
 
 /* ═════════════ gerar a lista ═════════════ */
-async function gerarLista(){
+async function gerarLista(opt){
+  opt=opt||{tr:document.getElementById('optTR').checked,ss:document.getElementById('optSS').checked};
   const btn=document.getElementById('btnGerar'); btn.disabled=true;
   const lista=LISTA_ATUAL, temExt=!!EXT_VERSAO;
   try{
@@ -919,7 +1022,7 @@ async function gerarLista(){
     const upd={};
     // 2) TransferRoom: dados frescos de todos (valor, clube, idade, posição)
     let trAtual={};
-    if(temExt&&document.getElementById('optTR').checked){
+    if(temExt&&opt.tr){
       try{
         log('Lendo o TransferRoom (valor, clube, idade)…');
         const r=await extPedido({tipo:'tr_listas',nomes:['MAIN','BACKUP','YOUTH']},90000,t=>log('  '+t));
@@ -936,11 +1039,12 @@ async function gerarLista(){
       J[id]=novo;
     }
     // 3) SofaScore (temporada + últimas notas) e foto para os novos
-    if(temExt&&(document.getElementById('optSS').checked||novos.length)){
+    const semRecorte=j=>j&&j.fotoFonte==='sofascore';   // foto quadrada com fundo (16/11, caso Andrada): tenta recortar
+    if(temExt&&(opt.ss||novos.length||ids.some(id=>semRecorte(J[id])))){
       let i=0;
       for(const id of ids){
         i++; const j=J[id]; const ehNovo=novos.some(n=>n.id===id);
-        if(!ehNovo&&!document.getElementById('optSS').checked) continue;
+        if(!ehNovo&&!opt.ss){ if(semRecorte(j)&&!opt.rapido) await trocarFoto(id,j); continue; }
         try{
           let sid=j.ss&&j.ss.sid;
           if(!sid){ log(`  [${i}/${ids.length}] ${j.nome}: procurando no SofaScore…`); const p=await sofaAchar(j); sid=p&&p.id; if(!sid) log(`    não achei ${j.nome} no SofaScore com o mesmo clube e idade`); else if(p.__conferir){ log(`    ⚠ ${j.nome}: ${p.__conferir}`); j.ssConferir=p.__conferir; } }
@@ -954,14 +1058,7 @@ async function gerarLista(){
             log(`  [${i}/${ids.length}] ${j.nome}: ${d.temp?`${campCurto(d.temp.camp)} ${d.temp.temporada} — ${d.temp.jogos} jogos`:'sem temporada'}, ${(d.jogos||[]).length} notas recentes`);
           }
         }catch(e){ log(`  [${i}/${ids.length}] ${j.nome}: SofaScore — ${e.message}`); }
-        if(ehNovo&&!j.foto){
-          try{
-            log(`    procurando a foto recortada no sortitoutsi…`);
-            const f=await fotoSorti(j,log);
-            if(f){ j.foto=await guardarFoto(id,f.dataurl); j.fotoFonte='sortitoutsi'; j.fmid=f.fmid; log(`    foto ok (conferido: ${f.conferido})`); }
-            else if(j.ss&&j.ss.sid){ j.foto=`https://img.sofascore.com/api/v1/player/${j.ss.sid}/image`; j.fotoFonte='sofascore'; log('    sem foto recortada que bata — ficou a do SofaScore'); }
-          }catch(e){ log('    foto: '+e.message); }
-        }
+        if((ehNovo&&!j.foto)||semRecorte(j)) await trocarFoto(id,j);
       }
     }
     // 4) grava
@@ -969,8 +1066,9 @@ async function gerarLista(){
     upd[`listas/${lista}`]={atualizado:hojeISO(),fonte:'print do Squad View',caixas,em:new Date().toISOString()};
     if(db) await db.ref(RAIZ).update(upd); else { L[lista]=upd[`listas/${lista}`]; }
     log('Pronto. Lista atualizada para todo mundo.');
+    if(opt.rapido){ render(); return; }
     setTimeout(()=>{ fecharModal(); render(); window.scrollTo(0,0); },900);
-  }catch(e){ log('Erro: '+e.message); console.error(e); btn.disabled=false; }
+  }catch(e){ log('Erro: '+e.message); console.error(e); btn.disabled=false; if(opt.rapido) throw e; }
 }
 function limpar(o){ return JSON.parse(JSON.stringify(o,(k,v)=>v===undefined?null:v)); }
 
