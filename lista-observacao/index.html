@@ -113,7 +113,7 @@ body{font-family:"BFR",sans-serif;-webkit-print-color-adjust:exact;print-color-a
 .ed.salvo{box-shadow:0 0 0 2px #21b36b}
 @media print{
   html,body{background:#fff}
-  .app,.aviso,#modal,.nao-imprime{display:none!important}
+  .app,.aviso,#modal,#lixo,.nao-imprime{display:none!important}
   #doc{padding:0;zoom:1!important}
   .ed{background:none!important;box-shadow:none!important}
   .ed:empty:before{content:""}
@@ -122,6 +122,10 @@ body{font-family:"BFR",sans-serif;-webkit-print-color-adjust:exact;print-color-a
 /* ---------- janela "Atualizar pelo print" ---------- */
 #modal{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:40;display:none;align-items:flex-start;justify-content:center;overflow:auto;padding:30px 12px;font:13px system-ui,sans-serif}
 #modal.on{display:flex}
+#lixo{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:41;display:none;align-items:flex-start;justify-content:center;padding:60px 12px;font:13px system-ui,sans-serif}
+#lixo.on{display:flex}
+.lx{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid #eee}
+.lx span{display:flex;flex-direction:column}.lx small{color:#888}
 .jan{background:#fff;border-radius:12px;width:min(1180px,100%);padding:18px 20px;box-shadow:0 10px 40px rgba(0,0,0,.4)}
 .jan h2{font:700 18px system-ui;margin-bottom:4px}
 .jan .sub{color:#666;margin-bottom:12px}
@@ -141,6 +145,20 @@ body{font-family:"BFR",sans-serif;-webkit-print-color-adjust:exact;print-color-a
 .lr select{font:11px system-ui;width:120px;flex:none}
 .lr button,.cx .mais{font:12px system-ui;border:1px solid #d6d3c8;background:#fff;border-radius:5px;cursor:pointer;padding:2px 6px}
 .cx .mais{width:100%;margin-top:2px;color:#555}
+.lr .ft{width:24px;height:24px;flex:none;border-radius:50%;object-fit:cover;object-position:top;background:#e9e7da}
+.bj{position:relative;margin-top:2px}
+.bj input{width:100%;font:12px system-ui;padding:5px 8px;border:1px solid #d6d3c8;border-radius:5px;background:#fff}
+.bj input:focus{outline:none;border-color:#e8c84a;box-shadow:0 0 0 2px rgba(232,200,74,.35)}
+.sug{position:absolute;left:0;right:0;top:100%;z-index:5;background:#fff;border:1px solid #d6d3c8;border-radius:7px;box-shadow:0 6px 18px rgba(0,0,0,.18);max-height:330px;overflow:auto;display:none}
+.sug.on{display:block}
+.sug .gr{font:600 10px system-ui;color:#999;text-transform:uppercase;padding:6px 8px 2px}
+.sug .op{display:flex;align-items:center;gap:7px;padding:5px 8px;cursor:pointer}
+.sug .op:hover,.sug .op.sel{background:#fff6d6}
+.sug .op img.f{width:30px;height:30px;border-radius:50%;object-fit:cover;object-position:top;background:#e9e7da;flex:none}
+.sug .op img.e{width:18px;height:18px;object-fit:contain;flex:none}
+.sug .op span{min-width:0;line-height:1.25}
+.sug .op b{font-size:12px}.sug .op small{color:#777;font-size:11px}
+.sug .msg{font-size:11px;color:#888;padding:6px 8px}
 .rodape-jan{display:flex;gap:10px;justify-content:flex-end;align-items:center;margin-top:14px;flex-wrap:wrap}
 .rodape-jan .btn{background:#33312c;color:#fff;border-color:#33312c}
 .rodape-jan .btn.ver{background:#1a6e3a;border-color:#1a6e3a}
@@ -163,6 +181,7 @@ body{font-family:"BFR",sans-serif;-webkit-print-color-adjust:exact;print-color-a
 <div id="avisos"></div>
 <div id="doc"><div class="vazio-doc">Carregando…</div></div>
 
+<div id="lixo"></div>
 <div id="modal">
   <div class="jan">
     <h2>Atualizar a <span id="mLista"></span> pelo print do TransferRoom</h2>
@@ -245,6 +264,7 @@ function ouvirTextos(k){
 }
 /* listas criadas pela equipe para demandas específicas (16/11, pedido do Pedro e do Brunno: "destaques da Série B") */
 function juntarCriadas(cr){
+  CRIADAS=cr;
   for(const k of Object.keys(LISTAS)) if(!FIXAS.has(k)) delete LISTAS[k];
   Object.entries(cr).filter(([k,v])=>v&&!v.apagada).sort((a,b)=>String(a[1].criada||'').localeCompare(String(b[1].criada||''))).forEach(([k,v])=>{
     LISTAS[k]={nome:v.nome,titulo:v.titulo||String(v.nome).toUpperCase(),sub:v.sub||'',criada:true};
@@ -254,30 +274,45 @@ function juntarCriadas(cr){
   LISTA_PEDIDA=null;
   if(!LISTAS[LISTA_ATUAL]) LISTA_ATUAL='MAIN';
 }
+let CRIADAS={};
 async function criarLista(){
   if(!db) return alert('Sem conexão com o banco: não dá para criar lista agora.');
-  const nome=(prompt('Nome da lista (aparece na aba). Ex.: Destaques Série B')||'').trim(); if(!nome) return;
-  const titulo=(prompt('Título da folha do campograma:',nome.toUpperCase())||nome).trim().toUpperCase();
-  const sub=(prompt('Subtítulo (embaixo do título):','DESTAQUES POR POSIÇÃO')||'').trim().toUpperCase();
-  let k='C_'+sem(nome).replace(/ /g,'_').toUpperCase().slice(0,30)||'C_LISTA';
-  if(LISTAS[k]) k+='_'+Date.now().toString(36).toUpperCase();
+  const nome=(prompt('Nome da lista (ex.: Destaques Série B):')||'').trim(); if(!nome) return;
+  let k='C_'+(sem(nome).replace(/ /g,'_').toUpperCase().slice(0,30)||'LISTA');
+  if(CRIADAS[k]) k+='_'+Date.now().toString(36).toUpperCase();
   try{
-    await db.ref(`${RAIZ}/criadas/${k}`).set({nome,titulo,sub,criada:new Date().toISOString()});
+    await db.ref(`${RAIZ}/criadas/${k}`).set({nome,titulo:nome.toUpperCase(),sub:'ALVOS POR POSIÇÃO',criada:new Date().toISOString()});
     LISTA_ATUAL=k; try{localStorage.setItem('lo_lista',k);}catch(e){}
     agendarRender(); window.scrollTo(0,0);
   }catch(e){ alert('Não deu para criar a lista: '+e.message); }
 }
 async function renomearLista(){
   const k=LISTA_ATUAL, v=LISTAS[k]; if(!v||!v.criada||!db) return;
-  const nome=(prompt('Nome da lista:',v.nome)||'').trim(); if(!nome) return;
-  const titulo=(prompt('Título da folha do campograma:',v.titulo)||v.titulo).trim().toUpperCase();
-  const sub=(prompt('Subtítulo:',v.sub)??v.sub).trim().toUpperCase();
-  try{ await db.ref(`${RAIZ}/criadas/${k}`).update({nome,titulo,sub}); }catch(e){ alert('Não deu para salvar: '+e.message); }
+  const nome=(prompt('Novo nome da lista:',v.nome)||'').trim(); if(!nome||nome===v.nome) return;
+  try{ await db.ref(`${RAIZ}/criadas/${k}`).update({nome,titulo:nome.toUpperCase()}); }catch(e){ alert('Não deu para salvar: '+e.message); }
 }
-async function apagarLista(){
-  const k=LISTA_ATUAL, v=LISTAS[k]; if(!v||!v.criada||!db) return;
-  if(!confirm(`Apagar a lista "${v.nome}"? Ela some da tela para todo mundo (os jogadores e as avaliações continuam guardados no banco).`)) return;
-  try{ await db.ref(`${RAIZ}/criadas/${k}`).update({apagada:true,apagadaEm:new Date().toISOString()}); LISTA_ATUAL='MAIN'; try{localStorage.setItem('lo_lista','MAIN');}catch(e){} agendarRender(); }catch(e){ alert('Não deu para apagar: '+e.message); }
+/* 🗑: painel com todas as listas criadas (apagar) e as apagadas (voltar) */
+function abrirLixeira(){
+  const ativas=Object.entries(CRIADAS).filter(([k,v])=>v&&!v.apagada), apag=Object.entries(CRIADAS).filter(([k,v])=>v&&v.apagada)
+    .sort((a,b)=>String(b[1].apagadaEm||'').localeCompare(String(a[1].apagadaEm||'')));
+  const dt=s=>s?String(s).slice(0,10).split('-').reverse().join('/'):'';
+  const qtd=k=>Object.values(((L[k]||{}).caixas)||{}).reduce((a,v)=>a+(v||[]).length,0);
+  const lin=(k,v,bt)=>`<div class="lx"><span><b>${esc(v.nome)}</b><small>${qtd(k)} jogadores · criada ${dt(v.criada)}${v.apagada?` · apagada ${dt(v.apagadaEm)}`:''}</small></span>${bt}</div>`;
+  document.getElementById('lixo').innerHTML=`<div class="jan" style="width:min(560px,100%)"><h2>Listas criadas</h2>
+    <div class="sub">As três do TransferRoom (Principal, Backup e Youth) não saem daqui.</div>
+    ${ativas.length?ativas.map(([k,v])=>lin(k,v,`<button class="btn" style="background:#8B1A2E;border-color:#8B1A2E;color:#fff" onclick="apagarLista('${k}')">🗑 Apagar</button>`)).join(''):'<div class="sub">Nenhuma lista criada.</div>'}
+    ${apag.length?`<h2 style="margin-top:16px;font-size:15px">Apagadas</h2>`+apag.map(([k,v])=>lin(k,v,`<button class="btn" style="background:#1a6e3a;border-color:#1a6e3a;color:#fff" onclick="voltarLista('${k}')">↩ Voltar</button>`)).join(''):''}
+    <div class="rodape-jan"><button class="btn cinza" onclick="document.getElementById('lixo').classList.remove('on')">Fechar</button></div></div>`;
+  document.getElementById('lixo').classList.add('on');
+}
+async function apagarLista(k){
+  const v=CRIADAS[k]; if(!v||!db) return;
+  if(!confirm(`Apagar a lista "${v.nome}"? Dá para voltar com ela depois, neste mesmo botão 🗑.`)) return;
+  try{ await db.ref(`${RAIZ}/criadas/${k}`).update({apagada:true,apagadaEm:new Date().toISOString()}); if(LISTA_ATUAL===k){ LISTA_ATUAL='MAIN'; try{localStorage.setItem('lo_lista','MAIN');}catch(e){} } agendarRender(); setTimeout(abrirLixeira,300); }catch(e){ alert('Não deu para apagar: '+e.message); }
+}
+async function voltarLista(k){
+  if(!db) return;
+  try{ await db.ref(`${RAIZ}/criadas/${k}`).update({apagada:null,apagadaEm:null}); LISTA_ATUAL=k; try{localStorage.setItem('lo_lista',k);}catch(e){} agendarRender(); document.getElementById('lixo').classList.remove('on'); window.scrollTo(0,0); }catch(e){ alert('Não deu para voltar com a lista: '+e.message); }
 }
 
 /* ═════════════ extensão BFR Relatório Jogadores ═════════════ */
@@ -437,7 +472,8 @@ function render(){
   const cr=LISTAS[LISTA_ATUAL]&&LISTAS[LISTA_ATUAL].criada;
   document.getElementById('abas').innerHTML=Object.entries(LISTAS).map(([k,v])=>`<button class="${k===LISTA_ATUAL?'on':''}" onclick="trocarLista('${k}')">${esc(v.nome)}</button>`).join(' ')
     +` <button class="nova" onclick="criarLista()" title="Lista nova para uma demanda específica (ex.: destaques da Série B). Monta pelo print ou digitando os nomes.">＋ Criar lista</button>`
-    +(cr?` <button class="mini" onclick="renomearLista()" title="Mudar nome, título e subtítulo desta lista">✎</button><button class="mini" onclick="apagarLista()" title="Apagar esta lista">🗑</button>`:'');
+    +(cr?` <button class="mini" onclick="renomearLista()" title="Renomear esta lista">✎</button>`:'')
+    +` <button class="mini" onclick="abrirLixeira()" title="Apagar uma lista criada ou voltar com uma apagada">🗑</button>`;
   const ativo=document.activeElement&&document.activeElement.classList.contains('ed')?document.activeElement.dataset.id:null;
   if(ativo) return;   // não redesenha embaixo de quem está digitando; o texto já está salvo
   const C=cfgDaLista(LISTA_ATUAL);
@@ -646,12 +682,13 @@ function desenharRevisao(){
   const caixa=k=>{
     const ls=REV[k]||[];
     return `<div class="cx"><h4>${POSICOES[k]} <small>${ls.length}/${MAX_POR_POSICAO}</small></h4>
-      ${ls.map((l,i)=>`<div class="lr"><input value="${esc(l.texto)}" onchange="mudarNome('${k}',${i},this.value)" title="Nome lido no print — corrija se precisar">
+      ${ls.map((l,i)=>`<div class="lr">${(()=>{ const f=(l.id&&J[l.id]&&J[l.id].foto)||(l.cand&&l.cand[l.esc||0]&&l.cand[l.esc||0].foto); return f?`<img class="ft" referrerpolicy="no-referrer" src="${esc(f)}" alt="" onerror="this.style.visibility='hidden'">`:'<span class="ft"></span>'; })()}<input value="${esc(l.texto)}" onchange="mudarNome('${k}',${i},this.value)" title="Nome lido no print — corrija se precisar">
         ${l.status==='base'&&J[l.id]?`<span class="st ok" title="${esc(J[l.id].nome)} · ${esc(J[l.id].clube&&J[l.id].clube.nome||'')} · ${J[l.id].idade??''} anos">✓ ${esc(J[l.id].clube&&J[l.id].clube.nome||'')}</span>`
+        :l.escolhido&&l.cand&&l.cand[0]?`<span class="st ok" title="${esc(l.cand[0].nome)} · ${esc(l.cand[0].clube&&l.cand[0].clube.nome||'')} · ${l.cand[0].idade??''} anos (TransferRoom)">✓ ${esc(l.cand[0].clube&&(l.cand[0].clube.curto||l.cand[0].clube.nome)||'')}</span>`
         :l.cand&&l.cand.length?`<select onchange="escolherCand('${k}',${i},this.value)" title="Jogador novo: confira qual é no TransferRoom">${l.cand.map((c,ci)=>`<option value="${ci}"${ci===(l.esc||0)?' selected':''}>${esc(c.nome)} · ${esc(c.clube&&c.clube.curto||c.clube&&c.clube.nome||'')} · ${c.idade??'?'}a · ${esc(c.pos1||'')}</option>`).join('')}<option value="-1"${l.esc===-1?' selected':''}>nenhum destes</option></select>`
         :`<span class="st ${l.status==='erro'?'erro':'novo'}">${l.status==='buscando'?'buscando no TR…':l.status==='erro'?'não achei no TR':'novo'}</span>`}
         <button onclick="moverLinha('${k}',${i},-1)" title="Subir">↑</button><button onclick="tirarLinha('${k}',${i})" title="Tirar">✕</button></div>`).join('')}
-      ${ls.length<MAX_POR_POSICAO?`<button class="mais" onclick="maisLinha('${k}')">+ jogador</button>`:''}</div>`;
+      ${ls.length<MAX_POR_POSICAO?`<div class="bj"><input id="bj_${k}" placeholder="🔎 Buscar jogador…" autocomplete="off" oninput="buscaJog('${k}')" onkeydown="teclaBusca(event,'${k}')" onblur="setTimeout(()=>fecharSug('${k}'),200)"><div class="sug" id="sug_${k}"></div></div>`:''}</div>`;
   };
   document.getElementById('revisao').innerHTML=`<div style="margin-top:12px;font-weight:600">Confira o que foi lido (na ordem do Squad View). ✓ = já está na base; jogador novo: escolha qual é no TransferRoom.</div><div class="grade">${ORDEM_CARDS.map(caixa).join('')}</div>`;
   document.getElementById('btnGerar').disabled=!Object.values(REV).some(v=>v.length);
@@ -660,6 +697,64 @@ function mudarNome(k,i,v){ REV[k][i]=linhaNova(v.trim(),k); desenharRevisao(); b
 function escolherCand(k,i,v){ REV[k][i].esc=+v; }
 function moverLinha(k,i,d){ const a=REV[k]; if(i+d<0) return; [a[i],a[i+d]]=[a[i+d],a[i]]; desenharRevisao(); }
 function tirarLinha(k,i){ REV[k].splice(i,1); desenharRevisao(); }
+/* busca de jogador (16/11): base da Lista + TransferRoom inteiro, com foto, clube, idade e posição — clica e entra */
+const BJ={};   // por caixa: {seq, timer, itens}
+const fotoJ=j=>j&&(j.foto||'');
+function sugItem(it,i){
+  const c=it.clube||{}, e=c.escudo||c.escudoTR||c.escudoSS||'';
+  return `<div class="op" data-i="${i}" onmousedown="event.preventDefault();pegarSug('${it.caixa}',${i})">${it.foto?`<img class="f" referrerpolicy="no-referrer" src="${esc(it.foto)}" alt="" onerror="this.style.visibility='hidden'">`:'<img class="f" alt="">'}
+    <span><b>${esc(it.nome)}</b><br><small>${esc(c.curto||c.nome||'sem clube')}${it.idade!=null?` · ${it.idade} anos`:''}${it.pos1?` · ${esc(it.pos1)}`:''}${it.nasc?` · ${esc(String(it.nasc).slice(0,10).split('-').reverse().join('/'))}`:''}</small></span>
+    ${e?`<img class="e" referrerpolicy="no-referrer" src="${esc(e)}" alt="" onerror="this.remove()">`:''}</div>`;
+}
+function desenharSug(k,carregando){
+  const b=BJ[k], box=document.getElementById('sug_'+k); if(!box||!b) return;
+  const daBase=b.itens.filter(x=>x.fonte==='base'), doTR=b.itens.filter(x=>x.fonte==='tr');
+  let h='';
+  if(daBase.length) h+=`<div class="gr">Já na nossa base</div>`+daBase.map(x=>sugItem(x,b.itens.indexOf(x))).join('');
+  if(doTR.length) h+=`<div class="gr">TransferRoom</div>`+doTR.map(x=>sugItem(x,b.itens.indexOf(x))).join('');
+  if(carregando) h+=`<div class="msg">buscando no TransferRoom…</div>`;
+  else if(!EXT_VERSAO) h+=`<div class="msg">Sem a extensão BFR Relatório Jogadores: só a nossa base. Enter = incluir pelo nome digitado.</div>`;
+  else if(b.erro) h+=`<div class="msg">${esc(b.erro)}</div>`;
+  if(!h) h=`<div class="msg">Nenhum jogador com esse nome. Enter = incluir pelo nome digitado.</div>`;
+  box.innerHTML=h; box.classList.add('on');
+}
+function fecharSug(k){ const box=document.getElementById('sug_'+k); if(box) box.classList.remove('on'); }
+function buscaJog(k){
+  const inp=document.getElementById('bj_'+k), q=inp.value.trim(); const b=BJ[k]=BJ[k]||{seq:0,itens:[]};
+  clearTimeout(b.timer); const meu=++b.seq; b.erro='';
+  if(q.length<2){ b.itens=[]; fecharSug(k); return; }
+  const qs=sem(q), ja=new Set(Object.values(REV).flat().map(l=>l.id).filter(Boolean));
+  b.itens=Object.values(J).filter(j=>!ja.has(j.id)&&[j.nome,j.nomeTR,j.nomeCompleto].some(n=>n&&sem(n).includes(qs)))
+    .sort((a,c)=>((POS_OK[k]||[]).includes(c.pos1)-(POS_OK[k]||[]).includes(a.pos1)))
+    .slice(0,6).map(j=>({...j,fonte:'base',caixa:k}));
+  desenharSug(k,!!EXT_VERSAO&&q.length>=3);
+  if(!EXT_VERSAO||q.length<3) return;
+  b.timer=setTimeout(async()=>{
+    try{
+      const r=await extPedido({tipo:'tr_busca',nome:q},60000);
+      if(meu!==b.seq) return;
+      const naBase=new Set(b.itens.map(x=>String(x.id)));
+      let c=(r.dados||[]).filter(x=>!naBase.has(String(x.id))&&!ja.has(x.id));
+      c.sort((a,d)=>((POS_OK[k]||[]).includes(d.pos1)-(POS_OK[k]||[]).includes(a.pos1)));
+      b.itens=b.itens.concat(c.slice(0,10).map(x=>({...x,fonte:'tr',caixa:k})));
+    }catch(e){ if(meu!==b.seq) return; b.erro=e.code==='login'||/login/.test(e.message)?'O TransferRoom está deslogado neste Chrome: entre no TransferRoom Scout e busque de novo.':'TransferRoom: '+e.message; }
+    desenharSug(k,false);
+  },400);
+}
+function teclaBusca(ev,k){
+  const box=document.getElementById('sug_'+k), ops=box?[...box.querySelectorAll('.op')]:[];
+  let i=ops.findIndex(o=>o.classList.contains('sel'));
+  if(ev.key==='ArrowDown'||ev.key==='ArrowUp'){ ev.preventDefault(); if(!ops.length) return; ops.forEach(o=>o.classList.remove('sel')); i=ev.key==='ArrowDown'?Math.min(ops.length-1,i+1):Math.max(0,i-1); ops[i].classList.add('sel'); ops[i].scrollIntoView({block:'nearest'}); }
+  else if(ev.key==='Enter'){ ev.preventDefault(); if(i>=0) pegarSug(k,+ops[i].dataset.i); else { const n=ev.target.value.trim(); if(n){ REV[k].push(linhaNova(n,k)); desenharRevisao(); buscarCandidatosNovos(); focarBusca(k); } } }
+  else if(ev.key==='Escape') fecharSug(k);
+}
+function focarBusca(k){ setTimeout(()=>{ const i=document.getElementById('bj_'+k); if(i) i.focus(); },30); }
+function pegarSug(k,i){
+  const it=(BJ[k]||{}).itens[i]; if(!it) return;
+  if(it.fonte==='base') REV[k].push({texto:it.nome||it.nomeTR,id:it.id,status:'base'});
+  else { const {fonte,caixa,...c}=it; REV[k].push(J[c.id]?{texto:c.nome,id:c.id,status:'base'}:{texto:c.nome,id:null,status:'novo',cand:[c],esc:0,escolhido:true}); }
+  BJ[k]={seq:0,itens:[]}; desenharRevisao(); focarBusca(k);
+}
 function maisLinha(k){ const n=prompt('Nome do jogador (como está no TransferRoom):'); if(!n) return; REV[k].push(linhaNova(n.trim(),k)); desenharRevisao(); buscarCandidatosNovos(); }
 async function buscarCandidatosNovos(){
   if(!EXT_VERSAO) return;
