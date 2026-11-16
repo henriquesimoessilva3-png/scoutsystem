@@ -225,7 +225,8 @@ const POSICOES={GOL:"GOLEIRO",LE:"LATERAL ESQUERDO",ZC:"ZAGUEIRO CANHOTO",ZD:"ZA
 const MAX_POR_POSICAO=5;
 // caixa do Squad View (rótulo no print / código na API do TR) -> caixa do documento
 const ROTULO_CAIXA={GK:'GOL',LB:'LE',CB1:'ZC',CB2:'ZD',RB:'LD',DM1:'MED',DM2:'VOL',LM:'EE',CAM:'MEI',RM:'ED',ST:'ATA'};
-const CODIGO_CAIXA={gk:'GOL',lb:'LE',lcb:'ZC',rcb:'ZD',rb:'LD',ldmf:'MED',rdmf:'VOL',lamf:'EE',amf:'MEI',ramf:'ED',cf:'ATA'};
+const CODIGO_CAIXA={gk:'GOL',lb:'LE',lcb:'ZC',rcb:'ZD',rb:'LD',ldmf:'MED',rdmf:'VOL',lamf:'EE',amf:'MEI',ramf:'ED',cf:'ATA',
+  dmf:'VOL',lcmf3:'MED',rcmf3:'MEI',lwf:'EE',rwf:'ED'};   // 16/11: listas do TR montadas no 4-3-3 (Libertadores, Sul-Americana)
 // posições do TR que fazem sentido em cada caixa (para desempatar nomes iguais: Igor Gomes ZAG x Igor Gomes MEI)
 const POS_OK={GOL:['GK'],LE:['LB','CB','W'],LD:['RB','CB','W'],ZC:['CB','DM','LB','RB'],ZD:['CB','DM','LB','RB'],MED:['DM','CM','CB','AM'],VOL:['DM','CM','CB','AM'],MEI:['AM','CM','W','F'],EE:['W','AM','F','LB','RB'],ED:['W','AM','F','LB','RB'],ATA:['F','W','AM']};
 
@@ -654,10 +655,11 @@ function casarBase(nome,caixa){
     if(s<.8) continue;
     const pos=(POS_OK[caixa]||[]).includes(j.pos1)?.06:0;
     const naLista=Object.values(L).some(l=>((l.caixas||{})[caixa]||[]).includes(j.id))?.04:0;
+    if(s<.99) continue;   // 16/11: só nome igual (Janderson virava Anderson); homônimo se resolve pelo Squad View
     const sc=s+pos+naLista;
     if(!melhor||sc>melhor.sc) melhor={sc,j};
   }
-  return melhor&&melhor.sc>=.86?melhor.j:null;
+  return melhor?melhor.j:null;   // 16/11: só nome igual (Janderson virava Anderson); homônimo se resolve pelo TR
 }
 
 /* ═════════════ janela de atualização ═════════════ */
@@ -701,6 +703,7 @@ async function processarPrints(){
   if(faltam.length) log(`Atenção: não achei as caixas ${faltam.map(k=>POSICOES[k]).join(', ')} — se estiverem fora do print, mande outro print ou digite os nomes abaixo.`);
   REV={};
   for(const k of Object.keys(POSICOES)) REV[k]=(juntas[k]||[]).slice(0,MAX_POR_POSICAO).map(t=>linhaNova(t,k));
+  await casarComSquadView();
   desenharRevisao();
   buscarCandidatosNovos();
 }
@@ -727,6 +730,32 @@ function mudarNome(k,i,v){ REV[k][i]=linhaNova(v.trim(),k); desenharRevisao(); b
 function escolherCand(k,i,v){ REV[k][i].esc=+v; }
 function moverLinha(k,i,d){ const a=REV[k]; if(i+d<0) return; [a[i],a[i+d]]=[a[i+d],a[i]]; desenharRevisao(); }
 function tirarLinha(k,i){ REV[k].splice(i,1); desenharRevisao(); }
+/* 16/11 (varredura do Gabriel: Kadu virou Gadu, Zé Hugo virou Hugo, Romulo do Novorizontino virou o do Tigres…): o print É de uma
+   lista do Squad View, então cada nome lido é procurado primeiro nas listas do TransferRoom, na mesma posição — elas trazem o
+   código do jogador, e aí não tem homônimo. Só o que não aparecer lá vai para a base e para a busca por nome. */
+async function casarComSquadView(){
+  if(!EXT_VERSAO) await checarExtensao(); if(!EXT_VERSAO) return;
+  try{
+    log('Conferindo os nomes nas listas do Squad View do TransferRoom…');
+    if(!TR_LISTAS) TR_LISTAS=(await extPedido({tipo:'tr_listas',nomes:null},120000,t=>log('  '+t))).dados||{};
+    // qual lista do TR é a do print: a que tem mais nomes lidos na mesma posição
+    let melhor=null;
+    for(const [nome,ps] of Object.entries(TR_LISTAS)){
+      const cx={}; for(const p of ps){ const k=CODIGO_CAIXA[String(p.caixa).toLowerCase()]; if(k) cx[k]=(cx[k]||[]).concat(p.jogadores||[]); }
+      let n=0; for(const [k,ls] of Object.entries(REV)) for(const l of ls) if((cx[k]||[]).some(x=>parecido(l.texto,x.nome)>=.8)) n++;
+      if(!melhor||n>melhor.n) melhor={nome,cx,n};
+    }
+    const tot=Object.values(REV).flat().length;
+    if(!melhor||melhor.n<Math.max(2,tot*.4)){ log('  não achei no Squad View a lista deste print — confira cada nome'); return; }
+    log(`  o print é da lista "${melhor.nome}" (${melhor.n} de ${tot} nomes achados)`);
+    for(const [k,ls] of Object.entries(REV)) ls.forEach((l,i)=>{
+      const c=(melhor.cx[k]||[]).map(x=>({x,s:parecido(l.texto,x.nome)})).sort((a,b)=>b.s-a.s)[0];
+      if(!c||c.s<.7) return;
+      ls[i]=J[c.x.id]?{texto:c.x.nome,id:c.x.id,status:'base'}:{texto:c.x.nome,id:null,status:'novo',cand:[c.x],esc:0,escolhido:true};
+    });
+  }catch(e){ log('  Squad View: '+e.message+' — confira cada nome'); }
+}
+
 /* atualizar direto do TransferRoom (16/11): lê as listas do Squad View pela extensão, os 5 primeiros de cada caixa (modo Compact) */
 let TR_LISTAS=null;
 async function lerDoTR(){
@@ -853,10 +882,10 @@ async function buscarCandidatosNovos(){
     try{
       const r=await extPedido({tipo:'tr_busca',nome:l.texto},60000,t=>log('  '+t));
       let c=(r.dados||[]);
-      c.sort((a,b)=>((POS_OK[k]||[]).includes(b.pos1)-(POS_OK[k]||[]).includes(a.pos1))||(parecido(l.texto,b.nome)-parecido(l.texto,a.nome)));
+      c.sort((a,b)=>(parecido(l.texto,b.nome)-parecido(l.texto,a.nome))||((POS_OK[k]||[]).includes(b.pos1)-(POS_OK[k]||[]).includes(a.pos1)));   // 16/11: nome antes da posição (Kadu ≠ Gadu)
       l.cand=c.slice(0,8); l.esc=c.length?0:-1; l.status=c.length?'novo':'erro';
       // já está na base com outro nome? (TR id igual)
-      if(c.length&&J[c[0].id]&&parecido(l.texto,c[0].nome)>.85){ l.id=c[0].id; l.status='base'; }
+      if(c.length&&J[c[0].id]&&parecido(l.texto,c[0].nome)>=.99&&c.filter(x=>parecido(l.texto,x.nome)>=.99).length===1){ l.id=c[0].id; l.status='base'; }
     }catch(e){ l.status='erro'; log(`  ${l.texto}: ${e.message}`); }
     desenharRevisao();
   }
