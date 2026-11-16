@@ -40,6 +40,9 @@ body{font-family:"BFR",sans-serif;-webkit-print-color-adjust:exact;print-color-a
 .app .acao{background:#1a6e3a;border-color:#1a6e3a}
 .app .pdf{background:#8B1A2E;border-color:#8B1A2E;color:#e8c84a}
 .app .info{color:#a9a69c;font-size:12px}
+.app .nova{background:transparent;border-style:dashed;color:#e8c84a;border-color:#8a7a3a}
+.app .mini{padding:7px 9px;background:transparent}
+.vazio-doc .btn{margin:6px;background:#33312c;color:#fff;font-size:14px;padding:10px 16px}
 .app .dir{margin-left:auto;display:flex;gap:8px;align-items:center}
 .aviso{font:13px system-ui,sans-serif;background:#fff6d6;border-bottom:1px solid #e6d48a;color:#5b4a00;padding:8px 14px}
 .aviso a{color:#374df5}
@@ -152,6 +155,7 @@ body{font-family:"BFR",sans-serif;-webkit-print-color-adjust:exact;print-color-a
   <span class="info" id="infoLista"></span>
   <span class="dir">
     <button class="acao" onclick="abrirModal()" title="Carregar o print do Squad View do TransferRoom e gerar a lista de novo">📷 Atualizar pelo print</button>
+    <button onclick="abrirModal(true)" title="Incluir, tirar ou reordenar jogadores à mão, sem print">✎ Editar jogadores</button>
     <button class="pdf" onclick="baixarPDF()" title="Abre a impressão: escolha 'Salvar como PDF'">⬇ PDF</button>
     <span class="info" id="infoBanco">conectando…</span>
   </span>
@@ -182,7 +186,7 @@ const FIREBASE_CONFIG={apiKey:"AIzaSyBi4pOl1hkP8t-NcIMAhYuTGWtMcm290HE",authDoma
 const RJ_EXT_ID='ohjijihiclegbdhbpphaofkjicenplla';
 const EXT_ZIP='extensao-bfr-relatorio-jogadores-1.5.1.zip';
 const RAIZ='lista_obs';
-const LISTAS={
+const LISTAS={   // as 3 do TransferRoom; as criadas pela equipe (botão ＋ Criar lista) entram aqui ao ler lista_obs/criadas
   MAIN:{nome:'Lista Principal',titulo:'LISTA PRINCIPAL',sub:'PRINCIPAIS ALVOS POR POSIÇÃO',tr:'MAIN LIST'},
   BACKUP:{nome:'Lista Backup',titulo:'LISTA BACKUP',sub:'ALTERNATIVAS POR POSIÇÃO',tr:'BACKUP LIST'},
   YOUTH:{nome:'Lista Youth',titulo:'LISTA YOUTH',sub:'JOVENS ALVOS POR POSIÇÃO',tr:'YOUTH LIST'}};
@@ -196,9 +200,12 @@ const POS_OK={GOL:['GK'],LE:['LB','CB','W'],LD:['RB','CB','W'],ZC:['CB','DM','LB
 
 /* ═════════════ estado ═════════════ */
 let db=null, storage=null, BASE=null, LISTA_ATUAL='MAIN';
-const J={}, L={}, T={MAIN:{},BACKUP:{},YOUTH:{}};   // jogadores, listas, textos (vêm do Firebase)
+const J={}, L={}, T={MAIN:{},BACKUP:{},YOUTH:{}};
+const FIXAS=new Set(['MAIN','BACKUP','YOUTH']);
+const _ouvindoTextos=new Set();   // jogadores, listas, textos (vêm do Firebase)
 let SIGLAS={};
-try{ const a=new URLSearchParams(location.search).get('lista'); if(a&&LISTAS[a.toUpperCase()]) LISTA_ATUAL=a.toUpperCase(); else { const s=localStorage.getItem('lo_lista'); if(s&&LISTAS[s]) LISTA_ATUAL=s; } }catch(e){}
+let LISTA_PEDIDA=null;   // lista criada só existe depois que o banco responde
+try{ const a=new URLSearchParams(location.search).get('lista'); LISTA_PEDIDA=a?a.toUpperCase():localStorage.getItem('lo_lista'); if(LISTA_PEDIDA&&LISTAS[LISTA_PEDIDA]) LISTA_ATUAL=LISTA_PEDIDA; }catch(e){}
 
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const sem=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
@@ -221,7 +228,8 @@ async function iniciarBanco(){
     ref.child('jogadores').on('value',s=>{ Object.keys(J).forEach(k=>delete J[k]); Object.assign(J,s.val()||{}); agendarRender(); });
     ref.child('listas').on('value',s=>{ Object.keys(L).forEach(k=>delete L[k]); Object.assign(L,s.val()||{}); agendarRender(); });
     ref.child('siglas').on('value',s=>{ SIGLAS=s.val()||{}; });
-    for(const k of Object.keys(LISTAS)) ref.child('textos/'+k).on('value',s=>{ T[k]=s.val()||{}; atualizarTextosNaTela(k); });
+    for(const k of Object.keys(LISTAS)) ouvirTextos(k);
+    ref.child('criadas').on('value',s=>{ juntarCriadas(s.val()||{}); agendarRender(); });
     document.getElementById('infoBanco').textContent='● salvo para a equipe';
   }catch(e){
     console.error(e);
@@ -229,6 +237,47 @@ async function iniciarBanco(){
     document.getElementById('infoBanco').textContent='⚠ sem conexão com o banco (só leitura)';
     agendarRender();
   }
+}
+
+function ouvirTextos(k){
+  if(!db||_ouvindoTextos.has(k)) return; _ouvindoTextos.add(k);
+  db.ref(RAIZ).child('textos/'+k).on('value',s=>{ T[k]=s.val()||{}; atualizarTextosNaTela(k); });
+}
+/* listas criadas pela equipe para demandas específicas (16/11, pedido do Pedro e do Brunno: "destaques da Série B") */
+function juntarCriadas(cr){
+  for(const k of Object.keys(LISTAS)) if(!FIXAS.has(k)) delete LISTAS[k];
+  Object.entries(cr).filter(([k,v])=>v&&!v.apagada).sort((a,b)=>String(a[1].criada||'').localeCompare(String(b[1].criada||''))).forEach(([k,v])=>{
+    LISTAS[k]={nome:v.nome,titulo:v.titulo||String(v.nome).toUpperCase(),sub:v.sub||'',criada:true};
+    T[k]=T[k]||{}; ouvirTextos(k);
+  });
+  if(LISTA_PEDIDA&&LISTAS[LISTA_PEDIDA]&&LISTA_ATUAL!==LISTA_PEDIDA){ LISTA_ATUAL=LISTA_PEDIDA; }
+  LISTA_PEDIDA=null;
+  if(!LISTAS[LISTA_ATUAL]) LISTA_ATUAL='MAIN';
+}
+async function criarLista(){
+  if(!db) return alert('Sem conexão com o banco: não dá para criar lista agora.');
+  const nome=(prompt('Nome da lista (aparece na aba). Ex.: Destaques Série B')||'').trim(); if(!nome) return;
+  const titulo=(prompt('Título da folha do campograma:',nome.toUpperCase())||nome).trim().toUpperCase();
+  const sub=(prompt('Subtítulo (embaixo do título):','DESTAQUES POR POSIÇÃO')||'').trim().toUpperCase();
+  let k='C_'+sem(nome).replace(/ /g,'_').toUpperCase().slice(0,30)||'C_LISTA';
+  if(LISTAS[k]) k+='_'+Date.now().toString(36).toUpperCase();
+  try{
+    await db.ref(`${RAIZ}/criadas/${k}`).set({nome,titulo,sub,criada:new Date().toISOString()});
+    LISTA_ATUAL=k; try{localStorage.setItem('lo_lista',k);}catch(e){}
+    agendarRender(); window.scrollTo(0,0);
+  }catch(e){ alert('Não deu para criar a lista: '+e.message); }
+}
+async function renomearLista(){
+  const k=LISTA_ATUAL, v=LISTAS[k]; if(!v||!v.criada||!db) return;
+  const nome=(prompt('Nome da lista:',v.nome)||'').trim(); if(!nome) return;
+  const titulo=(prompt('Título da folha do campograma:',v.titulo)||v.titulo).trim().toUpperCase();
+  const sub=(prompt('Subtítulo:',v.sub)??v.sub).trim().toUpperCase();
+  try{ await db.ref(`${RAIZ}/criadas/${k}`).update({nome,titulo,sub}); }catch(e){ alert('Não deu para salvar: '+e.message); }
+}
+async function apagarLista(){
+  const k=LISTA_ATUAL, v=LISTAS[k]; if(!v||!v.criada||!db) return;
+  if(!confirm(`Apagar a lista "${v.nome}"? Ela some da tela para todo mundo (os jogadores e as avaliações continuam guardados no banco).`)) return;
+  try{ await db.ref(`${RAIZ}/criadas/${k}`).update({apagada:true,apagadaEm:new Date().toISOString()}); LISTA_ATUAL='MAIN'; try{localStorage.setItem('lo_lista','MAIN');}catch(e){} agendarRender(); }catch(e){ alert('Não deu para apagar: '+e.message); }
 }
 
 /* ═════════════ extensão BFR Relatório Jogadores ═════════════ */
@@ -385,7 +434,10 @@ function ajustarNomes(){
 let _rt=null;
 function agendarRender(){ clearTimeout(_rt); _rt=setTimeout(render,120); }
 function render(){
-  document.getElementById('abas').innerHTML=Object.entries(LISTAS).map(([k,v])=>`<button class="${k===LISTA_ATUAL?'on':''}" onclick="trocarLista('${k}')">${v.nome}</button>`).join(' ');
+  const cr=LISTAS[LISTA_ATUAL]&&LISTAS[LISTA_ATUAL].criada;
+  document.getElementById('abas').innerHTML=Object.entries(LISTAS).map(([k,v])=>`<button class="${k===LISTA_ATUAL?'on':''}" onclick="trocarLista('${k}')">${esc(v.nome)}</button>`).join(' ')
+    +` <button class="nova" onclick="criarLista()" title="Lista nova para uma demanda específica (ex.: destaques da Série B). Monta pelo print ou digitando os nomes.">＋ Criar lista</button>`
+    +(cr?` <button class="mini" onclick="renomearLista()" title="Mudar nome, título e subtítulo desta lista">✎</button><button class="mini" onclick="apagarLista()" title="Apagar esta lista">🗑</button>`:'');
   const ativo=document.activeElement&&document.activeElement.classList.contains('ed')?document.activeElement.dataset.id:null;
   if(ativo) return;   // não redesenha embaixo de quem está digitando; o texto já está salvo
   const C=cfgDaLista(LISTA_ATUAL);
@@ -393,7 +445,7 @@ function render(){
   const l=L[LISTA_ATUAL]||{};
   document.getElementById('infoLista').textContent=tot?`${tot} jogadores · atualizada em ${C.atualizado||'—'}${l.por?` · ${l.por}`:''}`:'';
   const doc=document.getElementById('doc');
-  if(!tot){ doc.innerHTML=`<div class="vazio-doc">Esta lista ainda não foi gerada. Clique em <b>📷 Atualizar pelo print</b>.</div>`; return; }
+  if(!tot){ doc.innerHTML=`<div class="vazio-doc">Esta lista ainda não tem jogadores.<br><br><button class="btn" onclick="abrirModal()">📷 Montar pelo print</button><button class="btn" onclick="abrirModal(true)">✎ Montar digitando os nomes</button></div>`; return; }
   const sy=window.scrollY;
   doc.innerHTML=capa()+folhaCampo(C)+folhasCards(C);
   ajustarZoom();
@@ -546,14 +598,20 @@ function casarBase(nome,caixa){
 
 /* ═════════════ janela de atualização ═════════════ */
 let REV=null;   // {caixa: [{texto, id|null, cand:[...], status}]}
-function abrirModal(){
+function abrirModal(aMao){
   PRINTS=[]; REV=null;
   document.getElementById('mLista').textContent=LISTAS[LISTA_ATUAL].nome;
   document.getElementById('prints').innerHTML=''; document.getElementById('revisao').innerHTML='';
   const lg=document.getElementById('log'); lg.style.display='none'; lg.textContent='';
   document.getElementById('btnGerar').disabled=true;
   document.getElementById('modal').classList.add('on');
-  checarExtensao();
+  const pronta=checarExtensao();
+  if(aMao){   // sem print: parte do que já está na lista e deixa incluir pelo "+ jogador"
+    const l=L[LISTA_ATUAL]||{}; REV={};
+    for(const k of Object.keys(POSICOES)) REV[k]=((l.caixas||{})[k]||[]).filter(id=>J[id]).map(id=>({texto:J[id].nome||J[id].nomeTR||'',id,status:'base'}));
+    desenharRevisao();
+    pronta.then(()=>buscarCandidatosNovos());
+  }
 }
 function fecharModal(){ document.getElementById('modal').classList.remove('on'); }
 function log(t){ const lg=document.getElementById('log'); lg.style.display='block'; lg.textContent+=t+'\n'; lg.scrollTop=lg.scrollHeight; }
