@@ -84,6 +84,9 @@ body{font-family:"BFR",sans-serif;-webkit-print-color-adjust:exact;print-color-a
 .fesc{position:absolute;left:227px;top:107px;width:152px;height:152px;object-fit:contain}
 .foto{position:absolute;left:109px;top:95px;width:162px;height:162px;object-fit:contain;object-position:bottom}
 .btn-rec{position:absolute;left:120px;z-index:3;font:600 14px system-ui;padding:5px 10px;border-radius:6px;border:1px solid #e8c84a;background:#e8c84a;color:#1f1e1b;cursor:pointer}
+.lin{position:relative}
+.tira{position:absolute;right:-30px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;border:0;background:#8B1A2E;color:#fff;font:700 12px/22px system-ui;cursor:pointer;padding:0;opacity:0;transition:opacity .15s;z-index:4}
+.lin:hover .tira{opacity:1}
 .mais-cx{position:absolute;right:-12px;top:-12px;box-shadow:0 1px 4px rgba(0,0,0,.4);width:26px;height:26px;border-radius:50%;border:0;background:#e8c84a;color:#1f1e1b;font:700 20px/26px system-ui;cursor:pointer;padding:0}
 .caixa.vazia{opacity:.55}.caixa.vazia:hover{opacity:1}
 #rapido{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:42;display:none;align-items:flex-start;justify-content:center;padding:90px 12px;font:13px system-ui,sans-serif}
@@ -406,12 +409,19 @@ function capa(){
 const cabecalho=(C,rel)=>`<img class="cab-escudo" src="assets/escudo_botafogo.png" alt="">
   <div class="cab-tit">${esc(C.titulo)}</div><div class="cab-sub">${esc(C.sub)}</div>
   <div class="cab-marca">${rel?'<div class="rel">RELATÓRIO<br>DE SCOUT</div>':''}${marca}</div>`;
+async function tirarDoCampo(k,id){
+  const j=J[id]||{}, nome=j.nome||id, lista=LISTA_ATUAL;
+  if(!confirm(`Tirar ${nome} de ${POSICOES[k]} na ${LISTAS[lista].nome}?`)) return;
+  const l=L[lista]||{}, cx=((l.caixas||{})[k]||[]).filter(x=>String(x)!==String(id));
+  if(!db){ ((L[lista]=L[lista]||{caixas:{}}).caixas||(L[lista].caixas={}))[k]=cx; return render(); }
+  try{ await db.ref(`${RAIZ}/listas/${lista}/caixas/${k}`).set(cx); }catch(e){ alert('Não deu para tirar: '+e.message); }
+}
 const maisCx=k=>`<button class="mais-cx nao-imprime" onclick="abrirRapido('${k}')" title="Incluir jogador nesta posição">+</button>`;
 function folhaCampo(C){
   const caixas=Object.keys(CAIXA_X).map(k=>{
     const js=C.caixas[k]||[]; if(!js.length) return `<div class="caixa nao-imprime vazia" style="left:${CAIXA_X[k]}px;top:${(CAIXA_CY[k]-21).toFixed(1)}px;height:42.3px"><h3>${esc(POSICOES[k])}</h3>${maisCx(k)}</div>`;
     const h=42.3+33.77*js.length, top=CAIXA_CY[k]-h/2;
-    const linhas=js.map((j,i)=>{ const e=escudoDe(j); return `<div class="lin" style="background:${CINZAS[Math.min(i,4)]}"><span class="n">${esc(String(j.nome||'').toUpperCase())}</span><span class="i">${j.idade??"–"}</span><span class="e">${e?`<img referrerpolicy="no-referrer" src="${esc(e)}" alt="">`:""}</span><span class="s">${esc(siglaClube(j.clube))}</span></div>`; }).join("");
+    const linhas=js.map((j,i)=>{ const e=escudoDe(j); return `<div class="lin" style="background:${CINZAS[Math.min(i,4)]}"><span class="n">${esc(String(j.nome||'').toUpperCase())}</span><span class="i">${j.idade??"–"}</span><span class="e">${e?`<img referrerpolicy="no-referrer" src="${esc(e)}" alt="">`:""}</span><span class="s">${esc(siglaClube(j.clube))}</span><button class="tira nao-imprime" onclick="tirarDoCampo('${k}','${esc(String(j.id))}')" title="Tirar ${esc(j.nome)} da lista">✕</button></div>`; }).join("");
     return `<div class="caixa" style="left:${CAIXA_X[k]}px;top:${top.toFixed(1)}px;height:${h.toFixed(1)}px"><h3>${esc(POSICOES[k])}</h3>${linhas}${js.length<MAX_POR_POSICAO?maisCx(k):''}</div>`;
   }).join("");
   return `<section class="folha fundo">${cabecalho(C,true)}<div class="campo"></div>${caixas}<div class="rodape">Última atualização: ${esc(C.atualizado)}</div></section>`;
