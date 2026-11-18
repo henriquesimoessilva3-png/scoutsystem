@@ -86,6 +86,8 @@ body{font-family:"BFR",sans-serif;-webkit-print-color-adjust:exact;print-color-a
 .fotobt{position:absolute;left:96px;z-index:3;display:flex;gap:5px}
 .fotobt button{font:600 13px system-ui;padding:4px 8px;border-radius:6px;border:1px solid #e8c84a;background:#e8c84a;color:#1f1e1b;cursor:pointer}
 .fotobt button:last-child:not(:first-child){background:#333;border-color:#555;color:#fff}
+.ssbt{position:absolute;z-index:3;font:600 12px system-ui;padding:3px 8px;border-radius:6px;border:1px solid #e8c84a;background:#e8c84a;color:#1f1e1b;cursor:pointer}
+.ssbt.discreto{background:rgba(255,255,255,.85);border-color:#bbb;color:#555;padding:2px 6px}
 .lin{position:relative}
 .tira{position:absolute;right:-30px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;border:0;background:#8B1A2E;color:#fff;font:700 12px/22px system-ui;cursor:pointer;padding:0;opacity:0;transition:opacity .15s;z-index:4}
 .lin:hover .tira{opacity:1}
@@ -476,6 +478,7 @@ function cartao(C,j,i){
     ${campinho(j,764+dx,y0+54)}
     <div class="bar" style="left:${930.9+dx}px;top:${y0+10.5}px;width:432px">PERFORMANCE RECENTE</div>
     <div class="camp" style="left:${943.6+dx}px;top:${y0+51}px">${esc(camp)}</div>
+    <button class="nao-imprime ssbt${t?' discreto':''}" style="left:${(t?1318:1215)+dx}px;top:${y0+44}px" onclick="linkSofa('${esc(j.id)}')" title="${t?'Jogador errado no SofaScore? Cole o link certo':'Não achou no SofaScore? Cole o link do jogador'}">${t?'🔗':'🔗 Link SofaScore'}</button>
     ${K.map(([r,val],k)=>`<div class="kp" style="left:${CX[k]+dx}px;top:${y0+63.5}px"><small>${r==="RATING SOFASCORE"?"RATING<br>SOFASCORE":r}</small><b>${val==null?"–":r==="RATING SOFASCORE"?val:fmt(val).replace(/\./g,"")}</b></div>`).join("")}
     ${grafico(j,930.9+dx,y0+165,432,133)}
     <div class="bar" style="left:${1393.7+dx}px;top:${y0+10.4}px;width:432px">AVALIAÇÃO</div>
@@ -1060,6 +1063,26 @@ async function recortarFotoDoCard(id){
     if(!ok) alert('Não consegui uma foto recortada para '+j.nome+'.');
   }catch(e){ alert('Foto: '+e.message); }
   LOG_ALVO=null; agendarRender();
+}
+// link do SofaScore à mão (18/11, pedido do Pedro): quando a busca não acha o jogador ou acha o errado
+async function linkSofa(id){
+  const j=J[id]; if(!j) return;
+  const url=prompt(`Cole o link do ${j.nome} no SofaScore (ex.: https://www.sofascore.com/pt/jogador/nome/123456):`, j.ss&&j.ss.sid?`https://www.sofascore.com/player/x/${j.ss.sid}`:'');
+  if(url==null) return;
+  const m=String(url).trim().match(/sofascore\.com\/.*?(?:player|jogador|jugador)\/[^\/?#]*\/(\d+)/i)||String(url).trim().match(/^(\d{3,})$/);
+  if(!m) return alert('Link não reconhecido. Abra o jogador no SofaScore e copie o endereço da página.');
+  if(!await checarExtensao()) return alert('Precisa da extensão BFR Relatório Jogadores neste Chrome.');
+  try{
+    const d=await sofaDados(m[1]);
+    const nasc=d.nasc?idadeDe(d.nasc*1000):null;
+    if(nasc!=null&&j.idade!=null&&Math.abs(nasc-j.idade)>1&&!confirm(`No SofaScore esse jogador tem ${nasc} anos (aqui está ${j.idade}) e joga no ${d.time||'?'}. É ele mesmo?`)) return;
+    j.ss={...d,manual:true}; j.ssConferir=null;
+    if(!j.valor&&d.valor) j.valor=d.valor;
+    if(j.idade==null&&d.nasc) j.idade=nasc;
+    if(j.clube&&!j.clube.escudo&&d.timeId&&clubeBate(j.clube.nome,d.time)) j.clube.escudoSS=escSS(d.timeId);
+    if(db) await db.ref(`${RAIZ}/jogadores/${chaveFB(id)}`).update(limpar({ss:j.ss,ssConferir:null,valor:j.valor||null,idade:j.idade??null,clube:j.clube||null}));
+    agendarRender();
+  }catch(e){ alert('SofaScore: '+e.message); }
 }
 async function guardarFoto(id,dataurl){
   if(!storage) return dataurl;
