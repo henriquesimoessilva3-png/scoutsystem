@@ -478,7 +478,7 @@ function cartao(C,j,i){
     ${campinho(j,764+dx,y0+54)}
     <div class="bar" style="left:${930.9+dx}px;top:${y0+10.5}px;width:432px">PERFORMANCE RECENTE</div>
     <div class="camp" style="left:${943.6+dx}px;top:${y0+51}px">${esc(camp)}</div>
-    <button class="nao-imprime ssbt${t?' discreto':''}" style="left:${(t?1318:1215)+dx}px;top:${y0+44}px" onclick="linkSofa('${esc(j.id)}')" title="${t?'Jogador errado no SofaScore? Cole o link certo':'Não achou no SofaScore? Cole o link do jogador'}">${t?'🔗':'🔗 Link SofaScore'}</button>
+    <button class="nao-imprime ssbt${t?' discreto':''}" style="left:${(t?1328:1246)+dx}px;top:${y0+13}px;padding-top:1px;padding-bottom:1px" onclick="linkSofa('${esc(j.id)}')" title="${t?'Jogador errado no SofaScore? Cole o link certo':'Não achou no SofaScore? Cole o link do jogador'}">${t?'🔗':'🔗 Link SofaScore'}</button>
     ${K.map(([r,val],k)=>`<div class="kp" style="left:${CX[k]+dx}px;top:${y0+63.5}px"><small>${r==="RATING SOFASCORE"?"RATING<br>SOFASCORE":r}</small><b>${val==null?"–":r==="RATING SOFASCORE"?val:fmt(val).replace(/\./g,"")}</b></div>`).join("")}
     ${grafico(j,930.9+dx,y0+165,432,133)}
     <div class="bar" style="left:${1393.7+dx}px;top:${y0+10.4}px;width:432px">AVALIAÇÃO</div>
