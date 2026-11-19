@@ -454,7 +454,7 @@ function campoDe(j){
 }
 function campinho(j,x,y){
   const c=campoDe(j), id=esc(j.id);
-  const pt=(k,cls,click)=>{const p=PONTO[k];return p?`<span class="pt ${cls}" style="left:${p[0]*141}px;top:${p[1]*207}px"${click?` onclick="event.stopPropagation();cicloCampo('${id}','${k}')" title="Clique para trocar (principal → secundária → nenhuma)"`:''}></span>`:"";};
+  const pt=(k,cls,click)=>{const p=PONTO[k];return p?`<span class="pt ${cls}" style="left:${p[0]*141}px;top:${p[1]*207}px"${click?` onclick="event.stopPropagation();cicloCampo('${id}','${k}','${esc(j.caixa||'')}')" title="Clique para trocar (principal → secundária → nenhuma)"`:''}></span>`:"";};
   const marcadas=new Set([c.p,...c.s]);
   const vazias=CAMPO_KEYS.filter(k=>!marcadas.has(k)).map(k=>pt(k,'v',1)).join('');
   return `<div class="cmp" style="left:${x}px;top:${y}px"><img src="assets/campinho.png" alt="">${vazias}${c.s.map(k=>pt(k,"s",1)).join('')}${pt(c.p,"p",1)}
@@ -1090,8 +1090,9 @@ async function gravarCampo(id,v){
   const j=J[id]; if(!j) return; j.campo=v; agendarRender();
   try{ if(db) await db.ref(`${RAIZ}/jogadores/${chaveFB(id)}/campo`).set(v); }catch(e){ alert('Não deu para gravar: '+e.message); }
 }
-function cicloCampo(id,k){
-  const j=J[id]; if(!j) return;
+function cicloCampo(id,k,cx){
+  // J[id] não tem a caixa (ela é da lista): sem isso o clique partia de outra posição principal que a desenhada (Pedro, 19/11)
+  if(!J[id]) return; const j={...J[id],caixa:cx||J[id].caixa};
   const c=campoDe(j); let p=c.p, s=c.s.slice();
   if(k===p){ p=s.shift()||null; s.push(k); if(!p){ p=k; s=s.filter(x=>x!==k); } }   // principal → secundária (outra secundária vira principal)
   else if(s.includes(k)) s=s.filter(x=>x!==k);                                          // secundária → nenhuma
