@@ -440,18 +440,24 @@ function folhaCampo(C){
 }
 // posições do campinho: automáticas (caixa + 2ª posição do TransferRoom) ou marcadas à mão clicando nas bolinhas
 // (19/11, pedido do Pedro, igual ao Relatório Jogadores): vazia → principal (preta) → secundária (cinza) → vazia; várias secundárias
+// 2ª posição do TransferRoom vem em código inglês (DM, CB, CM...): converte para as 11 bolinhas clicáveis.
+// Sem isso o DM caía em cima do VOL e o CB no meio da zaga como bolinha que não dava para clicar (Pedro, 19/11: Madson)
+function posCampo(k,j){
+  const M={GK:'GOL',RB:'LD',LB:'LE',DM:'VOL',CM:'MED',AM:'MEI',F:'ATA',W:j.pe===1?'ED':'EE',CB:j.caixa==='ZD'?'ZC':'ZD'};
+  k=M[k]||k; return CAMPO_KEYS.includes(k)?k:null;
+}
 function campoDe(j){
-  if(j.campo&&j.campo.p) return {p:j.campo.p, s:[].concat(j.campo.s||[]).filter(k=>k&&k!==j.campo.p)};
-  let sec=j.pos2||null; if(sec==="W") sec=j.pe===1?"ED":"EE";
-  if(sec&&(!PONTO[sec]||String(PONTO[sec])===String(PONTO[j.caixa]))) sec=null;
-  return {p:j.caixa, s:sec&&CAMPO_KEYS.includes(sec)?[sec]:(sec&&PONTO[sec]?[sec]:[])};
+  const p0=posCampo(j.campo&&j.campo.p||j.caixa,j)||'VOL';
+  if(j.campo&&j.campo.p) return {p:p0, s:[...new Set([].concat(j.campo.s||[]).map(k=>posCampo(k,j)).filter(k=>k&&k!==p0))]};
+  const sec=posCampo(j.pos2,j);
+  return {p:p0, s:sec&&sec!==p0?[sec]:[]};
 }
 function campinho(j,x,y){
   const c=campoDe(j), id=esc(j.id);
   const pt=(k,cls,click)=>{const p=PONTO[k];return p?`<span class="pt ${cls}" style="left:${p[0]*141}px;top:${p[1]*207}px"${click?` onclick="event.stopPropagation();cicloCampo('${id}','${k}')" title="Clique para trocar (principal → secundária → nenhuma)"`:''}></span>`:"";};
   const marcadas=new Set([c.p,...c.s]);
-  const vazias=CAMPO_KEYS.filter(k=>!marcadas.has(k)&&!c.s.concat(c.p).some(m=>PONTO[m]&&String(PONTO[m])===String(PONTO[k]))).map(k=>pt(k,'v',1)).join('');
-  return `<div class="cmp" style="left:${x}px;top:${y}px"><img src="assets/campinho.png" alt="">${vazias}${c.s.map(k=>pt(k,"s",CAMPO_KEYS.includes(k))).join('')}${pt(c.p,"p",CAMPO_KEYS.includes(c.p))}
+  const vazias=CAMPO_KEYS.filter(k=>!marcadas.has(k)).map(k=>pt(k,'v',1)).join('');
+  return `<div class="cmp" style="left:${x}px;top:${y}px"><img src="assets/campinho.png" alt="">${vazias}${c.s.map(k=>pt(k,"s",1)).join('')}${pt(c.p,"p",1)}
     ${j.campo?`<span class="auto nao-imprime" onclick="event.stopPropagation();voltarCampoAuto('${id}')" title="Voltar às posições automáticas">↺</span>`:''}</div>
     <div class="poslab" style="left:${x}px;top:${y+215}px">${esc(POS_ROT[c.p]||"")}</div>`;
 }
