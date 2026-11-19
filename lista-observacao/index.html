@@ -105,15 +105,11 @@ body{font-family:"BFR",sans-serif;-webkit-print-color-adjust:exact;print-color-a
 .cmp .pt.p{width:25px;height:25px;background:#000}
 .cmp .pt.s{width:21px;height:21px;background:#929292}
 .poslab{position:absolute;width:141px;text-align:center;font-weight:700;font-size:18px}
-body:not(.pdf) .cmp.edt{cursor:pointer}
-body:not(.pdf) .cmp.edt:hover{outline:3px dashed #e8c84a;outline-offset:2px}
-#campoPop{position:fixed;z-index:9999;background:#fff;color:#1f1e1b;border:2px solid #e8c84a;border-radius:10px;padding:12px 14px;box-shadow:0 10px 30px rgba(0,0,0,.35);font:500 13px system-ui;width:250px}
-#campoPop b{display:block;margin-bottom:8px;font-size:14px}
-#campoPop label{display:block;margin:6px 0 2px;font-weight:700;font-size:12px}
-#campoPop select{width:100%;padding:5px;font:500 13px system-ui;border:1px solid #ccc;border-radius:6px}
-#campoPop .bts{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
-#campoPop button{font:600 12px system-ui;padding:5px 9px;border-radius:6px;border:1px solid #e8c84a;background:#e8c84a;cursor:pointer}
-#campoPop button.cz{background:#eee;border-color:#ccc}
+.cmp .pt{cursor:pointer;z-index:2}
+.cmp .pt.v{width:21px;height:21px;background:rgba(255,255,255,.35);border:2px dashed rgba(0,0,0,.3)}
+.cmp .pt.v:hover{background:rgba(232,200,74,.6)}
+@media print{.cmp .pt.v{display:none}}
+.cmp .auto{position:absolute;right:-4px;top:-22px;font:600 11px system-ui;padding:1px 6px;border-radius:5px;border:1px solid #bbb;background:#fff;color:#555;cursor:pointer;z-index:3}
 .camp{position:absolute;font-weight:700;font-size:18px;white-space:nowrap}
 .kp{position:absolute;text-align:center;width:100px;margin-left:-50px}
 .kp small{display:block;font-size:14px;line-height:16px;height:32px;display:flex;align-items:flex-end;justify-content:center}
@@ -384,6 +380,7 @@ const GENTILICO={Brazil:"BRASILEIRO",Argentina:"ARGENTINO",Uruguay:"URUGUAIO",Co
 const POS_ROT={GOL:"GOLEIRO",LE:"LATERAL",LD:"LATERAL",ZC:"ZAGUEIRO",ZD:"ZAGUEIRO",VOL:"VOLANTE",MED:"MÉDIO",MEI:"MEIA",EE:"EXTREMO",ED:"EXTREMO",ATA:"ATACANTE"};
 const PONTO={GOL:[.5,.917],LD:[.86,.78],LE:[.14,.78],ZD:[.64,.79],ZC:[.366,.796],VOL:[.506,.645],MED:[.5,.5],MEI:[.505,.30],ED:[.86,.29],EE:[.14,.29],ATA:[.505,.123],
   GK:[.5,.917],RB:[.86,.78],LB:[.14,.78],CB:[.5,.79],DM:[.506,.645],CM:[.5,.5],AM:[.505,.30],F:[.505,.123]};
+const CAMPO_KEYS=['GOL','LD','ZD','ZC','LE','VOL','MED','MEI','ED','EE','ATA'];
 const fmt=n=>n==null?"–":Number(n).toLocaleString("pt-BR");
 const corNota=n=>n>=8?"#1f76d3":n>=7?"#21b36b":n>=6.5?"#9fbe1c":n>=6?"#ef7e1c":"#dc2626";
 const escSS=id=>`https://img.sofascore.com/api/v1/team/${id}/image`;
@@ -441,15 +438,22 @@ function folhaCampo(C){
   }).join("");
   return `<section class="folha fundo">${cabecalho(C,true)}<div class="campo"></div>${caixas}<div class="rodape">Última atualização: ${esc(C.atualizado)}</div></section>`;
 }
+// posições do campinho: automáticas (caixa + 2ª posição do TransferRoom) ou marcadas à mão clicando nas bolinhas
+// (19/11, pedido do Pedro, igual ao Relatório Jogadores): vazia → principal (preta) → secundária (cinza) → vazia; várias secundárias
+function campoDe(j){
+  if(j.campo&&j.campo.p) return {p:j.campo.p, s:[].concat(j.campo.s||[]).filter(k=>k&&k!==j.campo.p)};
+  let sec=j.pos2||null; if(sec==="W") sec=j.pe===1?"ED":"EE";
+  if(sec&&(!PONTO[sec]||String(PONTO[sec])===String(PONTO[j.caixa]))) sec=null;
+  return {p:j.caixa, s:sec&&CAMPO_KEYS.includes(sec)?[sec]:(sec&&PONTO[sec]?[sec]:[])};
+}
 function campinho(j,x,y){
-  // posições do campinho: automáticas (caixa + 2ª posição do TransferRoom) ou escolhidas à mão (j.campo, 18/11 pedido do Pedro)
-  let princ=j.caixa, sec=j.pos2||null;
-  if(sec==="W") sec=j.pe===1?"ED":"EE";
-  if(j.campo&&j.campo.p){ princ=j.campo.p; sec=j.campo.s||null; }
-  if(sec&&String(PONTO[sec])===String(PONTO[princ])) sec=null;
-  const pt=(k,c)=>{const p=PONTO[k];return p?`<span class="pt ${c}" style="left:${p[0]*141}px;top:${p[1]*207}px"></span>`:"";};
-  return `<div class="cmp edt" style="left:${x}px;top:${y}px" title="Clique para mudar as posições do campinho" onclick="editarCampo(event,'${esc(j.id)}')"><img src="assets/campinho.png" alt="">${sec?pt(sec,"s"):""}${pt(princ,"p")}</div>
-    <div class="poslab" style="left:${x}px;top:${y+215}px">${esc(POS_ROT[princ]||"")}</div>`;
+  const c=campoDe(j), id=esc(j.id);
+  const pt=(k,cls,click)=>{const p=PONTO[k];return p?`<span class="pt ${cls}" style="left:${p[0]*141}px;top:${p[1]*207}px"${click?` onclick="event.stopPropagation();cicloCampo('${id}','${k}')" title="Clique para trocar (principal → secundária → nenhuma)"`:''}></span>`:"";};
+  const marcadas=new Set([c.p,...c.s]);
+  const vazias=CAMPO_KEYS.filter(k=>!marcadas.has(k)&&!c.s.concat(c.p).some(m=>PONTO[m]&&String(PONTO[m])===String(PONTO[k]))).map(k=>pt(k,'v',1)).join('');
+  return `<div class="cmp" style="left:${x}px;top:${y}px"><img src="assets/campinho.png" alt="">${vazias}${c.s.map(k=>pt(k,"s",CAMPO_KEYS.includes(k))).join('')}${pt(c.p,"p",CAMPO_KEYS.includes(c.p))}
+    ${j.campo?`<span class="auto nao-imprime" onclick="event.stopPropagation();voltarCampoAuto('${id}')" title="Voltar às posições automáticas">↺</span>`:''}</div>
+    <div class="poslab" style="left:${x}px;top:${y+215}px">${esc(POS_ROT[c.p]||"")}</div>`;
 }
 function grafico(j,x,y,w,h){
   const js=((j.ss||{}).jogos||[]).slice(-5);
@@ -1075,34 +1079,21 @@ async function recortarFotoDoCard(id){
   }catch(e){ alert('Foto: '+e.message); }
   LOG_ALVO=null; agendarRender();
 }
-// campinho editável (18/11, pedido do Pedro): posição principal (bolinha preta) e secundária (cinza), gravadas no jogador
-const CAMPO_OP=[['GOL','Goleiro'],['LD','Lateral direito'],['ZD','Zagueiro (direita)'],['ZC','Zagueiro (esquerda)'],['LE','Lateral esquerdo'],['VOL','Volante'],['MED','Médio'],['MEI','Meia'],['ED','Extremo direito'],['EE','Extremo esquerdo'],['ATA','Atacante']];
-function fecharCampo(){ const p=document.getElementById('campoPop'); if(p) p.remove(); }
-function editarCampo(ev,id){
-  if(document.body.classList.contains('pdf')) return;
-  ev.stopPropagation(); fecharCampo();
-  const j=J[id]; if(!j) return;
-  let p=j.caixa, s=j.pos2||'';
-  if(s==='W') s=j.pe===1?'ED':'EE';
-  if(j.campo&&j.campo.p){ p=j.campo.p; s=j.campo.s||''; }
-  const op=(v,vazio)=>(vazio?`<option value="">— nenhuma —</option>`:'')+CAMPO_OP.map(([k,n])=>`<option value="${k}"${k===v?' selected':''}>${n}</option>`).join('');
-  const d=document.createElement('div'); d.id='campoPop';
-  d.innerHTML=`<b>${esc(j.nome)}</b><label>Posição principal (preta)</label><select id="cpP">${op(p)}</select>
-    <label>Posição secundária (cinza)</label><select id="cpS">${op(s,true)}</select>
-    <div class="bts"><button onclick="salvarCampo('${esc(id)}')">Salvar</button>${j.campo?`<button class="cz" onclick="salvarCampo('${esc(id)}',true)">Voltar ao automático</button>`:''}<button class="cz" onclick="fecharCampo()">Cancelar</button></div>`;
-  d.addEventListener('click',e=>e.stopPropagation());
-  document.body.appendChild(d);
-  const r=ev.currentTarget.getBoundingClientRect();
-  d.style.left=Math.max(8,Math.min(innerWidth-266,r.right+8))+'px';
-  d.style.top=Math.max(8,Math.min(innerHeight-d.offsetHeight-8,r.top))+'px';
-}
-document.addEventListener('click',fecharCampo);
-async function salvarCampo(id,auto){
-  const j=J[id]; if(!j) return;
-  const v=auto?null:{p:document.getElementById('cpP').value,s:document.getElementById('cpS').value||null};
-  j.campo=v; fecharCampo(); agendarRender();
+// campinho editável: clique nas bolinhas (19/11, como no Relatório Jogadores)
+async function gravarCampo(id,v){
+  const j=J[id]; if(!j) return; j.campo=v; agendarRender();
   try{ if(db) await db.ref(`${RAIZ}/jogadores/${chaveFB(id)}/campo`).set(v); }catch(e){ alert('Não deu para gravar: '+e.message); }
 }
+function cicloCampo(id,k){
+  const j=J[id]; if(!j) return;
+  const c=campoDe(j); let p=c.p, s=c.s.slice();
+  if(k===p){ p=s.shift()||null; s.push(k); if(!p){ p=k; s=s.filter(x=>x!==k); } }   // principal → secundária (outra secundária vira principal)
+  else if(s.includes(k)) s=s.filter(x=>x!==k);                                          // secundária → nenhuma
+  else { if(p) s.unshift(p); p=k; }                                                    // nenhuma → principal (a antiga vira secundária)
+  s=[...new Set(s.filter(x=>x&&x!==p))];
+  gravarCampo(id,{p,s});
+}
+function voltarCampoAuto(id){ gravarCampo(id,null); }
 // link do SofaScore à mão (18/11, pedido do Pedro): quando a busca não acha o jogador ou acha o errado
 async function linkSofa(id){
   const j=J[id]; if(!j) return;
